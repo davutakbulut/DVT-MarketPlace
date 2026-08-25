@@ -83,7 +83,7 @@ export default function LoginPage() {
           <div>
             <div className="flex justify-between items-center mb-1">
               <label className="text-xs font-bold text-dark">Şifre</label>
-              <a href="#" className="text-[11px] font-semibold text-primary hover:underline">Şifremi Unuttum</a>
+              <Link href="/forgot-password" className="text-[11px] font-semibold text-primary hover:underline">Şifremi Unuttum</Link>
             </div>
             <div className="relative">
               <input

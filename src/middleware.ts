@@ -5,11 +5,12 @@ export function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
   const session = request.cookies.get('dvt_session');
 
-  // Allow public landing page, static assets, login, register, and all API routes
+  // Allow public routes
   if (
     pathname === '/' ||
     pathname === '/login' ||
     pathname === '/register' ||
+    pathname === '/forgot-password' ||
     pathname.startsWith('/_next') ||
     pathname.startsWith('/api') ||
     pathname.includes('.')
