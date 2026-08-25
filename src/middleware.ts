@@ -5,18 +5,19 @@ export function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
   const session = request.cookies.get('dvt_session');
 
-  // Allow public static assets and all API routes
+  // Allow public landing page, static assets, login, register, and all API routes
   if (
-    pathname.startsWith('/_next') ||
-    pathname.startsWith('/api') ||
+    pathname === '/' ||
     pathname === '/login' ||
     pathname === '/register' ||
+    pathname.startsWith('/_next') ||
+    pathname.startsWith('/api') ||
     pathname.includes('.')
   ) {
     return NextResponse.next();
   }
 
-  // If user is not logged in and tries to access dashboard pages, redirect to login
+  // If user is not logged in and tries to access dashboard routes, redirect to login
   if (!session) {
     const url = request.nextUrl.clone();
     url.pathname = '/login';
