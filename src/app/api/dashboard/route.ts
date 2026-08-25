@@ -1,10 +1,19 @@
 import { NextResponse } from 'next/server';
 import { query } from '@/lib/db';
 
+const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+const DEFAULT_STORE_ID = '22222222-2222-2222-2222-222222222221';
+
 export async function GET(request: Request) {
   try {
     const { searchParams } = new URL(request.url);
-    const storeId = searchParams.get('storeId') || '22222222-2222-2222-2222-222222222221';
+    let storeId = searchParams.get('storeId');
+
+    // If storeId is missing, empty, or not a valid UUID (e.g. 'store-1'), resolve to default store UUID
+    if (!storeId || !UUID_REGEX.test(storeId)) {
+      const storeRows = await query('SELECT id FROM stores LIMIT 1');
+      storeId = storeRows.length > 0 ? storeRows[0].id : DEFAULT_STORE_ID;
+    }
 
     const orderAgg = await query(`
       SELECT 

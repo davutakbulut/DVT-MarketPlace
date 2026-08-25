@@ -1,10 +1,18 @@
 import { NextResponse } from 'next/server';
 import { query } from '@/lib/db';
 
+const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+const DEFAULT_STORE_ID = '22222222-2222-2222-2222-222222222221';
+
 export async function GET(request: Request) {
   try {
     const { searchParams } = new URL(request.url);
-    const storeId = searchParams.get('storeId') || '22222222-2222-2222-2222-222222222221';
+    let storeId = searchParams.get('storeId');
+
+    if (!storeId || !UUID_REGEX.test(storeId)) {
+      const storeRows = await query('SELECT id FROM stores LIMIT 1');
+      storeId = storeRows.length > 0 ? storeRows[0].id : DEFAULT_STORE_ID;
+    }
 
     const products = await query(`
       SELECT 
@@ -37,7 +45,6 @@ export async function POST(request: Request) {
       WHERE id = $2
     `, [costPrice, productId]);
 
-    // Insert cost history log
     await query(`
       INSERT INTO product_cost_history (product_id, cost_price, vat_rate, change_reason)
       VALUES ($1, $2, 20, 'Kullanıcı Canlı Analiz Düzenlemesi')
