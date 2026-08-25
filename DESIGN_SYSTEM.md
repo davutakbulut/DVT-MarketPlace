@@ -68,3 +68,24 @@ z-0:  Ana Sayfa Canvas & Grafikler
 - **Sabit Header**: Yükseklik `56px`, Hamburger menü butonu, aktif mağaza rozeti ve kullanıcı ikonu.
 - **Sol Drawer**: Hamburger butonuna tıklandığında soldan yumuşakça kayarak açılan (`z-50`) tam navigasyon çekmecesi.
 - **Tablolar**: Yatay kaydırılabilir, ürün ismi kolonu solda sabit (`z-20`), üstte Tablo Yoğunluk / Yakınlaştırma butonları (`85%`, `90%`, `100%`).
+
+---
+
+## 📱 KATI RESPONSIVE & MOBİL STANDARTLARI (MANDATORY RESPONSIVE RULES)
+
+Tüm sayfalar ve bileşenler istisnasız aşağıdaki 4 ekran kırılımında (breakpoint) %100 kusursuz ve taşmasız çalışmalıdır:
+
+### 1. Kırılım Noktaları (Breakpoints)
+- 📱 **Mobil Küçük (< 480px)**: Tek kolonlu kartlar, kompakt butonlar, yatay kaydırılabilir yapışkan başlıklı tablolar (`table-sticky-first-col`).
+- 📱 **Mobil Standart & Tablet Dikey (480px - 767px)**: 2 kolonlu KPI gridleri, soldan açılan tam çekmece (drawer).
+- 💻 **Tablet Yatay & Küçük Laptop (768px - 1023px)**: 3 kolonlu metrikler, daraltılabilir üst bar araçları.
+- 🖥️ **Masaüstü & Geniş Ekran (>= 1024px)**: 260px sabit/katlanabilir sol sidebar, 6 kolonlu KPI panelleri, yan yana form ve sonuç kartları.
+
+### 2. Tablo Duyarlılık (Responsive Table) Kuralları
+- Tüm veri tabloları `<div className="overflow-x-auto -mx-4 sm:mx-0 px-4 sm:px-0">` ile sarılmalıdır.
+- İlk sütun (Ürün / Barkod) mobilde `table-sticky-first-col` ile solda sabit kalmalı, diğer sütunlar sağa doğru akıcı şekilde kaydırılabilmelidir.
+- Mobilde dokunma alanları minimum `36px - 44px` yüksekliğinde olmalı, yakınlaştırma (`%85`, `%90`, `%100`) butonları her zaman erişilebilir olmalıdır.
+
+### 3. Header & Navigasyon Kuralları
+- Header yüksekliği mobilde `56px`, masaüstünde `64px` olmalı, asla yatay taşmaya (`overflow-x`) neden olmamalıdır.
+- Mobil cihazlarda sol sidebar gizlenmeli; hamburger menü tıklandığında soldan yumuşakça kayarak açılan (`z-50`) mobil çekmece devreye girmelidir.

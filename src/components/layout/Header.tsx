@@ -23,34 +23,38 @@ export function Header({ onMobileMenuToggle }: { onMobileMenuToggle: () => void 
   };
 
   return (
-    <header className="sticky top-0 z-40 h-16 bg-white/95 backdrop-blur-md border-b border-border px-4 sm:px-6 flex items-center justify-between transition-all">
-      <div className="flex items-center gap-3">
+    <header className="sticky top-0 z-40 h-14 sm:h-16 bg-white/95 backdrop-blur-md border-b border-border px-3 sm:px-6 flex items-center justify-between transition-all">
+      {/* Left: Mobile Toggle & Logo & Store Selector */}
+      <div className="flex items-center gap-2 sm:gap-3">
         <button
           onClick={onMobileMenuToggle}
-          className="lg:hidden p-2 rounded-xl text-dark hover:bg-canvas transition-colors"
+          className="lg:hidden p-1.5 rounded-xl text-dark hover:bg-canvas transition-colors"
           aria-label="Menüyü Aç"
         >
           <Menu className="w-5 h-5" />
         </button>
 
-        <div className="flex items-center gap-2">
-          <span className="text-sm font-extrabold tracking-tight text-primary flex items-center gap-1.5">
-            <span className="w-2.5 h-2.5 rounded-full bg-primary inline-block" />
-            DVT<span className="text-dark font-normal">MarketPlace</span>
+        <div className="flex items-center gap-1.5">
+          <span className="text-xs sm:text-sm font-extrabold tracking-tight text-primary flex items-center gap-1">
+            <span className="w-2 h-2 rounded-full bg-primary inline-block" />
+            DVT<span className="text-dark font-normal">Market</span>
           </span>
-          <span className="hidden sm:inline-block bg-primary-tint-100 text-primary text-[10px] font-bold px-2 py-0.5 rounded-full">
-            v1.0 • Supabase Live
+          <span className="hidden md:inline-block bg-primary-tint-100 text-primary text-[9px] font-bold px-1.5 py-0.2 rounded-full">
+            v1.0
           </span>
         </div>
 
-        <div className="hidden md:flex items-center gap-2 ml-4">
+        <div className="flex items-center gap-1.5 ml-1 sm:ml-3">
           <StoreSelector />
-          <CountrySelector />
+          <div className="hidden sm:block">
+            <CountrySelector />
+          </div>
         </div>
       </div>
 
-      <div className="flex items-center gap-2.5">
-        <div className="hidden lg:block">
+      {/* Right: Date picker, Virtual Tour, Notifications, Profile */}
+      <div className="flex items-center gap-1.5 sm:gap-2.5">
+        <div className="hidden md:block">
           <DateRangePicker />
         </div>
 
@@ -58,10 +62,10 @@ export function Header({ onMobileMenuToggle }: { onMobileMenuToggle: () => void 
           variant="secondary"
           size="sm"
           onClick={() => setTourOpen(true)}
-          className="hidden sm:flex items-center gap-1.5 h-8 text-[11px] rounded-xl font-semibold"
+          className="hidden sm:flex items-center gap-1 h-8 text-[11px] rounded-xl font-semibold px-2.5"
         >
           <Compass className="w-3.5 h-3.5 text-primary" />
-          <span>Nasıl Yapılır?</span>
+          <span>Rehber</span>
         </Button>
 
         <NotificationCenter />
@@ -70,7 +74,7 @@ export function Header({ onMobileMenuToggle }: { onMobileMenuToggle: () => void 
         <div className="relative">
           <div
             onClick={() => setUserDropdown(!userDropdown)}
-            className="w-9 h-9 rounded-xl bg-canvas border border-border flex items-center justify-center cursor-pointer hover:bg-border/50 transition-colors"
+            className="w-8 h-8 sm:w-9 sm:h-9 rounded-xl bg-canvas border border-border flex items-center justify-center cursor-pointer hover:bg-border/50 transition-colors"
             title="Profil & Oturum"
           >
             <User className="w-4 h-4 text-dark" />
@@ -79,12 +83,12 @@ export function Header({ onMobileMenuToggle }: { onMobileMenuToggle: () => void 
           {userDropdown && (
             <>
               <div className="fixed inset-0 z-50" onClick={() => setUserDropdown(false)} />
-              <div className="absolute right-0 mt-2 w-56 bg-white rounded-2xl shadow-xl border border-border z-60 p-3 animate-in fade-in zoom-in-95 space-y-2">
+              <div className="absolute right-0 mt-2 w-52 sm:w-56 bg-white rounded-2xl shadow-xl border border-border z-60 p-3 animate-in fade-in zoom-in-95 space-y-2">
                 <div className="px-2 py-1 border-b border-border">
                   <div className="text-xs font-bold text-dark flex items-center gap-1">
                     Davut Akbulut <ShieldCheck className="w-3.5 h-3.5 text-primary" />
                   </div>
-                  <div className="text-[11px] text-gray-500 font-mono">dvtakblt@gmail.com</div>
+                  <div className="text-[10px] text-gray-500 font-mono">dvtakblt@gmail.com</div>
                   <div className="text-[10px] text-primary font-bold mt-0.5">Admin (Firma Sahibi)</div>
                 </div>
 
