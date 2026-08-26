@@ -63,6 +63,9 @@ export default function ProductPricingPage() {
   const [competitorBuyboxPrice, setCompetitorBuyboxPrice] = useState<number>(149.90);
   const [syncingPrice, setSyncingPrice] = useState(false);
 
+  // Inline Editing Key for Right Waterfall Rows
+  const [editingKey, setEditingKey] = useState<string | null>(null);
+
   // Fetch real products, live cargo barems, and default settings from DB
   const fetchAllData = async () => {
     setLoading(true);
@@ -732,7 +735,7 @@ export default function ProductPricingPage() {
               </div>
             )}
 
-            {/* DYNAMIC PARAMETER FIELDS GRID (1-10 DEĞİŞTİRİLEBİLİR GİDERLER) */}
+            {/* CORE PRODUCT PARAMETERS (1. Maliyet, 2. Komisyon, 3. Desi, 4. KDV) */}
             <div className="grid grid-cols-2 gap-3">
               {/* 1. Birim Alış Maliyeti */}
               <div>
@@ -742,7 +745,7 @@ export default function ProductPricingPage() {
                   step="0.1"
                   value={costPrice}
                   onChange={(e) => setCostPrice(Math.max(0, parseFloat(e.target.value) || 0))}
-                  className="w-full px-3 py-2 rounded-xl border border-border font-bold text-dark bg-white focus:ring-2 focus:ring-primary"
+                  className="w-full px-3 py-2 rounded-xl border border-border font-bold text-dark bg-white focus:ring-2 focus:ring-primary shadow-xs"
                 />
               </div>
 
@@ -754,11 +757,11 @@ export default function ProductPricingPage() {
                   step="0.1"
                   value={commissionRate}
                   onChange={(e) => setCommissionRate(Math.max(0, parseFloat(e.target.value) || 0))}
-                  className="w-full px-3 py-2 rounded-xl border border-border font-bold text-dark bg-white focus:ring-2 focus:ring-primary"
+                  className="w-full px-3 py-2 rounded-xl border border-border font-bold text-dark bg-white focus:ring-2 focus:ring-primary shadow-xs"
                 />
               </div>
 
-              {/* 3. Desi & Kargo */}
+              {/* 3. Desi */}
               <div>
                 <label className="font-bold text-gray-700 block mb-1">3. Paket Desisi</label>
                 <input
@@ -766,94 +769,22 @@ export default function ProductPricingPage() {
                   step="0.5"
                   value={desi}
                   onChange={(e) => setDesi(Math.max(0.5, parseFloat(e.target.value) || 1))}
-                  className="w-full px-3 py-2 rounded-xl border border-border font-bold text-dark bg-white focus:ring-2 focus:ring-primary"
+                  className="w-full px-3 py-2 rounded-xl border border-border font-bold text-dark bg-white focus:ring-2 focus:ring-primary shadow-xs"
                 />
               </div>
 
-              {/* 4. Platform Hizmet Bedeli */}
+              {/* 4. KDV Oranı (%) */}
               <div>
-                <label className="font-bold text-gray-700 block mb-1">4. Hizmet Bedeli (₺/sipariş)</label>
-                <input
-                  type="number"
-                  step="0.1"
-                  value={serviceFee}
-                  onChange={(e) => setServiceFee(Math.max(0, parseFloat(e.target.value) || 0))}
-                  className="w-full px-3 py-2 rounded-xl border border-border font-bold text-dark bg-white focus:ring-2 focus:ring-primary"
-                />
-              </div>
-
-              {/* 5. Ambalaj & Paketleme Sabit Gideri */}
-              <div>
-                <label className="font-bold text-gray-700 block mb-1">5. Ambalaj Gideri (₺/sipariş)</label>
-                <input
-                  type="number"
-                  step="0.1"
-                  value={packagingCost}
-                  onChange={(e) => setPackagingCost(Math.max(0, parseFloat(e.target.value) || 0))}
-                  className="w-full px-3 py-2 rounded-xl border border-border font-bold text-dark bg-white focus:ring-2 focus:ring-primary"
-                />
-              </div>
-
-              {/* 6. E-Fatura & Sabit Operasyon Gideri */}
-              <div>
-                <label className="font-bold text-gray-700 block mb-1">6. E-Fatura & Sabit Op. (₺/sip)</label>
-                <input
-                  type="number"
-                  step="0.05"
-                  value={fixedOpCost}
-                  onChange={(e) => setFixedOpCost(Math.max(0, parseFloat(e.target.value) || 0))}
-                  className="w-full px-3 py-2 rounded-xl border border-border font-bold text-dark bg-white focus:ring-2 focus:ring-primary"
-                />
-              </div>
-
-              {/* 7. Stopaj Kesintisi (%) */}
-              <div>
-                <label className="font-bold text-gray-700 block mb-1">7. Stopaj Kesintisi (%)</label>
-                <input
-                  type="number"
-                  step="0.5"
-                  value={stopajRate}
-                  onChange={(e) => setStopajRate(Math.max(0, parseFloat(e.target.value) || 0))}
-                  className="w-full px-3 py-2 rounded-xl border border-border font-bold text-dark bg-white focus:ring-2 focus:ring-primary"
-                />
-              </div>
-
-              {/* 8. KDV Oranı (%) */}
-              <div>
-                <label className="font-bold text-gray-700 block mb-1">8. KDV Oranı (%)</label>
+                <label className="font-bold text-gray-700 block mb-1">4. KDV Oranı (%)</label>
                 <select
                   value={vatRate}
                   onChange={(e) => setVatRate(parseInt(e.target.value) || 10)}
-                  className="w-full px-3 py-2 rounded-xl border border-border font-bold text-dark bg-white focus:ring-2 focus:ring-primary cursor-pointer"
+                  className="w-full px-3 py-2 rounded-xl border border-border font-bold text-dark bg-white focus:ring-2 focus:ring-primary cursor-pointer shadow-xs"
                 >
-                  <option value={1}>%1 (Gıda / Tıbbi)</option>
+                  <option value={1}>%1 (Temel Gıda / Tıbbi)</option>
                   <option value={10}>%10 (Medikal & İlaç)</option>
                   <option value={20}>%20 (Genel Standart)</option>
                 </select>
-              </div>
-
-              {/* 9. Ekstra Operasyon Gideri (%) */}
-              <div>
-                <label className="font-bold text-gray-700 block mb-1">9. Ekstra Operasyon (%)</label>
-                <input
-                  type="number"
-                  step="0.5"
-                  value={extraOpRate}
-                  onChange={(e) => setExtraOpRate(Math.max(0, parseFloat(e.target.value) || 0))}
-                  className="w-full px-3 py-2 rounded-xl border border-border font-bold text-dark bg-white focus:ring-2 focus:ring-primary"
-                />
-              </div>
-
-              {/* 10. Önceki Ay İade Riski Oranı (%) */}
-              <div>
-                <label className="font-bold text-gray-700 block mb-1">10. İade Riski Oranı (%)</label>
-                <input
-                  type="number"
-                  step="0.1"
-                  value={returnRate}
-                  onChange={(e) => setReturnRate(Math.max(0, parseFloat(e.target.value) || 0))}
-                  className="w-full px-3 py-2 rounded-xl border border-border font-bold text-dark bg-white focus:ring-2 focus:ring-primary"
-                />
               </div>
             </div>
 
@@ -864,7 +795,7 @@ export default function ProductPricingPage() {
                 <select
                   value={carrier}
                   onChange={(e) => setCarrier(e.target.value)}
-                  className="w-full px-3 py-2 rounded-xl border border-border font-bold text-dark bg-white focus:ring-2 focus:ring-primary cursor-pointer"
+                  className="w-full px-3 py-2 rounded-xl border border-border font-bold text-dark bg-white focus:ring-2 focus:ring-primary cursor-pointer shadow-xs"
                 >
                   <option value="TEX">Trendyol Express (TEX)</option>
                   <option value="ARAS">Aras Kargo</option>
@@ -1024,27 +955,84 @@ export default function ProductPricingPage() {
               </span>
             </div>
 
-            {/* 🌟 10-ITEM FINANCIAL WATERFALL (EXACTLY AS IN USER'S SCREENSHOT) */}
-            <div className="space-y-2.5 pt-2 border-t border-border text-xs">
+            {/* 🌟 10-ITEM FINANCIAL WATERFALL (CLICK NUMBER TO EDIT INLINE) */}
+            <div className="space-y-1.5 pt-2 border-t border-border text-xs">
               
               {/* 1. Alış Maliyeti (COGS) */}
-              <div className="flex items-center justify-between py-1 text-gray-700">
-                <span>1. Alış Maliyeti (COGS)</span>
-                <span className="font-bold text-red-700 tabular-nums">
-                  -₺{(breakdownView === 'unit' ? costPrice : currentSim.basketCost).toFixed(2)}
+              <div className="flex items-center justify-between py-1 text-gray-700 hover:bg-canvas/80 px-2 -mx-2 rounded-xl transition-all group">
+                <span 
+                  onClick={() => setEditingKey('costPrice')}
+                  className="flex items-center gap-1.5 cursor-pointer"
+                >
+                  <span>1. Alış Maliyeti (COGS)</span>
+                  <Edit3 className="w-3 h-3 text-gray-400 opacity-0 group-hover:opacity-100 transition-opacity" />
                 </span>
+                <div className="flex items-center gap-1.5">
+                  {editingKey === 'costPrice' ? (
+                    <div className="flex items-center gap-1 animate-in fade-in zoom-in-95">
+                      <input
+                        type="number"
+                        step="0.1"
+                        autoFocus
+                        value={costPrice}
+                        onChange={(e) => setCostPrice(Math.max(0, parseFloat(e.target.value) || 0))}
+                        onBlur={() => setEditingKey(null)}
+                        onKeyDown={(e) => e.key === 'Enter' && setEditingKey(null)}
+                        className="w-20 px-2 py-0.5 rounded-lg border-2 border-primary font-bold text-right text-xs bg-white focus:outline-none shadow-xs text-primary"
+                      />
+                      <button onClick={() => setEditingKey(null)} className="p-0.5 text-emerald-600 font-bold hover:text-emerald-800 cursor-pointer">✓</button>
+                    </div>
+                  ) : (
+                    <span 
+                      onClick={() => setEditingKey('costPrice')}
+                      className="font-bold text-red-700 tabular-nums cursor-pointer hover:underline hover:text-primary transition-colors"
+                      title="Maliyeti değiştirmek için tıkla"
+                    >
+                      -₺{(breakdownView === 'unit' ? costPrice : currentSim.basketCost).toFixed(2)}
+                    </span>
+                  )}
+                </div>
               </div>
 
               {/* 2. Trendyol Komisyonu */}
-              <div className="flex items-center justify-between py-1 text-gray-700">
-                <span>2. Trendyol Komisyonu (%{commissionRate})</span>
-                <span className="font-bold text-gray-800 tabular-nums">
-                  -₺{(breakdownView === 'unit' ? (currentSim.comm / currentSim.q) : currentSim.comm).toFixed(2)}
+              <div className="flex items-center justify-between py-1 text-gray-700 hover:bg-canvas/80 px-2 -mx-2 rounded-xl transition-all group">
+                <span 
+                  onClick={() => setEditingKey('commissionRate')}
+                  className="flex items-center gap-1.5 cursor-pointer"
+                >
+                  <span>2. Trendyol Komisyonu (%{commissionRate})</span>
+                  <Edit3 className="w-3 h-3 text-gray-400 opacity-0 group-hover:opacity-100 transition-opacity" />
                 </span>
+                <div className="flex items-center gap-1.5">
+                  {editingKey === 'commissionRate' ? (
+                    <div className="flex items-center gap-1 animate-in fade-in zoom-in-95">
+                      <span className="font-bold text-gray-500">%</span>
+                      <input
+                        type="number"
+                        step="0.1"
+                        autoFocus
+                        value={commissionRate}
+                        onChange={(e) => setCommissionRate(Math.max(0, parseFloat(e.target.value) || 0))}
+                        onBlur={() => setEditingKey(null)}
+                        onKeyDown={(e) => e.key === 'Enter' && setEditingKey(null)}
+                        className="w-18 px-2 py-0.5 rounded-lg border-2 border-primary font-bold text-right text-xs bg-white focus:outline-none shadow-xs text-primary"
+                      />
+                      <button onClick={() => setEditingKey(null)} className="p-0.5 text-emerald-600 font-bold hover:text-emerald-800 cursor-pointer">✓</button>
+                    </div>
+                  ) : (
+                    <span 
+                      onClick={() => setEditingKey('commissionRate')}
+                      className="font-bold text-gray-800 tabular-nums cursor-pointer hover:underline hover:text-primary transition-colors"
+                      title="Komisyon oranını değiştirmek için tıkla"
+                    >
+                      -₺{(breakdownView === 'unit' ? (currentSim.comm / currentSim.q) : currentSim.comm).toFixed(2)}
+                    </span>
+                  )}
+                </div>
               </div>
 
               {/* 3. Kargo Gideri */}
-              <div className="flex items-center justify-between py-1 text-gray-700">
+              <div className="flex items-center justify-between py-1 text-gray-700 hover:bg-canvas/80 px-2 -mx-2 rounded-xl transition-all">
                 <span>3. Kargo Gideri ({carrier}, {currentSim.shippingObj.tierName})</span>
                 <span className="font-bold text-primary tabular-nums">
                   -₺{(breakdownView === 'unit' ? (currentSim.ship / currentSim.q) : currentSim.ship).toFixed(2)}
@@ -1052,64 +1040,267 @@ export default function ProductPricingPage() {
               </div>
 
               {/* 4. Platform Hizmet Bedeli */}
-              <div className="flex items-center justify-between py-1 text-gray-700">
-                <span>
-                  4. Platform Hizmet Bedeli ({serviceFee <= 6.5 ? 'Bugün Kargoda: 4.99 TL + KDV = ₺5.99/sipariş' : 'Standart: 10.99 TL + KDV = ₺13.19/sipariş'})
+              <div className="flex items-center justify-between py-1 text-gray-700 hover:bg-canvas/80 px-2 -mx-2 rounded-xl transition-all group">
+                <span 
+                  onClick={() => setEditingKey('serviceFee')}
+                  className="flex items-center gap-1.5 cursor-pointer"
+                >
+                  <span>
+                    4. Platform Hizmet Bedeli ({serviceFee <= 6.5 ? 'Bugün Kargoda: 4.99 TL + KDV = ₺5.99/sipariş' : 'Standart: 10.99 TL + KDV = ₺13.19/sipariş'})
+                  </span>
+                  <Edit3 className="w-3 h-3 text-gray-400 opacity-0 group-hover:opacity-100 transition-opacity" />
                 </span>
-                <span className="font-bold text-gray-800 tabular-nums">
-                  -₺{(breakdownView === 'unit' ? (serviceFee / currentSim.q) : serviceFee).toFixed(2)}
-                </span>
+                <div className="flex items-center gap-1.5">
+                  {editingKey === 'serviceFee' ? (
+                    <div className="flex items-center gap-1 animate-in fade-in zoom-in-95">
+                      <span className="font-bold text-gray-500">₺</span>
+                      <input
+                        type="number"
+                        step="0.1"
+                        autoFocus
+                        value={serviceFee}
+                        onChange={(e) => setServiceFee(Math.max(0, parseFloat(e.target.value) || 0))}
+                        onBlur={() => setEditingKey(null)}
+                        onKeyDown={(e) => e.key === 'Enter' && setEditingKey(null)}
+                        className="w-20 px-2 py-0.5 rounded-lg border-2 border-primary font-bold text-right text-xs bg-white focus:outline-none shadow-xs text-primary"
+                      />
+                      <button onClick={() => setEditingKey(null)} className="p-0.5 text-emerald-600 font-bold hover:text-emerald-800 cursor-pointer">✓</button>
+                    </div>
+                  ) : (
+                    <span 
+                      onClick={() => setEditingKey('serviceFee')}
+                      className="font-bold text-gray-800 tabular-nums cursor-pointer hover:underline hover:text-primary transition-colors"
+                      title="Hizmet bedelini değiştirmek için tıkla"
+                    >
+                      -₺{(breakdownView === 'unit' ? (serviceFee / currentSim.q) : serviceFee).toFixed(2)}
+                    </span>
+                  )}
+                </div>
               </div>
 
               {/* 5. Ambalaj & Paketleme Sabit Gideri */}
-              <div className="flex items-center justify-between py-1 text-gray-700">
-                <span>5. Ambalaj & Paketleme Sabit Gideri (₺{packagingCost.toFixed(2)}/sipariş)</span>
-                <span className="font-bold text-gray-800 tabular-nums">
-                  -₺{(breakdownView === 'unit' ? (packagingCost / currentSim.q) : packagingCost).toFixed(2)}
+              <div className="flex items-center justify-between py-1 text-gray-700 hover:bg-canvas/80 px-2 -mx-2 rounded-xl transition-all group">
+                <span 
+                  onClick={() => setEditingKey('packagingCost')}
+                  className="flex items-center gap-1.5 cursor-pointer"
+                >
+                  <span>5. Ambalaj & Paketleme Sabit Gideri (₺{packagingCost.toFixed(2)}/sipariş)</span>
+                  <Edit3 className="w-3 h-3 text-gray-400 opacity-0 group-hover:opacity-100 transition-opacity" />
                 </span>
+                <div className="flex items-center gap-1.5">
+                  {editingKey === 'packagingCost' ? (
+                    <div className="flex items-center gap-1 animate-in fade-in zoom-in-95">
+                      <span className="font-bold text-gray-500">₺</span>
+                      <input
+                        type="number"
+                        step="0.1"
+                        autoFocus
+                        value={packagingCost}
+                        onChange={(e) => setPackagingCost(Math.max(0, parseFloat(e.target.value) || 0))}
+                        onBlur={() => setEditingKey(null)}
+                        onKeyDown={(e) => e.key === 'Enter' && setEditingKey(null)}
+                        className="w-20 px-2 py-0.5 rounded-lg border-2 border-primary font-bold text-right text-xs bg-white focus:outline-none shadow-xs text-primary"
+                      />
+                      <button onClick={() => setEditingKey(null)} className="p-0.5 text-emerald-600 font-bold hover:text-emerald-800 cursor-pointer">✓</button>
+                    </div>
+                  ) : (
+                    <span 
+                      onClick={() => setEditingKey('packagingCost')}
+                      className="font-bold text-gray-800 tabular-nums cursor-pointer hover:underline hover:text-primary transition-colors"
+                      title="Ambalaj maliyetini değiştirmek için tıkla"
+                    >
+                      -₺{(breakdownView === 'unit' ? (packagingCost / currentSim.q) : packagingCost).toFixed(2)}
+                    </span>
+                  )}
+                </div>
               </div>
 
               {/* 6. E-Fatura & Sabit Operasyon Gideri */}
-              <div className="flex items-center justify-between py-1 text-gray-700">
-                <span>6. E-Fatura & Sabit Operasyon Gideri (₺{fixedOpCost.toFixed(2)}/sipariş)</span>
-                <span className="font-bold text-gray-800 tabular-nums">
-                  -₺{(breakdownView === 'unit' ? (fixedOpCost / currentSim.q) : fixedOpCost).toFixed(2)}
+              <div className="flex items-center justify-between py-1 text-gray-700 hover:bg-canvas/80 px-2 -mx-2 rounded-xl transition-all group">
+                <span 
+                  onClick={() => setEditingKey('fixedOpCost')}
+                  className="flex items-center gap-1.5 cursor-pointer"
+                >
+                  <span>6. E-Fatura & Sabit Operasyon Gideri (₺{fixedOpCost.toFixed(2)}/sipariş)</span>
+                  <Edit3 className="w-3 h-3 text-gray-400 opacity-0 group-hover:opacity-100 transition-opacity" />
                 </span>
+                <div className="flex items-center gap-1.5">
+                  {editingKey === 'fixedOpCost' ? (
+                    <div className="flex items-center gap-1 animate-in fade-in zoom-in-95">
+                      <span className="font-bold text-gray-500">₺</span>
+                      <input
+                        type="number"
+                        step="0.05"
+                        autoFocus
+                        value={fixedOpCost}
+                        onChange={(e) => setFixedOpCost(Math.max(0, parseFloat(e.target.value) || 0))}
+                        onBlur={() => setEditingKey(null)}
+                        onKeyDown={(e) => e.key === 'Enter' && setEditingKey(null)}
+                        className="w-20 px-2 py-0.5 rounded-lg border-2 border-primary font-bold text-right text-xs bg-white focus:outline-none shadow-xs text-primary"
+                      />
+                      <button onClick={() => setEditingKey(null)} className="p-0.5 text-emerald-600 font-bold hover:text-emerald-800 cursor-pointer">✓</button>
+                    </div>
+                  ) : (
+                    <span 
+                      onClick={() => setEditingKey('fixedOpCost')}
+                      className="font-bold text-gray-800 tabular-nums cursor-pointer hover:underline hover:text-primary transition-colors"
+                      title="Sabit operasyon giderini değiştirmek için tıkla"
+                    >
+                      -₺{(breakdownView === 'unit' ? (fixedOpCost / currentSim.q) : fixedOpCost).toFixed(2)}
+                    </span>
+                  )}
+                </div>
               </div>
 
               {/* 7. Stopaj Kesintisi */}
-              <div className="flex items-center justify-between py-1 text-gray-700">
-                <span>7. Stopaj Kesintisi (%{stopajRate})</span>
-                <span className="font-bold text-gray-800 tabular-nums">
-                  -₺{(breakdownView === 'unit' ? (currentSim.stopaj / currentSim.q) : currentSim.stopaj).toFixed(2)}
+              <div className="flex items-center justify-between py-1 text-gray-700 hover:bg-canvas/80 px-2 -mx-2 rounded-xl transition-all group">
+                <span 
+                  onClick={() => setEditingKey('stopajRate')}
+                  className="flex items-center gap-1.5 cursor-pointer"
+                >
+                  <span>7. Stopaj Kesintisi (%{stopajRate})</span>
+                  <Edit3 className="w-3 h-3 text-gray-400 opacity-0 group-hover:opacity-100 transition-opacity" />
                 </span>
+                <div className="flex items-center gap-1.5">
+                  {editingKey === 'stopajRate' ? (
+                    <div className="flex items-center gap-1 animate-in fade-in zoom-in-95">
+                      <span className="font-bold text-gray-500">%</span>
+                      <input
+                        type="number"
+                        step="0.5"
+                        autoFocus
+                        value={stopajRate}
+                        onChange={(e) => setStopajRate(Math.max(0, parseFloat(e.target.value) || 0))}
+                        onBlur={() => setEditingKey(null)}
+                        onKeyDown={(e) => e.key === 'Enter' && setEditingKey(null)}
+                        className="w-18 px-2 py-0.5 rounded-lg border-2 border-primary font-bold text-right text-xs bg-white focus:outline-none shadow-xs text-primary"
+                      />
+                      <button onClick={() => setEditingKey(null)} className="p-0.5 text-emerald-600 font-bold hover:text-emerald-800 cursor-pointer">✓</button>
+                    </div>
+                  ) : (
+                    <span 
+                      onClick={() => setEditingKey('stopajRate')}
+                      className="font-bold text-gray-800 tabular-nums cursor-pointer hover:underline hover:text-primary transition-colors"
+                      title="Stopaj oranını değiştirmek için tıkla"
+                    >
+                      -₺{(breakdownView === 'unit' ? (currentSim.stopaj / currentSim.q) : currentSim.stopaj).toFixed(2)}
+                    </span>
+                  )}
+                </div>
               </div>
 
               {/* 8. Ödenecek Net KDV Farkı */}
-              <div className="flex items-center justify-between py-1 text-gray-700">
-                <span>8. Ödenecek Net KDV Farkı (%{vatRate} KDV)</span>
-                <span className="font-bold text-gray-800 tabular-nums">
-                  -₺{(breakdownView === 'unit' ? (currentSim.netVat / currentSim.q) : currentSim.netVat).toFixed(2)}
+              <div className="flex items-center justify-between py-1 text-gray-700 hover:bg-canvas/80 px-2 -mx-2 rounded-xl transition-all group">
+                <span 
+                  onClick={() => setEditingKey('vatRate')}
+                  className="flex items-center gap-1.5 cursor-pointer"
+                >
+                  <span>8. Ödenecek Net KDV Farkı (%{vatRate} KDV)</span>
+                  <Edit3 className="w-3 h-3 text-gray-400 opacity-0 group-hover:opacity-100 transition-opacity" />
                 </span>
+                <div className="flex items-center gap-1.5">
+                  {editingKey === 'vatRate' ? (
+                    <div className="flex items-center gap-1 animate-in fade-in zoom-in-95">
+                      <select
+                        autoFocus
+                        value={vatRate}
+                        onChange={(e) => {
+                          setVatRate(parseInt(e.target.value) || 10);
+                          setEditingKey(null);
+                        }}
+                        onBlur={() => setEditingKey(null)}
+                        className="px-2 py-0.5 rounded-lg border-2 border-primary font-bold text-xs bg-white focus:outline-none shadow-xs text-primary cursor-pointer"
+                      >
+                        <option value={1}>%1</option>
+                        <option value={10}>%10</option>
+                        <option value={20}>%20</option>
+                      </select>
+                    </div>
+                  ) : (
+                    <span 
+                      onClick={() => setEditingKey('vatRate')}
+                      className="font-bold text-gray-800 tabular-nums cursor-pointer hover:underline hover:text-primary transition-colors"
+                      title="KDV oranını değiştirmek için tıkla"
+                    >
+                      -₺{(breakdownView === 'unit' ? (currentSim.netVat / currentSim.q) : currentSim.netVat).toFixed(2)}
+                    </span>
+                  )}
+                </div>
               </div>
 
               {/* 9. Ekstra Operasyon Gideri */}
-              <div className="flex items-center justify-between py-1 text-gray-700">
-                <span>9. Ekstra Operasyon Gideri (%{extraOpRate})</span>
-                <span className="font-bold text-gray-800 tabular-nums">
-                  -₺{(breakdownView === 'unit' ? (currentSim.extraOp / currentSim.q) : currentSim.extraOp).toFixed(2)}
+              <div className="flex items-center justify-between py-1 text-gray-700 hover:bg-canvas/80 px-2 -mx-2 rounded-xl transition-all group">
+                <span 
+                  onClick={() => setEditingKey('extraOpRate')}
+                  className="flex items-center gap-1.5 cursor-pointer"
+                >
+                  <span>9. Ekstra Operasyon Gideri (%{extraOpRate})</span>
+                  <Edit3 className="w-3 h-3 text-gray-400 opacity-0 group-hover:opacity-100 transition-opacity" />
                 </span>
+                <div className="flex items-center gap-1.5">
+                  {editingKey === 'extraOpRate' ? (
+                    <div className="flex items-center gap-1 animate-in fade-in zoom-in-95">
+                      <span className="font-bold text-gray-500">%</span>
+                      <input
+                        type="number"
+                        step="0.5"
+                        autoFocus
+                        value={extraOpRate}
+                        onChange={(e) => setExtraOpRate(Math.max(0, parseFloat(e.target.value) || 0))}
+                        onBlur={() => setEditingKey(null)}
+                        onKeyDown={(e) => e.key === 'Enter' && setEditingKey(null)}
+                        className="w-18 px-2 py-0.5 rounded-lg border-2 border-primary font-bold text-right text-xs bg-white focus:outline-none shadow-xs text-primary"
+                      />
+                      <button onClick={() => setEditingKey(null)} className="p-0.5 text-emerald-600 font-bold hover:text-emerald-800 cursor-pointer">✓</button>
+                    </div>
+                  ) : (
+                    <span 
+                      onClick={() => setEditingKey('extraOpRate')}
+                      className="font-bold text-gray-800 tabular-nums cursor-pointer hover:underline hover:text-primary transition-colors"
+                      title="Ekstra operasyon oranını değiştirmek için tıkla"
+                    >
+                      -₺{(breakdownView === 'unit' ? (currentSim.extraOp / currentSim.q) : currentSim.extraOp).toFixed(2)}
+                    </span>
+                  )}
+                </div>
               </div>
 
               {/* 10. Önceki Ay İade Riski Rezervi (Ürün Başına Yapıldı) */}
-              <div className="flex items-center justify-between py-1.5 text-purple-900 bg-purple-50 px-2.5 rounded-xl font-bold border border-purple-200">
-                <span className="flex items-center gap-1.5">
+              <div className="flex items-center justify-between py-1.5 text-purple-900 bg-purple-50 px-2.5 rounded-xl font-bold border border-purple-200 hover:bg-purple-100/70 transition-all group">
+                <span 
+                  onClick={() => setEditingKey('returnRate')}
+                  className="flex items-center gap-1.5 cursor-pointer"
+                >
                   <Undo2 className="w-3.5 h-3.5 text-purple-600" />
                   <span>10. Önceki Ay İade Riski Rezervi (%{returnRate.toFixed(2)})</span>
+                  <Edit3 className="w-3 h-3 text-purple-400 opacity-0 group-hover:opacity-100 transition-opacity" />
                 </span>
-                <span className="font-black tabular-nums">
-                  -₺{(breakdownView === 'unit' ? currentSim.returnRiskUnit : currentSim.returnRiskBasket).toFixed(2)}
-                </span>
+                <div className="flex items-center gap-1.5">
+                  {editingKey === 'returnRate' ? (
+                    <div className="flex items-center gap-1 animate-in fade-in zoom-in-95">
+                      <span className="font-bold text-purple-700">%</span>
+                      <input
+                        type="number"
+                        step="0.1"
+                        autoFocus
+                        value={returnRate}
+                        onChange={(e) => setReturnRate(Math.max(0, parseFloat(e.target.value) || 0))}
+                        onBlur={() => setEditingKey(null)}
+                        onKeyDown={(e) => e.key === 'Enter' && setEditingKey(null)}
+                        className="w-18 px-2 py-0.5 rounded-lg border-2 border-purple-600 font-bold text-right text-xs bg-white focus:outline-none shadow-xs text-purple-900"
+                      />
+                      <button onClick={() => setEditingKey(null)} className="p-0.5 text-purple-800 font-bold hover:text-purple-950 cursor-pointer">✓</button>
+                    </div>
+                  ) : (
+                    <span 
+                      onClick={() => setEditingKey('returnRate')}
+                      className="font-black tabular-nums cursor-pointer hover:underline text-purple-900 hover:text-purple-700 transition-colors"
+                      title="İade riski oranını değiştirmek için tıkla"
+                    >
+                      -₺{(breakdownView === 'unit' ? currentSim.returnRiskUnit : currentSim.returnRiskBasket).toFixed(2)}
+                    </span>
+                  )}
+                </div>
               </div>
             </div>
 
