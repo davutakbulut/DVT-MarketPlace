@@ -196,27 +196,27 @@ export default function LandingHomePage() {
             <a href="#sss" className="hover:text-primary transition-colors">Sıkça Sorulanlar</a>
           </nav>
 
-          {/* Right Desktop Actions */}
-          <div className="flex items-center gap-2 sm:gap-2.5 shrink-0">
+          {/* Right Desktop / Mobile Actions */}
+          <div className="flex items-center gap-1.5 sm:gap-2.5 shrink-0">
             <Button
               variant="ghost"
               size="sm"
               onClick={() => setTourOpen(true)}
-              className="hidden sm:flex items-center gap-1.5 text-xs font-bold text-dark hover:text-primary h-9 px-3 rounded-xl"
+              className="hidden md:flex items-center gap-1.5 text-xs font-bold text-dark hover:text-primary h-9 px-3 rounded-xl"
             >
               <Compass className="w-4 h-4 text-primary" />
               <span>Sistem Turu</span>
             </Button>
 
-            <Link href="/login">
+            <Link href="/login" className="hidden sm:block">
               <Button variant="outline" size="sm" className="rounded-xl text-xs font-bold px-3.5 h-9 bg-white hover:bg-canvas">
                 Giriş Yap
               </Button>
             </Link>
 
             <Link href="/register">
-              <Button size="sm" className="rounded-xl text-xs font-bold px-4 h-9 shadow-xs bg-primary text-white hover:bg-primary-hover">
-                Canlı Başla ➔
+              <Button size="sm" className="rounded-xl text-xs font-bold px-3 sm:px-4 h-8 sm:h-9 shadow-xs bg-primary text-white hover:bg-primary-hover whitespace-nowrap">
+                <span className="hidden xs:inline">Canlı </span>Başla ➔
               </Button>
             </Link>
           </div>
