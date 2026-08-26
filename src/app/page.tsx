@@ -4,6 +4,13 @@ import Link from 'next/link';
 import {
   Menu,
   X,
+  Mail,
+  Phone,
+  MapPin,
+  Gift,
+  Sparkle,
+  Lock,
+  CheckCheck,
   TrendingUp,
   ShieldCheck,
   Zap,
@@ -761,25 +768,254 @@ export default function LandingHomePage() {
         </div>
       </section>
 
-      {/* 7. FOOTER WITH COMPLETE BRANDING */}
-      <footer className="mt-auto bg-dark text-white border-t border-border/20 pt-12 pb-8 px-4 sm:px-6 lg:px-8">
-        <div className="max-w-7xl mx-auto space-y-8">
-          <div className="flex flex-col sm:flex-row items-center justify-between gap-4 pb-8 border-b border-white/10">
-            <BrandLogo size="md" href="/" showSlogan={false} className="text-white" />
+      {/* 7. HIGH-CONVERSION CAMPAIGN CTA BANNER (HAREKETE GEÇİRİCİ KAMPANYA BANDI) */}
+      <section className="relative py-16 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto w-full">
+        <div className="relative rounded-3xl sm:rounded-[40px] bg-gradient-to-br from-[#1A0C09] via-[#2A120D] to-[#120806] text-white p-8 sm:p-12 lg:p-16 border border-primary/30 shadow-2xl overflow-hidden">
+          {/* Glowing background ambient lights */}
+          <div className="absolute -right-20 -top-20 w-80 h-80 bg-primary/20 rounded-full blur-3xl pointer-events-none" />
+          <div className="absolute -left-20 -bottom-20 w-80 h-80 bg-[#FF5722]/20 rounded-full blur-3xl pointer-events-none" />
 
-            <div className="flex items-center gap-4 text-xs text-gray-400 font-semibold">
-              <Link href="/dashboard" className="hover:text-white transition-colors">Yönetim Paneli</Link>
-              <Link href="/live-analysis" className="hover:text-white transition-colors">Canlı Analiz</Link>
-              <Link href="/product-pricing" className="hover:text-white transition-colors">Fiyatlandırma Motoru</Link>
-              <Link href="/settings" className="hover:text-white transition-colors">Ayarlar</Link>
+          <div className="relative z-10 grid grid-cols-1 lg:grid-cols-12 gap-8 items-center">
+            <div className="lg:col-span-8 space-y-4 text-center lg:text-left">
+              <div className="inline-flex items-center gap-2 bg-primary/20 border border-primary/40 px-3.5 py-1.5 rounded-full text-xs font-bold text-primary shadow-2xs">
+                <Gift className="w-4 h-4 text-primary animate-bounce" />
+                <span>Sınırlı Süreli Kampanya: 30 Gün Ücretsiz VIP Kârlılık Denetimi</span>
+              </div>
+
+              <h2 className="text-2xl sm:text-4xl lg:text-5xl font-black tracking-tight leading-[1.15]">
+                Pazaryeri Kesintilerine Son Verin, <br className="hidden sm:inline" />
+                <span className="text-primary underline decoration-primary/40 decoration-wavy">Cebinizde Kalan Gerçek Kârı</span> Büyütün!
+              </h2>
+
+              <p className="text-xs sm:text-sm text-gray-300 max-w-2xl leading-relaxed font-medium">
+                Mağazanızı bağlayın; ilk 100 siparişinizin kargo barem kesintilerini, komisyon farklarını ve desi aşımlarını 2 dakika içinde otomatik denetleyelim.
+              </p>
+
+              {/* Trust Badges */}
+              <div className="pt-2 flex flex-wrap items-center justify-center lg:justify-start gap-4 text-xs text-gray-300 font-semibold">
+                <span className="flex items-center gap-1.5">
+                  <CheckCheck className="w-4 h-4 text-emerald-400" />
+                  <span>Kredi Kartı Gerekmez</span>
+                </span>
+                <span className="flex items-center gap-1.5">
+                  <CheckCheck className="w-4 h-4 text-emerald-400" />
+                  <span>Resmi Trendyol & HB API</span>
+                </span>
+                <span className="flex items-center gap-1.5">
+                  <CheckCheck className="w-4 h-4 text-emerald-400" />
+                  <span>Anında Canlı Kurulum (2 Dk)</span>
+                </span>
+              </div>
+            </div>
+
+            {/* Right Action Box */}
+            <div className="lg:col-span-4 bg-white/10 backdrop-blur-md p-6 rounded-3xl border border-white/10 space-y-3.5 text-center shadow-xl">
+              <span className="text-xs font-bold text-primary uppercase tracking-wider block">
+                Hemen Ücretsiz Başlayın
+              </span>
+              <p className="text-xs text-gray-300">
+                14 gün boyunca tüm modülleri sınırsız test edin. Memnun kalmazsanız tek tıkla iptal.
+              </p>
+
+              <Link href="/register" className="block">
+                <Button className="w-full h-12 text-sm font-black rounded-2xl bg-primary text-white hover:bg-primary-hover shadow-lg gap-2">
+                  <span>VIP Hesabınızı Başlatın</span>
+                  <ArrowRight className="w-4 h-4" />
+                </Button>
+              </Link>
+
+              <Link href="/login" className="block text-[11px] text-gray-400 hover:text-white font-semibold transition-colors">
+                Zaten hesabınız var mı? Giriş Yapın ➔
+              </Link>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* 8. COMPREHENSIVE ENTERPRISE FOOTER (DETAYLI & KAPSAMLI KURUMSAL FOOTER) */}
+      <footer className="mt-auto bg-dark text-white border-t border-border/20 pt-16 pb-8 px-4 sm:px-6 lg:px-8">
+        <div className="max-w-7xl mx-auto space-y-12">
+          {/* Main 5-Column Grid */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-8 lg:gap-10 pb-12 border-b border-white/10">
+            {/* Column 1: Brand & Identity */}
+            <div className="space-y-4 lg:col-span-1">
+              <BrandLogo size="md" href="/" showSlogan={false} className="text-white" />
+              <p className="text-xs text-gray-400 leading-relaxed">
+                Türkiye'nin ilk ve tek resmi 10 Ağustos 2026 kargo baremi ve tersine fiyatlandırma destekli pazaryeri finansal zeka motoru.
+              </p>
+              
+              <div className="pt-2 space-y-2 text-[11px] text-gray-400">
+                <div className="flex items-center gap-2">
+                  <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+                  <span className="font-semibold text-gray-300">PostgreSQL 16 High-Availability</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Lock className="w-3.5 h-3.5 text-primary" />
+                  <span>256-Bit SSL Banka Düzeyi Şifreleme</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Column 2: 11 Akıllı Finans Motoru */}
+            <div className="space-y-3">
+              <h4 className="text-xs font-black text-white uppercase tracking-wider">
+                11 Finansal Motor
+              </h4>
+              <ul className="space-y-2 text-xs text-gray-400">
+                <li>
+                  <Link href="/product-pricing" className="hover:text-primary transition-colors block">
+                    Tersine Fiyatlandırma Motoru
+                  </Link>
+                </li>
+                <li>
+                  <Link href="/live-analysis" className="hover:text-primary transition-colors block">
+                    Canlı Sipariş & Kâr Akışı
+                  </Link>
+                </li>
+                <li>
+                  <Link href="/tariffs/desi" className="hover:text-primary transition-colors block">
+                    10 Ağustos Kargo Baremleri
+                  </Link>
+                </li>
+                <li>
+                  <Link href="/settlement-desi-audit" className="hover:text-primary transition-colors block">
+                    Kargo Desi Farkı & Hakediş
+                  </Link>
+                </li>
+                <li>
+                  <Link href="/profit-margin-list" className="hover:text-primary transition-colors block">
+                    Kâr Marjı & Alış Maliyetleri
+                  </Link>
+                </li>
+                <li>
+                  <Link href="/tariffs/plus" className="hover:text-primary transition-colors block">
+                    Plus Komisyon Simülasyonu
+                  </Link>
+                </li>
+                <li>
+                  <Link href="/tariffs/badges" className="hover:text-primary transition-colors block">
+                    Avantajlı Ürün Etiketleri
+                  </Link>
+                </li>
+              </ul>
+            </div>
+
+            {/* Column 3: Entegrasyonlar */}
+            <div className="space-y-3">
+              <h4 className="text-xs font-black text-white uppercase tracking-wider">
+                Entegrasyonlar
+              </h4>
+              <ul className="space-y-2 text-xs text-gray-400">
+                <li>
+                  <Link href="/stores" className="hover:text-primary transition-colors block">
+                    Trendyol Pazaryeri API
+                  </Link>
+                </li>
+                <li>
+                  <Link href="/stores" className="hover:text-primary transition-colors block">
+                    Hepsiburada Satıcı API
+                  </Link>
+                </li>
+                <li>
+                  <span className="text-gray-500 block">Amazon Türkiye (Çok Yakında)</span>
+                </li>
+                <li>
+                  <span className="text-gray-500 block">Trendyol Express (TEX) Baremi</span>
+                </li>
+                <li>
+                  <span className="text-gray-500 block">Aras & Yurtiçi Kargo Desi</span>
+                </li>
+                <li>
+                  <span className="text-gray-500 block">MNG, Sürat & Kolay Gelsin</span>
+                </li>
+                <li>
+                  <Link href="/system/analytics" className="hover:text-primary transition-colors block">
+                    Isı Haritası & Sayfa Telemetrisi
+                  </Link>
+                </li>
+              </ul>
+            </div>
+
+            {/* Column 4: Satıcı Kaynakları & Hesaplayıcılar */}
+            <div className="space-y-3">
+              <h4 className="text-xs font-black text-white uppercase tracking-wider">
+                Satıcı Kaynakları
+              </h4>
+              <ul className="space-y-2 text-xs text-gray-400">
+                <li>
+                  <Link href="/tariffs/commission" className="hover:text-primary transition-colors block">
+                    Resmi Komisyon Tarifeleri 2026
+                  </Link>
+                </li>
+                <li>
+                  <Link href="/reports/order-profitability" className="hover:text-primary transition-colors block">
+                    Kârlılık Raporu Excel Dışa Aktar
+                  </Link>
+                </li>
+                <li>
+                  <Link href="/marketing/ads" className="hover:text-primary transition-colors block">
+                    Pazaryeri Reklam Harcama Analizi
+                  </Link>
+                </li>
+                <li>
+                  <Link href="/customers" className="hover:text-primary transition-colors block">
+                    Müşteri Sadakat & Ciro Analitiği
+                  </Link>
+                </li>
+                <li>
+                  <Link href="/alerts" className="hover:text-primary transition-colors block">
+                    7/24 Otomatik Anomali Uyarıları
+                  </Link>
+                </li>
+                <li>
+                  <button onClick={() => setTourOpen(true)} className="hover:text-primary transition-colors block text-left">
+                    İnteraktif Sistem Rehberi (Nasıl Yapılır?)
+                  </button>
+                </li>
+              </ul>
+            </div>
+
+            {/* Column 5: İletişim, Destek & Kurumsal */}
+            <div className="space-y-3">
+              <h4 className="text-xs font-black text-white uppercase tracking-wider">
+                İletişim & Destek
+              </h4>
+              <div className="space-y-2.5 text-xs text-gray-400">
+                <div className="flex items-center gap-2">
+                  <Mail className="w-3.5 h-3.5 text-primary shrink-0" />
+                  <a href="mailto:destek@dvtmarketplace.com" className="hover:text-white transition-colors">
+                    destek@dvtmarketplace.com
+                  </a>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Phone className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
+                  <span className="font-mono text-gray-300">0850 308 00 00 (Canlı Destek)</span>
+                </div>
+                <div className="flex items-start gap-2">
+                  <MapPin className="w-3.5 h-3.5 text-primary shrink-0 mt-0.5" />
+                  <span>Levent Finans Merkezi, Beşiktaş / İstanbul</span>
+                </div>
+              </div>
+
+              <div className="pt-3 border-t border-white/10 space-y-1 text-[11px] text-gray-400">
+                <Link href="/settings" className="hover:text-white block">KVKK Aydınlatma Metni</Link>
+                <Link href="/settings" className="hover:text-white block">Kullanıcı Hizmet Sözleşmesi</Link>
+                <Link href="/settings" className="hover:text-white block">Gizlilik & Güvenlik Politikası</Link>
+              </div>
             </div>
           </div>
 
-          <div className="flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-gray-400">
-            <p>© 2026 DVT MarketPlace Financial Engine. Tüm hakları saklıdır.</p>
-            <div className="flex items-center gap-2 text-[11px]">
-              <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-              <span>Canlı PostgreSQL & Otomasyon Motoru Aktif</span>
+          {/* Bottom Bar: Copyright & Live Telemetry */}
+          <div className="flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-gray-400 pt-2">
+            <p>© 2026 DVT MarketPlace Financial Intelligence Inc. Tüm hakları saklıdır.</p>
+
+            <div className="flex items-center gap-3 text-[11px]">
+              <span className="flex items-center gap-1.5 text-emerald-400">
+                <span className="w-2 h-2 rounded-full bg-emerald-500 animate-ping" />
+                <span>API Yanıt Süresi: 16ms</span>
+              </span>
+              <span>•</span>
+              <span>İstanbul / TR Sunucuları</span>
             </div>
           </div>
         </div>
