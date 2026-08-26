@@ -189,14 +189,12 @@ export default function SettingsPage() {
 
   const tabs = [
     { id: "general", label: "1. Genel & Finansal Ayarlar", icon: Settings },
-    { id: "cargo_barem", label: "2. Kargo Barem Destek", icon: Truck },
-    { id: "desi_matrix", label: "3. 501 Desi Kargo Matrisi", icon: Layers },
-    { id: "service_fee", label: "4. Platform Hizmet Bedeli", icon: Receipt },
-    { id: "users", label: "5. Kullanıcılar & RBAC", icon: Users },
-    { id: "notifications", label: "6. Bildirim & E-Posta", icon: Mail },
-    { id: "tax_withholding", label: "7. Vergi & %1 Stopaj", icon: Percent },
-    { id: "fixed_expenses", label: "8. Sabit Gider Şablonları", icon: Package },
-    { id: "backup_logs", label: "9. Yedekleme & Loglar", icon: Database },
+    { id: "service_fee", label: "2. Platform Hizmet Bedeli", icon: Receipt },
+    { id: "users", label: "3. Kullanıcılar & RBAC", icon: Users },
+    { id: "notifications", label: "4. Bildirim & E-Posta", icon: Mail },
+    { id: "tax_withholding", label: "5. Vergi & %1 Stopaj", icon: Percent },
+    { id: "fixed_expenses", label: "6. Sabit Gider Şablonları", icon: Package },
+    { id: "backup_logs", label: "7. Yedekleme & Loglar", icon: Database },
   ];
 
   return (
@@ -321,85 +319,7 @@ export default function SettingsPage() {
                 </form>
               )}
 
-              {/* TAB 2: KARGO BAREM DESTEK */}
-              {activeTab === "cargo_barem" && (
-                <div className="space-y-4">
-                  <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-3 border-b border-border gap-2">
-                    <div>
-                      <div className="flex items-center gap-2">
-                        <span className="text-xs sm:text-sm font-bold text-dark">Trendyol Kargo Barem Destek Sistemi</span>
-                        <Badge variant="excellent">Canlı Veritabanı</Badge>
-                      </div>
-                      <p className="text-[11px] text-gray-500 mt-0.5">Satış tutarı kademelerine göre avantajlı kargo fiyatları</p>
-                    </div>
-                  </div>
 
-                  <div className="overflow-x-auto">
-                    <table className="w-full text-left text-xs border-collapse min-w-[560px]">
-                      <thead>
-                        <tr className="border-b border-border text-muted-foreground font-semibold">
-                          <th className="pb-2 px-2 table-sticky-first-col">Kargo</th>
-                          <th className="pb-2 px-2">Satış Tutarı Kademesi</th>
-                          <th className="pb-2 px-2 text-emerald-700 font-bold">Avantajlı (₺)</th>
-                          <th className="pb-2 px-2 text-red-700 font-bold">Standart (₺)</th>
-                          <th className="pb-2 px-2 text-right">İşlem</th>
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y divide-border/60">
-                        {(Array.isArray(baremTiers) ? baremTiers : []).map((t) => (
-                          <tr key={t.id} className="hover:bg-canvas/50">
-                            <td className="py-2 px-2 table-sticky-first-col font-bold text-dark">{t.carrierName}</td>
-                            <td className="py-2 px-2 font-semibold text-gray-700">{t.tierName}</td>
-                            <td className="py-2 px-2">
-                              <input
-                                type="number"
-                                step="0.01"
-                                value={t.discountedPriceExVat}
-                                onChange={(e) => handleBaremPriceChange(t.id, 'discountedPriceExVat', parseFloat(e.target.value) || 0)}
-                                className="w-18 px-1.5 py-1 rounded border border-emerald-300 bg-emerald-50/50 font-bold text-xs"
-                              />
-                            </td>
-                            <td className="py-2 px-2">
-                              <input
-                                type="number"
-                                step="0.01"
-                                value={t.standardPriceExVat}
-                                onChange={(e) => handleBaremPriceChange(t.id, 'standardPriceExVat', parseFloat(e.target.value) || 0)}
-                                className="w-18 px-1.5 py-1 rounded border border-red-300 bg-red-50/50 font-bold text-xs"
-                              />
-                            </td>
-                            <td className="py-2 px-2 text-right">
-                              <Button size="sm" variant="outline" className="h-6 text-[10px] px-2 font-bold" onClick={() => handleSaveBaremTier(t)}>
-                                Kaydet
-                              </Button>
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                </div>
-              )}
-
-              {/* TAB 3: 501 DESİ KARGO MATRİSİ KISAYOL */}
-              {activeTab === "desi_matrix" && (
-                <div className="space-y-4">
-                  <div className="flex items-center justify-between pb-3 border-b border-border">
-                    <div>
-                      <h4 className="text-xs sm:text-sm font-bold text-dark">501 Desi Kargo Fiyat Matrisi (0 - 500 Desi)</h4>
-                      <p className="text-[11px] text-gray-500">10 Kargo partnerinin tüm kademelerini yönetin</p>
-                    </div>
-                    <Link href="/tariffs/desi">
-                      <Button size="sm" className="text-xs font-bold gap-1.5 bg-primary hover:bg-primary-hover text-white">
-                        Tam Ekran Matrise Git ➔
-                      </Button>
-                    </Link>
-                  </div>
-                  <p className="text-xs text-gray-600 leading-relaxed">
-                    Tüm desi fiyatları <code>/tariffs/desi</code> ekranında canlı olarak düzenlenebilir, Excel formatında indirilebilir ve topluca yüklenebilir.
-                  </p>
-                </div>
-              )}
 
               {/* TAB 4: PLATFORM HİZMET BEDELLERİ */}
               {activeTab === "service_fee" && (

@@ -39,10 +39,17 @@ const navItems = [
   { href: '/profit-margin-list', label: 'Kâr Marjı Listesi', icon: Percent },
   { href: '/marketing/ads', label: 'Reklamlarım', icon: Megaphone },
   {
-    label: 'Kargo & Tarifeler',
+    label: 'Kargo Yönetimi',
     icon: Truck,
     children: [
       { href: '/tariffs/desi', label: 'Kargo Desi Fiyatları (0-500)' },
+      { href: '/tariffs/cargo-barem', label: 'Kargo Barem Destek' },
+    ],
+  },
+  {
+    label: 'Pazaryeri Tarifeleri',
+    icon: Layers,
+    children: [
       { href: '/tariffs/commission', label: 'Ürün Komisyon Tarifesi' },
       { href: '/tariffs/plus', label: 'Plus Komisyon Tarifesi' },
       { href: '/tariffs/badges', label: 'Avantajlı Ürün Etiketi' },
