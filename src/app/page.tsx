@@ -2,6 +2,8 @@
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import {
+  Menu,
+  X,
   TrendingUp,
   ShieldCheck,
   Zap,
@@ -42,6 +44,7 @@ import { formatCurrency, formatPercentage } from '@/lib/formatters';
 export default function LandingHomePage() {
   const [tourOpen, setTourOpen] = useState(false);
   const [faqOpen, setFaqOpen] = useState<number | null>(0);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   // 1. CINEMATIC FRAME-TO-FRAME SIMULATOR STATE
   const [currentFrame, setCurrentFrame] = useState(0);
@@ -152,45 +155,155 @@ export default function LandingHomePage() {
     <div className="min-h-screen bg-canvas text-dark flex flex-col selection:bg-primary-tint-200 selection:text-primary">
       {/* 1. TOP FLOATING NAVIGATION BAR */}
       <header className="sticky top-0 z-50 bg-white/95 backdrop-blur-md border-b border-border transition-all">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
-          <BrandLogo size="md" href="/" showSlogan={false} />
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between gap-3">
+          <div className="flex items-center gap-3">
+            {/* Mobile Hamburger Button */}
+            <button
+              onClick={() => setMobileMenuOpen(true)}
+              className="lg:hidden p-2 rounded-xl text-dark hover:bg-canvas transition-colors shrink-0"
+              aria-label="Menüyü Aç"
+            >
+              <Menu className="w-5 h-5" />
+            </button>
 
-          <nav className="hidden lg:flex items-center gap-6 text-xs font-bold text-dark/80">
+            {/* Brand Logo with click to toggle mobile drawer or navigate */}
+            <div className="shrink-0">
+              <BrandLogo size="md" href="/" showSlogan={false} />
+            </div>
+          </div>
+
+          {/* Desktop Clean Centered Navigation */}
+          <nav className="hidden lg:flex items-center gap-5 xl:gap-7 text-xs font-bold text-dark/80 whitespace-nowrap">
             <a href="#canli-akis" className="hover:text-primary transition-colors flex items-center gap-1">
-              <Sparkles className="w-3.5 h-3.5 text-primary" />
-              <span>Canlı Akış Deneyimi</span>
+              <Sparkles className="w-3.5 h-3.5 text-primary shrink-0" />
+              <span>Canlı Akış</span>
             </a>
             <a href="#motorlar" className="hover:text-primary transition-colors">11 Güçlü Motor</a>
-            <a href="#kargo-barem" className="hover:text-primary transition-colors">Kargo Barem Rehberi</a>
-            <a href="#hesaplayici" className="hover:text-primary transition-colors">Tersine Fiyat Simülatörü</a>
+            <a href="#hesaplayici" className="hover:text-primary transition-colors">Kâr Simülatörü</a>
             <a href="#karsilastirma" className="hover:text-primary transition-colors">Neden DVT?</a>
             <a href="#sss" className="hover:text-primary transition-colors">Sıkça Sorulanlar</a>
           </nav>
 
-          <div className="flex items-center gap-2.5">
+          {/* Right Desktop Actions */}
+          <div className="flex items-center gap-2 sm:gap-2.5 shrink-0">
             <Button
               variant="ghost"
               size="sm"
               onClick={() => setTourOpen(true)}
-              className="hidden sm:flex items-center gap-1.5 text-xs font-bold text-dark hover:text-primary"
+              className="hidden sm:flex items-center gap-1.5 text-xs font-bold text-dark hover:text-primary h-9 px-3 rounded-xl"
             >
               <Compass className="w-4 h-4 text-primary" />
               <span>Sistem Turu</span>
             </Button>
 
             <Link href="/login">
-              <Button variant="outline" size="sm" className="rounded-xl text-xs font-bold px-4 bg-white">
+              <Button variant="outline" size="sm" className="rounded-xl text-xs font-bold px-3.5 h-9 bg-white hover:bg-canvas">
                 Giriş Yap
               </Button>
             </Link>
 
             <Link href="/register">
-              <Button size="sm" className="rounded-xl text-xs font-bold px-4 shadow-xs bg-primary text-white hover:bg-primary-hover">
+              <Button size="sm" className="rounded-xl text-xs font-bold px-4 h-9 shadow-xs bg-primary text-white hover:bg-primary-hover">
                 Canlı Başla ➔
               </Button>
             </Link>
           </div>
         </div>
+
+        {/* 2. MOBILE SLIDE-IN DRAWER NAVIGATION FROM LEFT */}
+        {mobileMenuOpen && (
+          <div className="fixed inset-0 z-50 lg:hidden">
+            {/* Backdrop Overlay */}
+            <div 
+              className="fixed inset-0 bg-dark/60 backdrop-blur-xs transition-opacity animate-in fade-in"
+              onClick={() => setMobileMenuOpen(false)}
+            />
+
+            {/* Sliding Drawer Container */}
+            <div className="fixed inset-y-0 left-0 w-72 sm:w-80 bg-white z-50 p-5 shadow-2xl flex flex-col justify-between animate-in slide-in-from-left duration-200">
+              <div className="space-y-6">
+                {/* Drawer Top Header */}
+                <div className="flex items-center justify-between pb-4 border-b border-border">
+                  <BrandLogo size="sm" href="/" showSlogan={true} />
+                  <button
+                    onClick={() => setMobileMenuOpen(false)}
+                    className="p-1.5 rounded-xl text-gray-400 hover:text-dark hover:bg-canvas transition-colors"
+                  >
+                    <X className="w-5 h-5" />
+                  </button>
+                </div>
+
+                {/* Navigation Links */}
+                <nav className="space-y-1 text-sm font-bold text-dark">
+                  <a
+                    href="#canli-akis"
+                    onClick={() => setMobileMenuOpen(false)}
+                    className="flex items-center gap-2.5 p-3 rounded-2xl hover:bg-canvas text-dark hover:text-primary transition-colors"
+                  >
+                    <Sparkles className="w-4 h-4 text-primary" />
+                    <span>Canlı Akış Deneyimi</span>
+                  </a>
+                  <a
+                    href="#motorlar"
+                    onClick={() => setMobileMenuOpen(false)}
+                    className="flex items-center gap-2.5 p-3 rounded-2xl hover:bg-canvas text-dark hover:text-primary transition-colors"
+                  >
+                    <Layers className="w-4 h-4 text-primary" />
+                    <span>11 Güçlü Motor</span>
+                  </a>
+                  <a
+                    href="#hesaplayici"
+                    onClick={() => setMobileMenuOpen(false)}
+                    className="flex items-center gap-2.5 p-3 rounded-2xl hover:bg-canvas text-dark hover:text-primary transition-colors"
+                  >
+                    <Calculator className="w-4 h-4 text-primary" />
+                    <span>Tersine Kâr Simülatörü</span>
+                  </a>
+                  <a
+                    href="#karsilastirma"
+                    onClick={() => setMobileMenuOpen(false)}
+                    className="flex items-center gap-2.5 p-3 rounded-2xl hover:bg-canvas text-dark hover:text-primary transition-colors"
+                  >
+                    <CheckCircle2 className="w-4 h-4 text-emerald-600" />
+                    <span>Neden DVT-MarketPlace?</span>
+                  </a>
+                  <a
+                    href="#sss"
+                    onClick={() => setMobileMenuOpen(false)}
+                    className="flex items-center gap-2.5 p-3 rounded-2xl hover:bg-canvas text-dark hover:text-primary transition-colors"
+                  >
+                    <Compass className="w-4 h-4 text-gray-500" />
+                    <span>Sıkça Sorulan Sorular</span>
+                  </a>
+                </nav>
+              </div>
+
+              {/* Drawer Bottom Actions */}
+              <div className="pt-4 border-t border-border space-y-2.5">
+                <Button
+                  variant="outline"
+                  onClick={() => { setMobileMenuOpen(false); setTourOpen(true); }}
+                  className="w-full h-10 text-xs font-bold rounded-2xl gap-2 justify-center"
+                >
+                  <Compass className="w-4 h-4 text-primary" />
+                  <span>Sistem Turunu Başlat</span>
+                </Button>
+
+                <Link href="/login" className="block" onClick={() => setMobileMenuOpen(false)}>
+                  <Button variant="outline" className="w-full h-10 text-xs font-bold rounded-2xl justify-center bg-canvas">
+                    Giriş Yap
+                  </Button>
+                </Link>
+
+                <Link href="/register" className="block" onClick={() => setMobileMenuOpen(false)}>
+                  <Button className="w-full h-10 text-xs font-bold rounded-2xl justify-center bg-primary text-white hover:bg-primary-hover shadow-xs">
+                    Ücretsiz Başla ➔
+                  </Button>
+                </Link>
+              </div>
+            </div>
+          </div>
+        )}
       </header>
 
       {/* 2. HERO SECTION WITH CINEMATIC LIVE FRAME SIMULATOR */}

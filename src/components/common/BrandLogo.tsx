@@ -8,6 +8,7 @@ interface BrandLogoProps {
   showBadge?: boolean;
   showSlogan?: boolean;
   href?: string;
+  onClick?: () => void;
   className?: string;
 }
 
@@ -17,6 +18,7 @@ export function BrandLogo({
   showBadge = true,
   showSlogan = false,
   href = '/dashboard',
+  onClick,
   className = '',
 }: BrandLogoProps) {
   const iconDimensions = {
@@ -28,13 +30,13 @@ export function BrandLogo({
 
   const titleSize = {
     sm: 'text-xs',
-    md: 'text-sm',
+    md: 'text-sm sm:text-base',
     lg: 'text-lg',
     xl: 'text-2xl',
   }[size];
 
   const content = (
-    <div className={`flex items-center gap-2.5 sm:gap-3 select-none ${className}`}>
+    <div className={`flex items-center gap-2 sm:gap-2.5 select-none shrink-0 ${className}`}>
       {/* SVG Monogram Dynamic Logo Badge */}
       <div className={`${iconDimensions} bg-gradient-to-tr from-primary via-[#FF5722] to-[#D83A14] flex items-center justify-center text-white shadow-xs shrink-0 font-black relative overflow-hidden group`}>
         <svg viewBox="0 0 100 100" className="w-5/6 h-5/6 fill-none stroke-white stroke-[9] stroke-linecap-round stroke-linejoin-round">
@@ -48,19 +50,19 @@ export function BrandLogo({
       </div>
 
       {showText && (
-        <div className="flex flex-col justify-center">
-          <div className="flex items-center gap-1.5 leading-none">
-            <span className={`font-black tracking-tight text-dark ${titleSize}`}>
-              DVT <span className="text-primary">MarketPlace</span>
+        <div className="flex flex-col justify-center shrink-0">
+          <div className="flex items-center gap-1.5 leading-none whitespace-nowrap">
+            <span className={`font-black tracking-tight text-dark ${titleSize} whitespace-nowrap inline-flex items-center`}>
+              DVT<span className="text-primary ml-1">MarketPlace</span>
             </span>
             {showBadge && (
-              <span className="bg-primary-tint-100 text-primary text-[9px] font-black px-1.5 py-0.5 rounded-md leading-none tracking-wide">
+              <span className="bg-[#FFEDE7] text-primary text-[9px] font-black px-1.5 py-0.5 rounded-md leading-none tracking-wide shrink-0 border border-primary/20 uppercase">
                 PRO
               </span>
             )}
           </div>
           {showSlogan && (
-            <span className="text-[10px] text-muted-foreground font-semibold tracking-tight mt-1">
+            <span className="text-[10px] text-muted-foreground font-semibold tracking-tight mt-1 whitespace-nowrap">
               Finans & Kârlılık Zekası
             </span>
           )}
@@ -69,9 +71,17 @@ export function BrandLogo({
     </div>
   );
 
+  if (onClick) {
+    return (
+      <button type="button" onClick={onClick} className="hover:opacity-95 transition-opacity inline-flex items-center shrink-0 text-left cursor-pointer">
+        {content}
+      </button>
+    );
+  }
+
   if (href) {
     return (
-      <Link href={href} className="hover:opacity-95 transition-opacity inline-flex items-center">
+      <Link href={href} className="hover:opacity-95 transition-opacity inline-flex items-center shrink-0">
         {content}
       </Link>
     );
