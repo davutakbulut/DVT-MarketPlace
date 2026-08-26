@@ -56,7 +56,26 @@ export async function GET() {
       LIMIT 1
     `);
 
-    return NextResponse.json({ success: true, settings: res[0] || {} });
+    // Fetch live previous month return rate & overall return rate from DB
+    const returnStats = await query(`
+      SELECT 
+        ROUND(
+          (COUNT(*) FILTER (WHERE status = 'Returned' OR status = 'UnDeliveredAndReturned' AND order_date >= (DATE_TRUNC('month', NOW() - INTERVAL '1 month')) AND order_date < DATE_TRUNC('month', NOW()))::numeric 
+          / NULLIF(COUNT(*) FILTER (WHERE order_date >= (DATE_TRUNC('month', NOW() - INTERVAL '1 month')) AND order_date < DATE_TRUNC('month', NOW())), 0) * 100)::numeric,
+          2
+        ) as prev_month_return_rate,
+        ROUND(
+          (COUNT(*) FILTER (WHERE status = 'Returned' OR status = 'UnDeliveredAndReturned')::numeric / NULLIF(COUNT(*), 0) * 100)::numeric,
+          2
+        ) as overall_return_rate
+      FROM orders
+    `);
+
+    const settingsObj = res[0] || {};
+    settingsObj.prevMonthReturnRate = parseFloat(returnStats[0]?.prev_month_return_rate || returnStats[0]?.overall_return_rate || '2.67');
+    settingsObj.overallReturnRate = parseFloat(returnStats[0]?.overall_return_rate || '2.67');
+
+    return NextResponse.json({ success: true, settings: settingsObj });
   } catch (error: any) {
     console.error('Settings GET error:', error);
     return NextResponse.json({ error: error.message }, { status: 500 });

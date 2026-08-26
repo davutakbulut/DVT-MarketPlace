@@ -9,7 +9,8 @@ import {
   HelpCircle, RefreshCw, Send, CheckCircle2, AlertTriangle, 
   Clock, ArrowRight, Zap, Target, Package, Award, Sparkles,
   Layers, Check, ChevronRight, Eye, Info, Sliders, ArrowDownRight,
-  TrendingDown, Search, Filter, X, ZoomIn, ExternalLink, ShoppingBag, AlertCircle
+  TrendingDown, Search, Filter, X, ZoomIn, ExternalLink, ShoppingBag, 
+  AlertCircle, Undo2, Receipt, Box, Settings, Coins
 } from "lucide-react";
 import { calculateTrendyolShipping, BaremTier, DesiRate } from "@/lib/shippingCalculator";
 import { getMinimumOrderQuantity, TRENDYOL_MOQ_TIERS } from "@/lib/minimumOrderQuantity";
@@ -17,6 +18,7 @@ import { useTenantStore } from "@/stores/useTenantStore";
 
 export default function ProductPricingPage() {
   const { activeStoreId } = useTenantStore();
+
   // DB Products & Tariffs
   const [dbProducts, setDbProducts] = useState<any[]>([]);
   const [baremTiers, setBaremTiers] = useState<BaremTier[]>([]);
@@ -35,7 +37,7 @@ export default function ProductPricingPage() {
   // Pricing Mode: 'target_margin' (Hedef Kârdan Fiyat Bul) vs 'manual_price' (Fiyattan Kâr Hesapla)
   const [pricingMode, setPricingMode] = useState<'target_margin' | 'manual_price'>('target_margin');
 
-  // Breakdown View Mode: 'basket' (Minimum Sipariş Sepet Paketi) vs 'unit' (Birim Başına)
+  // Breakdown View Mode: 'unit' (Birim Başına) vs 'basket' (Minimum Sipariş Sepet Paketi)
   const [breakdownView, setBreakdownView] = useState<'unit' | 'basket'>('unit');
 
   // Form State
@@ -46,12 +48,23 @@ export default function ProductPricingPage() {
   const [desi, setDesi] = useState<number>(1);
   const [carrier, setCarrier] = useState<string>("TEX");
   const [leadTimeDays, setLeadTimeDays] = useState<number>(1); // 1, 2, 3 days
-  const [extraOperationRate, setExtraOperationRate] = useState<number>(6.0);
   const [manualSalePrice, setManualSalePrice] = useState<number>(149.90);
   const [competitorBuyboxPrice, setCompetitorBuyboxPrice] = useState<number>(139.90);
   const [syncingPrice, setSyncingPrice] = useState(false);
 
-  // Fetch real products and live cargo barem tiers from DB
+  // =========================================================================
+  // DYNAMIC SETTINGS & FIXED EXPENSES (Ayarlardan Çekilen Tüm Sabit Giderler)
+  // =========================================================================
+  const [serviceFee, setServiceFee] = useState<number>(13.19); // Platform Hizmet Bedeli
+  const [packagingCost, setPackagingCost] = useState<number>(1.00); // Sabit Paketleme/Ambalaj
+  const [invoiceCost, setInvoiceCost] = useState<number>(0.30); // Sabit E-Fatura/Muhasebe
+  const [fixedExtraOpCost, setFixedExtraOpCost] = useState<number>(0.50); // Sabit Ekstra Operasyon
+  const [extraOperationRate, setExtraOperationRate] = useState<number>(6.0); // Oransal Ekstra Operasyon (%)
+  const [earlyPayoutRate, setEarlyPayoutRate] = useState<number>(0.16); // Erken Ödeme Oranı (%)
+  const [withholdingTaxRate, setWithholdingTaxRate] = useState<number>(0.01); // Stopaj Kesintisi (%1)
+  const [prevMonthReturnRate, setPrevMonthReturnRate] = useState<number>(0.69); // Önceki Ay İade Yüzdesi (%)
+
+  // Fetch real products, live cargo barems, and all fixed settings from DB
   const fetchAllData = async () => {
     setLoading(true);
     try {
@@ -61,18 +74,30 @@ export default function ProductPricingPage() {
       const pList = Array.isArray(pData) ? pData : (pData.products || []);
       setDbProducts(pList);
 
-      // Fetch extra operation rate from settings
+      // 2. Fetch ALL Fixed Settings & Previous Month Return Rate
       try {
         const sRes = await fetch('/api/settings/general');
         const sData = await sRes.json();
-        if (sData?.settings?.extraOperationRate !== undefined && sData?.settings?.extraOperationRate !== null) {
-          setExtraOperationRate(parseFloat(sData.settings.extraOperationRate));
+        if (sData?.settings) {
+          const st = sData.settings;
+          if (st.defaultServiceFee !== undefined) setServiceFee(parseFloat(st.defaultServiceFee) || 13.19);
+          if (st.defaultPackagingCost !== undefined) setPackagingCost(parseFloat(st.defaultPackagingCost) || 1.00);
+          if (st.invoiceFixedCost !== undefined) setInvoiceCost(parseFloat(st.invoiceFixedCost) || 0.30);
+          if (st.extraOperationCost !== undefined) setFixedExtraOpCost(parseFloat(st.extraOperationCost) || 0.50);
+          if (st.extraOperationRate !== undefined) setExtraOperationRate(parseFloat(st.extraOperationRate) || 6.0);
+          if (st.earlyPayoutRate !== undefined) setEarlyPayoutRate(parseFloat(st.earlyPayoutRate) || 0.16);
+          if (st.defaultWithholdingRate !== undefined || st.defaultStopajRate !== undefined) {
+            setWithholdingTaxRate((parseFloat(st.defaultWithholdingRate || st.defaultStopajRate) || 1.0) / 100);
+          }
+          if (st.prevMonthReturnRate !== undefined) {
+            setPrevMonthReturnRate(parseFloat(st.prevMonthReturnRate) || 0.69);
+          }
         }
       } catch (err) {
         console.error('Settings fetch error in pricing:', err);
       }
 
-      // 2. Cargo Barem & Desi Rates from DB
+      // 3. Cargo Barem & Desi Rates from DB
       const bRes = await fetch('/api/tariffs/cargo-barem');
       const bData = await bRes.json();
       const tiers = bData.tiers || (Array.isArray(bData) ? bData : []);
@@ -108,23 +133,25 @@ export default function ProductPricingPage() {
     setShowProductModal(false);
   };
 
-  // Fixed Platform Service Fee (₺13.19 KDV Dahil per order)
-  const serviceFee = 13.19;
-  const withholdingTaxRate = 0.01; // %1 Stopaj Kesintisi
+  // Financial Rates & Constants
   const effectiveMargin = targetMargin / 100;
   const effectiveCommission = commissionRate / 100;
-  const effectiveExtraOp = (extraOperationRate || 0) / 100; // Dinamik Ekstra Operasyon Oranı
+  const effectiveExtraOp = (extraOperationRate || 0) / 100;
+  const effectiveEarlyPayout = (earlyPayoutRate || 0) / 100;
+  const effectiveReturnRate = (prevMonthReturnRate || 0) / 100;
   const kdvMultiplier = 1 + (vatRate / 100);
   const vatFraction = (vatRate / 100) / kdvMultiplier;
 
+  // Toplam Sabit Masraflar (Sipariş Başına: Hizmet + Ambalaj + Fatura + Sabit Operasyon)
+  const totalFixedOrderOverhead = serviceFee + packagingCost + invoiceCost + fixedExtraOpCost;
+
   // =========================================================================
-  // 1. REVERSE PRICING CALCULATION WITH MINIMUM ORDER QUANTITY (MOQ)
+  // 1. REVERSE PRICING CALCULATION WITH MINIMUM ORDER QUANTITY (MOQ) & ALL FIXED EXPENSES
   // =========================================================================
   const calculateReversePrice = () => {
-    const denominator = 1 - effectiveCommission - withholdingTaxRate - vatFraction - effectiveMargin - effectiveExtraOp;
+    const denominator = 1 - effectiveCommission - withholdingTaxRate - vatFraction - effectiveMargin - effectiveExtraOp - effectiveEarlyPayout;
     if (denominator <= 0) return costPrice * 1.5;
 
-    // Test tiers with their MOQ: 6, 4, 3, 2, 1
     const candidateTiers = [
       { minP: 0, maxP: 25.00, q: 6 },
       { minP: 25.0001, maxP: 35.00, q: 4 },
@@ -135,10 +162,11 @@ export default function ProductPricingPage() {
 
     for (const t of candidateTiers) {
       const basketCostExVat = (costPrice * t.q) * (1 - vatFraction);
-      let guessBasket = (basketCostExVat + 46.50 + serviceFee) / denominator;
+      let guessBasket = (basketCostExVat + 46.50 + totalFixedOrderOverhead) / denominator;
       for (let i = 0; i < 6; i++) {
         const shipGuess = calculateTrendyolShipping(guessBasket, desi, carrier, leadTimeDays, baremTiers, desiRates);
-        guessBasket = (basketCostExVat + shipGuess.appliedPriceIncVat + serviceFee) / denominator;
+        const returnRiskReserve = effectiveReturnRate * (shipGuess.appliedPriceIncVat * 1.5 + serviceFee);
+        guessBasket = (basketCostExVat + shipGuess.appliedPriceIncVat + totalFixedOrderOverhead + returnRiskReserve) / denominator;
       }
       const unitP = guessBasket / t.q;
       if (unitP >= t.minP && (t.maxP === Infinity || unitP <= t.maxP)) {
@@ -146,12 +174,13 @@ export default function ProductPricingPage() {
       }
     }
 
-    // Default 1-unit calculation fallback
+    // Default Fallback
     const costExVat = costPrice * (1 - vatFraction);
-    let guess = (costExVat + 46.50 + serviceFee) / denominator;
+    let guess = (costExVat + 46.50 + totalFixedOrderOverhead) / denominator;
     for (let i = 0; i < 6; i++) {
       const shipGuess = calculateTrendyolShipping(guess, desi, carrier, leadTimeDays, baremTiers, desiRates);
-      guess = (costExVat + shipGuess.appliedPriceIncVat + serviceFee) / denominator;
+      const returnRiskReserve = effectiveReturnRate * (shipGuess.appliedPriceIncVat * 1.5 + serviceFee);
+      guess = (costExVat + shipGuess.appliedPriceIncVat + totalFixedOrderOverhead + returnRiskReserve) / denominator;
     }
     return Math.round(guess * 100) / 100;
   };
@@ -166,7 +195,7 @@ export default function ProductPricingPage() {
   // 3. MINIMUM ORDER QUANTITY (MOQ) FOR ACTIVE SALE PRICE
   const activeMOQ = getMinimumOrderQuantity(activeSalePrice);
 
-  // 4. BASKET-LEVEL CALCULATIONS (Minimum Sipariş Sepeti)
+  // 4. BASKET-LEVEL CALCULATIONS (Minimum Sipariş Sepet Paketi)
   const basketGrossAmount = activeSalePrice * activeMOQ;
   const basketCostAmount = costPrice * activeMOQ;
 
@@ -174,18 +203,38 @@ export default function ProductPricingPage() {
   const activeShipping = calculateTrendyolShipping(basketGrossAmount, desi, carrier, leadTimeDays, baremTiers, desiRates);
   const effectiveShippingCost = activeShipping.appliedPriceIncVat;
 
-  // Basket Cost Breakdown
+  // Önceki Ay İade Oranına Göre İade Riski Karşılığı
+  const returnRiskCostPerBasket = effectiveReturnRate * (effectiveShippingCost * 1.5 + serviceFee);
+
+  // Basket Cost Breakdown (Tüm Sabit ve Oransal Giderler Dahil)
   const basketCommission = basketGrossAmount * effectiveCommission;
   const basketWithholding = basketGrossAmount * withholdingTaxRate;
   const basketExtraOp = basketGrossAmount * effectiveExtraOp;
+  const basketEarlyPayout = basketGrossAmount * effectiveEarlyPayout;
 
   // KDV Doğrusallaştırma
   const basketSaleVat = (basketGrossAmount / kdvMultiplier) * (vatRate / 100);
   const basketCostVat = (basketCostAmount / kdvMultiplier) * (vatRate / 100);
   const basketNetVat = Math.max(0, basketSaleVat - basketCostVat);
 
-  // Basket Net Cash Profit & Margins
-  const basketNetProfit = basketGrossAmount - (basketCostAmount + basketCommission + effectiveShippingCost + serviceFee + basketWithholding + basketNetVat + basketExtraOp);
+  // Toplam Sepet Giderleri
+  const basketTotalExpenses = (
+    basketCostAmount +
+    basketCommission +
+    effectiveShippingCost +
+    serviceFee +
+    packagingCost +
+    invoiceCost +
+    fixedExtraOpCost +
+    basketWithholding +
+    basketNetVat +
+    basketExtraOp +
+    basketEarlyPayout +
+    returnRiskCostPerBasket
+  );
+
+  // Net Cash Profit & Margins
+  const basketNetProfit = basketGrossAmount - basketTotalExpenses;
   const unitNetProfit = basketNetProfit / activeMOQ;
 
   const achievedMarginPercent = basketGrossAmount > 0 ? (basketNetProfit / basketGrossAmount) * 100 : 0;
@@ -196,13 +245,25 @@ export default function ProductPricingPage() {
   const buyboxBasketGross = competitorBuyboxPrice * buyboxMOQ;
   const buyboxBasketCost = costPrice * buyboxMOQ;
   const buyboxShipping = calculateTrendyolShipping(buyboxBasketGross, desi, carrier, leadTimeDays, baremTiers, desiRates);
+  const buyboxReturnRisk = effectiveReturnRate * (buyboxShipping.appliedPriceIncVat * 1.5 + serviceFee);
   const buyboxCommission = buyboxBasketGross * effectiveCommission;
   const buyboxWithholding = buyboxBasketGross * withholdingTaxRate;
   const buyboxExtraOp = buyboxBasketGross * effectiveExtraOp;
+  const buyboxEarlyPayout = buyboxBasketGross * effectiveEarlyPayout;
   const buyboxSaleVat = (buyboxBasketGross / kdvMultiplier) * (vatRate / 100);
   const buyboxCostVat = (buyboxBasketCost / kdvMultiplier) * (vatRate / 100);
   const buyboxNetVat = Math.max(0, buyboxSaleVat - buyboxCostVat);
-  const buyboxBasketProfit = buyboxBasketGross - (buyboxBasketCost + buyboxCommission + buyboxShipping.appliedPriceIncVat + serviceFee + buyboxWithholding + buyboxNetVat + buyboxExtraOp);
+  const buyboxBasketProfit = buyboxBasketGross - (
+    buyboxBasketCost + 
+    buyboxCommission + 
+    buyboxShipping.appliedPriceIncVat + 
+    totalFixedOrderOverhead + 
+    buyboxWithholding + 
+    buyboxNetVat + 
+    buyboxExtraOp + 
+    buyboxEarlyPayout + 
+    buyboxReturnRisk
+  );
   const buyboxUnitProfit = buyboxBasketProfit / buyboxMOQ;
   const buyboxMargin = buyboxBasketGross > 0 ? (buyboxBasketProfit / buyboxBasketGross) * 100 : 0;
 
@@ -257,10 +318,10 @@ export default function ProductPricingPage() {
         <div className="space-y-1">
           <div className="flex items-center gap-2 flex-wrap">
             <h3 className="text-base sm:text-lg font-black text-dark">Trendyol Fiyatlandırma & Minimum Sipariş Motoru</h3>
-            <Badge variant="excellent" className="text-[10px] sm:text-xs">10 Ağustos 2026 Resmi Barem & MOQ</Badge>
+            <Badge variant="excellent" className="text-[10px] sm:text-xs">Tüm Sabit Giderler & İade Riski Dahil</Badge>
           </div>
           <p className="text-xs text-muted-foreground">
-            Ürün fiyatına göre zorunlu <strong>Minimum Sipariş Adedi</strong>, 1 Gün Termin Kargo Baremleri ve net sepet kârlılık optimizasyonu.
+            Ürün fiyatına göre zorunlu <strong>Minimum Sipariş Adedi</strong>, tüm şirket sabit giderleri ({formatCurrency(totalFixedOrderOverhead)}/sipariş) ve önceki ay iade riski rezervi ({prevMonthReturnRate}%) dahil kârlılık optimizasyonu.
           </p>
         </div>
 
@@ -355,18 +416,21 @@ export default function ProductPricingPage() {
       </div>
 
       {/* ========================================================================= */}
-      {/* 🚀 TRENDYOL MINIMUM SIPARIS ADEDI CARD (MATCHING USER SCREENSHOT) */}
+      {/* 🚀 TRENDYOL MINIMUM SIPARIS ADEDI & HIGHLIGHT CARDS (USER SCREENSHOT MATCH) */}
       {/* ========================================================================= */}
       <div className="bg-white p-5 sm:p-6 rounded-3xl border border-border shadow-xs space-y-4">
         <div className="space-y-1">
           <div className="flex items-center justify-between flex-wrap gap-2">
             <h4 className="text-sm sm:text-base font-black text-dark flex items-center gap-2">
               <ShoppingBag className="w-4 h-4 text-primary" />
-              <span>Minimum Sipariş Adedi</span>
+              <span>Minimum Sipariş Adedi & Paket Hacmi</span>
             </h4>
-            <span className="text-xs font-bold text-primary hover:underline cursor-pointer">
-              Minimum Sipariş Adedi Ayarları
-            </span>
+            <div className="flex items-center gap-2 text-xs font-bold">
+              <span className="text-gray-500">Önceki Ay İade Oranı:</span>
+              <span className="px-2 py-0.5 rounded-lg bg-purple-50 text-purple-900 border border-purple-200 font-mono">
+                %{prevMonthReturnRate.toFixed(2)}
+              </span>
+            </div>
           </div>
           <p className="text-xs text-gray-600 leading-relaxed">
             Minimum Sipariş Adedi, bir ürünün müşteri tarafından alınması gereken minimum sayıyı belirtir. Müşteri ürünü sipariş içerisinde bu adetten daha az sayıda alamaz. Ürün fiyat baremine göre minimum sipariş adetleri aşağıda belirtilmiştir. <strong>Ürün stoğu Minimum Sipariş Adedi değerinden düşük ise ürünün stoğu tükendi olarak değerlendirilecektir.</strong>
@@ -460,9 +524,60 @@ export default function ProductPricingPage() {
             </span>
             {activeSalePrice > 75.00 && (
               <span className="text-[9px] font-black uppercase text-emerald-800 bg-white px-2 py-0.5 rounded-full border border-emerald-300 inline-block mt-1">
-                ✓ Tekli Satılabilir
+                ✓ Tekli Satış
               </span>
             )}
+          </div>
+        </div>
+
+        {/* 🌟 USER REQUEST: MINIMUM SIPARIS ADEDINE GİREN SİPARİŞLER İÇİN TOPLAM SATIŞ TUTARI VE TOPLAM KÂR ÖZET KARTLARI */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-3 pt-2">
+          {/* Paket / Sepet Toplamı */}
+          <div className="p-4 rounded-2xl bg-gradient-to-r from-primary-tint-50/80 via-white to-primary-tint-50/40 border border-primary/30 flex items-center justify-between gap-3 shadow-xs">
+            <div className="space-y-1 min-w-0">
+              <span className="text-[11px] font-black text-primary uppercase tracking-wide flex items-center gap-1.5">
+                <ShoppingBag className="w-4 h-4" />
+                <span>Minimum Sipariş Sepet Paketi ({activeMOQ} Adet)</span>
+              </span>
+              <div className="flex items-baseline gap-2">
+                <span className="text-2xl font-black text-dark tabular-nums">
+                  {formatCurrency(basketGrossAmount)}
+                </span>
+                <span className="text-xs font-bold text-gray-500">Toplam Satış Tutarı</span>
+              </div>
+            </div>
+
+            <div className="text-right shrink-0">
+              <span className="text-[11px] font-bold text-emerald-800 uppercase tracking-wide block">Toplam Oluşacak Kâr</span>
+              <div className={`text-xl font-black tabular-nums ${basketNetProfit >= 0 ? 'text-emerald-700' : 'text-red-600'}`}>
+                {formatCurrency(basketNetProfit)}
+              </div>
+              <span className="text-[10px] font-bold text-emerald-700 block">%{achievedMarginPercent.toFixed(1)} Marj</span>
+            </div>
+          </div>
+
+          {/* Tekil Birim Başına Getiri */}
+          <div className="p-4 rounded-2xl bg-slate-50 border border-border flex items-center justify-between gap-3 shadow-xs">
+            <div className="space-y-1 min-w-0">
+              <span className="text-[11px] font-black text-gray-600 uppercase tracking-wide flex items-center gap-1.5">
+                <Package className="w-4 h-4 text-gray-500" />
+                <span>Tekil Birim Başına Değerler (1 Adet)</span>
+              </span>
+              <div className="flex items-baseline gap-2">
+                <span className="text-2xl font-black text-dark tabular-nums">
+                  {formatCurrency(activeSalePrice)}
+                </span>
+                <span className="text-xs font-bold text-gray-500">Birim Satış Fiyatı</span>
+              </div>
+            </div>
+
+            <div className="text-right shrink-0">
+              <span className="text-[11px] font-bold text-gray-500 uppercase tracking-wide block">Birim Net Kâr</span>
+              <div className={`text-xl font-black tabular-nums ${unitNetProfit >= 0 ? 'text-emerald-700' : 'text-red-600'}`}>
+                {formatCurrency(unitNetProfit)}
+              </div>
+              <span className="text-[10px] font-bold text-gray-500 block">Maliyet: {formatCurrency(costPrice)}</span>
+            </div>
           </div>
         </div>
 
@@ -501,7 +616,7 @@ export default function ProductPricingPage() {
             <span className={`text-[10px] sm:text-[11px] block leading-tight truncate mt-0.5 ${
               pricingMode === 'target_margin' ? 'text-white/85' : 'text-gray-500'
             }`}>
-              Marj gir ➔ Fiyat bul (MOQ Dahil)
+              Marj gir ➔ Fiyat bul (Sabit Giderler & MOQ Dahil)
             </span>
           </div>
         </button>
@@ -543,9 +658,8 @@ export default function ProductPricingPage() {
 
           <div className="space-y-4 text-xs">
             
-            {/* DYNAMIC MODE MODULE: ONLY SHOWS THE SELECTED MODE'S INPUT CARD */}
+            {/* DYNAMIC MODE MODULE */}
             {pricingMode === 'target_margin' ? (
-              /* 1. HEDEF KÂR MARJI MODÜLÜ */
               <div className="p-4 rounded-2xl border border-emerald-300 bg-emerald-50/50 ring-2 ring-emerald-500/20 animate-in fade-in zoom-in-95 space-y-2">
                 <div className="flex items-center justify-between">
                   <label className="font-black text-emerald-800 flex items-center gap-1.5 text-xs">
@@ -570,7 +684,6 @@ export default function ProductPricingPage() {
                 </span>
               </div>
             ) : (
-              /* 2. MANUEL SATIŞ FİYATI MODÜLÜ */
               <div className="p-4 rounded-2xl border border-primary/40 bg-primary-tint-50/50 ring-2 ring-primary/20 animate-in fade-in zoom-in-95 space-y-2">
                 <div className="flex items-center justify-between">
                   <label className="font-black text-primary flex items-center gap-1.5 text-xs">
@@ -684,7 +797,7 @@ export default function ProductPricingPage() {
                   <button
                     type="button"
                     onClick={() => setLeadTimeDays(1)}
-                    className={`p-2.5 rounded-2xl border text-left transition-all ${
+                    className={`p-2.5 rounded-2xl border text-left transition-all cursor-pointer ${
                       leadTimeDays === 1
                         ? 'border-emerald-500 bg-emerald-50 text-emerald-900 font-bold shadow-xs ring-2 ring-emerald-500/20'
                         : 'border-border bg-white text-gray-600 hover:bg-gray-50'
@@ -699,7 +812,7 @@ export default function ProductPricingPage() {
                   <button
                     type="button"
                     onClick={() => setLeadTimeDays(2)}
-                    className={`p-2.5 rounded-2xl border text-left transition-all ${
+                    className={`p-2.5 rounded-2xl border text-left transition-all cursor-pointer ${
                       leadTimeDays >= 2
                         ? 'border-amber-500 bg-amber-50 text-amber-900 font-bold shadow-xs ring-2 ring-amber-500/20'
                         : 'border-border bg-white text-gray-600 hover:bg-gray-50'
@@ -712,6 +825,37 @@ export default function ProductPricingPage() {
                   </button>
                 </div>
               </div>
+
+              {/* DİNAMİK SABİT GİDERLER & İADE YÜZDESİ ÖZET PANELİ (SETTINGS SYNC) */}
+              <div className="p-3.5 rounded-2xl bg-canvas/60 border border-border space-y-2">
+                <div className="flex items-center justify-between text-xs font-bold text-dark">
+                  <span className="flex items-center gap-1.5">
+                    <Settings className="w-3.5 h-3.5 text-primary" />
+                    <span>Ayarlardaki Sabit Giderler & İade Karşılığı</span>
+                  </span>
+                  <Badge variant="outline" className="text-[10px]">Ayarlarla Canlı Senkron</Badge>
+                </div>
+
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-[11px]">
+                  <div className="p-2 rounded-xl bg-white border border-border">
+                    <span className="text-gray-400 block text-[9px] font-semibold">Platform Hizmeti</span>
+                    <span className="font-black text-dark">{formatCurrency(serviceFee)}</span>
+                  </div>
+                  <div className="p-2 rounded-xl bg-white border border-border">
+                    <span className="text-gray-400 block text-[9px] font-semibold">Ambalaj / Paket</span>
+                    <span className="font-black text-dark">{formatCurrency(packagingCost)}</span>
+                  </div>
+                  <div className="p-2 rounded-xl bg-white border border-border">
+                    <span className="text-gray-400 block text-[9px] font-semibold">E-Fatura & Operasyon</span>
+                    <span className="font-black text-dark">{formatCurrency(invoiceCost + fixedExtraOpCost)}</span>
+                  </div>
+                  <div className="p-2 rounded-xl bg-white border border-border">
+                    <span className="text-gray-400 block text-[9px] font-semibold">Önceki Ay İade Oranı</span>
+                    <span className="font-black text-purple-700">%{prevMonthReturnRate.toFixed(2)}</span>
+                  </div>
+                </div>
+              </div>
+
             </div>
 
           </div>
@@ -728,9 +872,9 @@ export default function ProductPricingPage() {
               <button
                 type="button"
                 onClick={() => setBreakdownView('unit')}
-                className={`flex-1 py-1.5 text-xs font-bold rounded-xl transition-all ${
+                className={`flex-1 py-1.5 text-xs font-bold rounded-xl transition-all cursor-pointer ${
                   breakdownView === 'unit'
-                    ? 'bg-white text-dark shadow-xs'
+                    ? 'bg-white text-dark shadow-xs font-black'
                     : 'text-gray-500 hover:text-dark'
                 }`}
               >
@@ -739,13 +883,13 @@ export default function ProductPricingPage() {
               <button
                 type="button"
                 onClick={() => setBreakdownView('basket')}
-                className={`flex-1 py-1.5 text-xs font-bold rounded-xl transition-all ${
+                className={`flex-1 py-1.5 text-xs font-bold rounded-xl transition-all cursor-pointer ${
                   breakdownView === 'basket'
                     ? 'bg-white text-primary font-black shadow-xs'
                     : 'text-gray-500 hover:text-dark'
                 }`}
               >
-                Minimum Sepet ({activeMOQ} Adet)
+                Minimum Sepet ({activeMOQ} Adet Toplamı)
               </button>
             </div>
 
@@ -754,7 +898,7 @@ export default function ProductPricingPage() {
                 <span className="text-[11px] font-bold text-muted-foreground uppercase tracking-wide block">
                   {breakdownView === 'unit' 
                     ? (pricingMode === 'target_margin' ? '🎯 Birim Satış Fiyatı' : '🏷️ Birim Satış Fiyatı')
-                    : '📦 Minimum Sepet Satış Tutarı'}
+                    : `📦 Toplam Oluşacak Satış Tutarı (${activeMOQ} Adet)`}
                 </span>
                 <div className="text-3xl font-black text-primary tabular-nums mt-1">
                   {formatCurrency(breakdownView === 'unit' ? activeSalePrice : basketGrossAmount)}
@@ -770,7 +914,7 @@ export default function ProductPricingPage() {
 
               <div className="text-right">
                 <span className="text-[11px] font-bold text-emerald-800 uppercase tracking-wide block">
-                  {breakdownView === 'unit' ? 'Birim Net Nakit Kâr' : 'Sepet Net Nakit Kârı'}
+                  {breakdownView === 'unit' ? 'Birim Net Nakit Kâr' : `Toplam Oluşacak Kâr (${activeMOQ} Adet)`}
                 </span>
                 <div className={`text-2xl font-black tabular-nums mt-1 ${unitNetProfit >= 0 ? 'text-emerald-700' : 'text-red-600'}`}>
                   {formatCurrency(breakdownView === 'unit' ? unitNetProfit : basketNetProfit)}
@@ -818,7 +962,7 @@ export default function ProductPricingPage() {
               </div>
             </div>
 
-            {/* Financial Waterfall Cost Breakdown */}
+            {/* Comprehensive Financial Waterfall Cost Breakdown */}
             <div className="space-y-2 pt-2 border-t border-border text-xs">
               <div className="flex items-center justify-between py-1 text-gray-600">
                 <span>1. Alış Maliyeti (COGS)</span>
@@ -835,39 +979,62 @@ export default function ProductPricingPage() {
               </div>
 
               <div className="flex items-center justify-between py-1 text-gray-600">
-                <span className="flex items-center gap-1">
-                  <span>3. Kargo Gideri ({carrier}, {activeShipping.isBaremSupported ? activeShipping.tierName : `${desi} Desi`})</span>
-                </span>
+                <span>3. Kargo Gideri ({carrier}, {activeShipping.isBaremSupported ? activeShipping.tierName : `${desi} Desi`})</span>
                 <span className="font-bold text-primary tabular-nums">
                   -₺{(breakdownView === 'unit' ? (effectiveShippingCost / activeMOQ) : effectiveShippingCost).toFixed(2)}
                 </span>
               </div>
 
               <div className="flex items-center justify-between py-1 text-gray-600">
-                <span>4. Hizmet Bedeli Kesintisi (13.19₺ / sipariş)</span>
+                <span>4. Platform Hizmet Bedeli ({formatCurrency(serviceFee)}/sipariş)</span>
                 <span className="font-bold text-gray-800 tabular-nums">
                   -₺{(breakdownView === 'unit' ? (serviceFee / activeMOQ) : serviceFee).toFixed(2)}
                 </span>
               </div>
 
               <div className="flex items-center justify-between py-1 text-gray-600">
-                <span>5. Stopaj Kesintisi (%1)</span>
+                <span>5. Ambalaj & Paketleme Sabit Gideri ({formatCurrency(packagingCost)}/sipariş)</span>
+                <span className="font-bold text-gray-800 tabular-nums">
+                  -₺{(breakdownView === 'unit' ? (packagingCost / activeMOQ) : packagingCost).toFixed(2)}
+                </span>
+              </div>
+
+              <div className="flex items-center justify-between py-1 text-gray-600">
+                <span>6. E-Fatura & Sabit Operasyon Gideri ({formatCurrency(invoiceCost + fixedExtraOpCost)}/sipariş)</span>
+                <span className="font-bold text-gray-800 tabular-nums">
+                  -₺{(breakdownView === 'unit' ? ((invoiceCost + fixedExtraOpCost) / activeMOQ) : (invoiceCost + fixedExtraOpCost)).toFixed(2)}
+                </span>
+              </div>
+
+              <div className="flex items-center justify-between py-1 text-gray-600">
+                <span>7. Stopaj Kesintisi (%{(withholdingTaxRate * 100).toFixed(0)})</span>
                 <span className="font-bold text-gray-800 tabular-nums">
                   -₺{(breakdownView === 'unit' ? (basketWithholding / activeMOQ) : basketWithholding).toFixed(2)}
                 </span>
               </div>
 
               <div className="flex items-center justify-between py-1 text-gray-600">
-                <span>6. Ödenecek Net KDV Farkı</span>
+                <span>8. Ödenecek Net KDV Farkı</span>
                 <span className="font-bold text-gray-800 tabular-nums">
                   -₺{(breakdownView === 'unit' ? (basketNetVat / activeMOQ) : basketNetVat).toFixed(2)}
                 </span>
               </div>
 
               <div className="flex items-center justify-between py-1 text-gray-600">
-                <span>7. Ekstra Operasyon Gideri (%{extraOperationRate})</span>
+                <span>9. Ekstra Operasyon Gideri (%{extraOperationRate})</span>
                 <span className="font-bold text-gray-800 tabular-nums">
                   -₺{(breakdownView === 'unit' ? (basketExtraOp / activeMOQ) : basketExtraOp).toFixed(2)}
+                </span>
+              </div>
+
+              {/* Önceki Ay İade Riski Rezervi */}
+              <div className="flex items-center justify-between py-1 text-purple-900 bg-purple-50/60 px-2 rounded-lg font-semibold">
+                <span className="flex items-center gap-1">
+                  <Undo2 className="w-3 h-3 text-purple-600" />
+                  <span>10. Önceki Ay İade Riski Rezervi (%{prevMonthReturnRate.toFixed(2)})</span>
+                </span>
+                <span className="font-bold tabular-nums">
+                  -₺{(breakdownView === 'unit' ? (returnRiskCostPerBasket / activeMOQ) : returnRiskCostPerBasket).toFixed(2)}
                 </span>
               </div>
             </div>
@@ -953,7 +1120,6 @@ export default function ProductPricingPage() {
 
             {/* Modal Search & Filters */}
             <div className="p-4 border-b border-border flex items-center gap-3 flex-wrap bg-white">
-              {/* Search input */}
               <div className="relative flex-1 min-w-[240px]">
                 <Search className="w-4 h-4 text-gray-400 absolute left-3 top-2.5" />
                 <input
@@ -965,7 +1131,6 @@ export default function ProductPricingPage() {
                 />
               </div>
 
-              {/* Brand Filter */}
               <select
                 value={modalBrandFilter}
                 onChange={(e) => setModalBrandFilter(e.target.value)}
@@ -977,7 +1142,6 @@ export default function ProductPricingPage() {
                 ))}
               </select>
 
-              {/* Stock Filter */}
               <select
                 value={modalStockFilter}
                 onChange={(e) => setModalStockFilter(e.target.value as any)}
@@ -1023,7 +1187,6 @@ export default function ProductPricingPage() {
                           key={p.id} 
                           className={`hover:bg-canvas/60 transition-colors ${isSelected ? 'bg-primary/5' : ''}`}
                         >
-                          {/* Image Thumbnail with zoom trigger */}
                           <td className="py-2.5 px-3 text-center">
                             <div 
                               onClick={() => p.imageUrl && setZoomImageUrl(p.imageUrl)}
@@ -1042,7 +1205,6 @@ export default function ProductPricingPage() {
                             </div>
                           </td>
 
-                          {/* Title & Model */}
                           <td className="py-2.5 px-3 font-bold text-dark max-w-sm">
                             <span className="block truncate font-bold text-dark">{p.title}</span>
                             {p.modelCode && (
@@ -1050,7 +1212,6 @@ export default function ProductPricingPage() {
                             )}
                           </td>
 
-                          {/* Barcode & Brand */}
                           <td className="py-2.5 px-3">
                             <span className="px-2 py-0.5 rounded-lg bg-canvas text-gray-700 font-mono text-[10px] font-bold border border-border block w-max">
                               {p.barcode}
@@ -1060,29 +1221,24 @@ export default function ProductPricingPage() {
                             )}
                           </td>
 
-                          {/* Stock Quantity */}
                           <td className="py-2.5 px-3 text-center">
                             <Badge variant={p.stockQuantity > 0 ? "excellent" : "secondary"}>
                               {p.stockQuantity} Adet
                             </Badge>
                           </td>
 
-                          {/* Sale Price */}
                           <td className="py-2.5 px-3 text-right font-black text-dark tabular-nums">
                             ₺{parseFloat(p.salePrice || 0).toFixed(2)}
                           </td>
 
-                          {/* Cost Price */}
                           <td className="py-2.5 px-3 text-right font-bold text-red-700 tabular-nums">
                             ₺{parseFloat(p.costPrice || 1.00).toFixed(2)}
                           </td>
 
-                          {/* Commission Rate */}
                           <td className="py-2.5 px-3 text-right font-black text-primary">
                             %{p.commissionRate || 16.15}
                           </td>
 
-                          {/* Select Action */}
                           <td className="py-2.5 px-3 text-right">
                             <Button
                               size="sm"
