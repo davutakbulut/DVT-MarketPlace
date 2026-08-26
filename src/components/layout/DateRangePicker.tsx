@@ -4,7 +4,7 @@ import { useDateStore } from '@/store/useDateStore';
 import { Calendar as CalendarIcon, ChevronLeft, ChevronRight, Check } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
-export function DateRangePicker() {
+export function DateRangePicker({ isMobileRow = false }: { isMobileRow?: boolean }) {
   const { period, startDate, endDate, label, setPreset, setCustomRange } = useDateStore();
   const [isOpen, setIsOpen] = useState(false);
   const [currentYear, setCurrentYear] = useState(2026);
@@ -171,9 +171,9 @@ export function DateRangePicker() {
   };
 
   return (
-    <div className="relative flex items-center gap-1.5 sm:gap-2 shrink-0" ref={containerRef}>
-      {/* 1. Quick Preset Dropdown Pill (Hidden on extra small screens, visible on md+) */}
-      <div className="hidden md:block relative">
+    <div className={`relative ${isMobileRow ? 'w-full flex items-center gap-2' : 'flex items-center gap-1.5 sm:gap-2 shrink-0'}`} ref={containerRef}>
+      {/* 1. Quick Preset Dropdown Pill */}
+      <div className={`relative ${isMobileRow ? 'w-1/2' : 'hidden md:block'}`}>
         <select
           value={period === 'custom' ? 'custom' : period}
           onChange={(e) => {
@@ -184,7 +184,7 @@ export function DateRangePicker() {
               setPreset(val);
             }
           }}
-          className="h-8 sm:h-9 pl-3 pr-7 rounded-2xl border border-border bg-white text-xs font-bold text-dark shadow-2xs focus:ring-2 focus:ring-primary focus:outline-none cursor-pointer appearance-none"
+          className={`h-8 sm:h-9 pl-3 pr-7 rounded-2xl border border-border bg-white text-xs font-bold text-dark shadow-2xs focus:ring-2 focus:ring-primary focus:outline-none cursor-pointer appearance-none ${isMobileRow ? 'w-full' : ''}`}
         >
           <option value="last_7_days">Son 7 Gün</option>
           <option value="today">Bugün</option>
@@ -202,22 +202,21 @@ export function DateRangePicker() {
       {/* 2. Interactive Date Range Button */}
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className="h-8 sm:h-9 px-2.5 sm:px-3 rounded-2xl bg-dark hover:bg-dark/90 text-white font-bold text-xs flex items-center gap-1.5 sm:gap-2 shadow-xs transition-colors cursor-pointer shrink-0"
+        className={`h-8 sm:h-9 px-2.5 sm:px-3 rounded-2xl bg-dark hover:bg-dark/90 text-white font-bold text-xs flex items-center justify-center gap-1.5 sm:gap-2 shadow-xs transition-colors cursor-pointer shrink-0 ${isMobileRow ? 'w-1/2' : ''}`}
         title="Tarih Aralığı Seç"
       >
         <CalendarIcon className="w-3.5 h-3.5 text-primary shrink-0" />
-        <span className="tabular-nums font-semibold text-[11px] sm:text-xs hidden md:inline">{formatDisplayRange(startDate, endDate)}</span>
-        <span className="tabular-nums font-semibold text-[11px] md:hidden">{formatShortDisplayRange(startDate, endDate)}</span>
+        <span className="tabular-nums font-semibold text-[11px] sm:text-xs">{isMobileRow ? formatShortDisplayRange(startDate, endDate) : formatDisplayRange(startDate, endDate)}</span>
       </button>
 
       {/* 3. POPUP CALENDAR MODAL / DROPDOWN */}
       {isOpen && (
-        <div className="absolute right-0 top-11 sm:top-12 z-50 w-72 sm:w-80 bg-white rounded-3xl border border-border shadow-2xl p-4 animate-in fade-in zoom-in-95 space-y-3">
+        <div className={`absolute ${isMobileRow ? 'left-0 right-0 top-11 mx-auto max-w-xs' : 'right-0 top-11 sm:top-12'} z-50 w-72 sm:w-80 bg-white rounded-3xl border border-border shadow-2xl p-4 animate-in fade-in zoom-in-95 space-y-3`}>
           {/* Calendar Header: < Month Year > */}
           <div className="flex items-center justify-between px-1">
             <button
               onClick={handlePrevMonth}
-              className="p-1.5 rounded-xl hover:bg-canvas text-dark transition-colors"
+              className="p-1.5 rounded-xl hover:bg-canvas text-dark transition-colors cursor-pointer"
             >
               <ChevronLeft className="w-4 h-4" />
             </button>
@@ -229,7 +228,7 @@ export function DateRangePicker() {
 
             <button
               onClick={handleNextMonth}
-              className="p-1.5 rounded-xl hover:bg-canvas text-dark transition-colors"
+              className="p-1.5 rounded-xl hover:bg-canvas text-dark transition-colors cursor-pointer"
             >
               <ChevronRight className="w-4 h-4" />
             </button>
@@ -304,7 +303,7 @@ export function DateRangePicker() {
                 }
                 setIsOpen(false);
               }}
-              className="h-7 px-3 text-[11px] font-bold bg-primary text-white hover:bg-primary-hover rounded-xl shadow-2xs"
+              className="h-7 px-3 text-[11px] font-bold bg-primary text-white hover:bg-primary-hover rounded-xl shadow-2xs cursor-pointer"
             >
               Tamam
             </Button>
