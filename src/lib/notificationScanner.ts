@@ -163,7 +163,7 @@ export async function runNotificationScanner(): Promise<ScanResult> {
         o.marketplace_order_number,
         o.customer_name,
         o.status,
-        o.total_sale_price,
+        o.gross_amount as "grossAmount",
         o.return_reason,
         o.cancellation_reason,
         o.order_date
@@ -189,7 +189,7 @@ export async function runNotificationScanner(): Promise<ScanResult> {
            VALUES ($1, $2, 'warning', 'order', '/returns-cancellations')`,
           [
             title,
-            `Müşteri: ${ret.customer_name || 'Bilinmiyor'} - Tutar: ₺${parseFloat(ret.total_sale_price || 0).toFixed(2)}. Neden: ${ret.return_reason || 'Kullanıcı talebi / İptal'}`
+            `Müşteri: ${ret.customer_name || 'Bilinmiyor'} - Tutar: ₺${parseFloat(ret.grossAmount || 0).toFixed(2)}. Neden: ${ret.return_reason || ret.cancellation_reason || 'Kullanıcı talebi / İptal'}`
           ]
         );
         result.totalNewNotifications++;
