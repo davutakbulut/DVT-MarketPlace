@@ -60,19 +60,19 @@ export async function GET(request: Request) {
       SELECT 
         COUNT(DISTINCT oi.barcode) as "totalUniqueProducts",
         COALESCE(SUM(oi.quantity), 0) as "totalUnitsSold",
-        COALESCE(SUM(oi.unit_sale_price * oi.quantity), 0) as "totalRevenue",
+        COALESCE(SUM(oi.invoiced_amount), 0) as "totalRevenue",
         COALESCE(SUM(COALESCE(oi.unit_cost_price, 0) * oi.quantity), 0) as "totalCogs",
         COALESCE(SUM(oi.commission_amount), 0) as "totalCommission",
         COALESCE(SUM(COALESCE(oi.shipping_amount, 0)), 0) as "totalShipping",
         COALESCE(SUM(COALESCE(oi.service_fee_share, 0)), 0) as "totalServiceFee",
-        COALESCE(SUM(oi.unit_sale_price * oi.quantity * $${extraParamIdx}), 0) as "totalExtraOp",
+        COALESCE(SUM(oi.invoiced_amount * $${extraParamIdx}), 0) as "totalExtraOp",
         COALESCE(SUM(
-          (oi.unit_sale_price * oi.quantity) - (
+          oi.invoiced_amount - (
             (COALESCE(oi.unit_cost_price, 0) * oi.quantity) + 
             COALESCE(oi.commission_amount, 0) + 
             COALESCE(oi.shipping_amount, 0) + 
             COALESCE(oi.service_fee_share, 0) + 
-            (oi.unit_sale_price * oi.quantity * $${extraParamIdx})
+            (oi.invoiced_amount * $${extraParamIdx})
           )
         ), 0) as "totalNetProfit"
       FROM order_items oi
@@ -110,31 +110,31 @@ export async function GET(request: Request) {
         COALESCE(p.current_sale_price, AVG(oi.unit_sale_price)) as "currentSalePrice",
         COALESCE(p.current_cost, AVG(COALESCE(oi.unit_cost_price, 0))) as "unitCost",
         SUM(oi.quantity) as "unitsSold",
-        SUM(oi.unit_sale_price * oi.quantity) as "totalRevenue",
+        SUM(oi.invoiced_amount) as "totalRevenue",
         SUM(COALESCE(oi.unit_cost_price, 0) * oi.quantity) as "totalCogs",
         SUM(COALESCE(oi.commission_amount, 0)) as "totalCommission",
         SUM(COALESCE(oi.shipping_amount, 0)) as "totalShipping",
         SUM(COALESCE(oi.service_fee_share, 0)) as "totalServiceFee",
-        ROUND((SUM(oi.unit_sale_price * oi.quantity * $${extraParamIdx}))::numeric, 2) as "extraOperationCost",
+        ROUND((SUM(oi.invoiced_amount * $${extraParamIdx}))::numeric, 2) as "extraOperationCost",
         ROUND((SUM(
-          (oi.unit_sale_price * oi.quantity) - (
+          oi.invoiced_amount - (
             (COALESCE(oi.unit_cost_price, 0) * oi.quantity) + 
             COALESCE(oi.commission_amount, 0) + 
             COALESCE(oi.shipping_amount, 0) + 
             COALESCE(oi.service_fee_share, 0) + 
-            (oi.unit_sale_price * oi.quantity * $${extraParamIdx})
+            (oi.invoiced_amount * $${extraParamIdx})
           )
         ))::numeric, 2) as "totalNetProfit",
         ROUND((
           SUM(
-            (oi.unit_sale_price * oi.quantity) - (
+            oi.invoiced_amount - (
               (COALESCE(oi.unit_cost_price, 0) * oi.quantity) + 
               COALESCE(oi.commission_amount, 0) + 
               COALESCE(oi.shipping_amount, 0) + 
               COALESCE(oi.service_fee_share, 0) + 
-              (oi.unit_sale_price * oi.quantity * $${extraParamIdx})
+              (oi.invoiced_amount * $${extraParamIdx})
             )
-          ) / NULLIF(SUM(oi.unit_sale_price * oi.quantity), 0) * 100
+          ) / NULLIF(SUM(oi.invoiced_amount), 0) * 100
         )::numeric, 1) as "marginPercent"
       FROM order_items oi
       JOIN orders o ON o.id = oi.order_id
@@ -142,12 +142,12 @@ export async function GET(request: Request) {
       WHERE ${whereClause}
       GROUP BY oi.barcode, oi.title, oi.brand, p.image_url, p.marketplace_product_url, p.current_sale_price, p.current_cost
       ORDER BY SUM(
-        (oi.unit_sale_price * oi.quantity) - (
+        oi.invoiced_amount - (
           (COALESCE(oi.unit_cost_price, 0) * oi.quantity) + 
           COALESCE(oi.commission_amount, 0) + 
           COALESCE(oi.shipping_amount, 0) + 
           COALESCE(oi.service_fee_share, 0) + 
-          (oi.unit_sale_price * oi.quantity * $${extraParamIdx})
+          (oi.invoiced_amount * $${extraParamIdx})
         )
       ) DESC
       LIMIT $${limitIdx} OFFSET $${offsetIdx}
