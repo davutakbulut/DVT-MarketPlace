@@ -56,7 +56,7 @@ export default function RootLayout({
                       strUrl.indexOf('moz-extension') !== -1 ||
                       strUrl.indexOf('VM') !== -1
                     ) {
-                      return true; // Suppress from console
+                      return true; // Suppress
                     }
                     if (origOnError) return origOnError.apply(this, arguments);
                     return false;
@@ -90,8 +90,27 @@ export default function RootLayout({
                     }
                   }, true);
 
-                  // 3. PerformanceObserver Guard: Ensure entries are never undefined
-                  if (typeof window.PerformanceObserver !== 'undefined') {
+                  // 3. requestIdleCallback Safe Wrapper
+                  if (typeof window !== 'undefined' && typeof window.requestIdleCallback === 'function') {
+                    var origRIC = window.requestIdleCallback;
+                    window.requestIdleCallback = function(cb, opts) {
+                      var safeCb = function(deadline) {
+                        try {
+                          return cb(deadline);
+                        } catch (err) {
+                          var errStr = String((err && err.message) || err || '');
+                          if (errStr.indexOf('startTime') !== -1 || errStr.indexOf('reportAllChanges') !== -1) {
+                            return;
+                          }
+                          console.warn('Silent idle error handled:', err);
+                        }
+                      };
+                      return origRIC.call(this, safeCb, opts);
+                    };
+                  }
+
+                  // 4. PerformanceObserver Guard: Ensure entries are never undefined
+                  if (typeof window !== 'undefined' && typeof window.PerformanceObserver !== 'undefined') {
                     var OrigPerfObs = window.PerformanceObserver;
                     window.PerformanceObserver = function(callback) {
                       var guardedCallback = function(list, observer) {
@@ -99,7 +118,6 @@ export default function RootLayout({
                           if (list && typeof list.getEntries === 'function') {
                             var rawEntries = list.getEntries() || [];
                             var validEntries = rawEntries.filter(function(e) { return e && typeof e.startTime !== 'undefined'; });
-                            // If entries were cleaned, create safe proxy
                             var safeList = {
                               getEntries: function() { return validEntries; },
                               getEntriesByName: function(name, type) { 
