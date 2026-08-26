@@ -39,6 +39,42 @@ export default function RootLayout({
         <link rel="icon" href="/favicon.ico" sizes="any" />
         <link rel="icon" href="/icon.svg" type="image/svg+xml" />
         <link rel="apple-touch-icon" href="/icon.svg" />
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `
+              (function() {
+                try {
+                  // Capture & suppress web-vitals / devtools startTime undefined errors
+                  window.addEventListener('error', function(event) {
+                    var msg = (event && event.message) ? event.message : '';
+                    var fn = (event && event.filename) ? event.filename : '';
+                    if (
+                      msg.indexOf('startTime') !== -1 || 
+                      msg.indexOf('reportAllChanges') !== -1 ||
+                      fn.indexOf('chrome-extension') !== -1 ||
+                      fn.indexOf('moz-extension') !== -1
+                    ) {
+                      if (event.preventDefault) event.preventDefault();
+                      if (event.stopPropagation) event.stopPropagation();
+                      if (event.stopImmediatePropagation) event.stopImmediatePropagation();
+                      return true;
+                    }
+                  }, true);
+
+                  window.addEventListener('unhandledrejection', function(event) {
+                    var reason = event && event.reason;
+                    var msg = (typeof reason === 'string') ? reason : (reason && reason.message ? reason.message : '');
+                    if (msg.indexOf('startTime') !== -1 || msg.indexOf('reportAllChanges') !== -1) {
+                      if (event.preventDefault) event.preventDefault();
+                      if (event.stopPropagation) event.stopPropagation();
+                      return true;
+                    }
+                  }, true);
+                } catch(e) {}
+              })();
+            `,
+          }}
+        />
       </head>
       <body className="antialiased font-sans bg-canvas text-dark selection:bg-primary-tint-200">
         <TelemetryTracker />
