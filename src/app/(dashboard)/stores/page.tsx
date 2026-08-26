@@ -267,7 +267,7 @@ export default function StoresManagementPage() {
       </div>
 
       {/* Connected Stores Grid */}
-      <div data-tour="stores-list" className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         {stores.map((s) => {
           const mpMeta = marketplaceLogos[s.marketplace] || { name: s.marketplace, color: 'text-gray-700', bg: 'bg-gray-50 border-gray-200' };
           const isSyncing = syncingId === s.id;

@@ -153,8 +153,7 @@ export default function LiveAnalysisPage() {
             <span>{showCharts ? 'Grafikleri Gizle' : 'Grafikleri Göster'}</span>
           </Button>
 
-          <Button 
-            data-tour="live-batch-cost"
+          <Button
             size="sm" 
             onClick={() => setBatchCostModal(true)}
             className="text-xs h-8 sm:h-9 gap-1.5 font-bold shadow-xs bg-primary hover:bg-primary-hover text-white"
@@ -170,7 +169,7 @@ export default function LiveAnalysisPage() {
       </div>
 
       {/* Summary KPI Cards (5 Metrics with AOV) */}
-      <div data-tour="live-kpis" className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 sm:gap-4">
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 sm:gap-4">
         <div className="bg-white p-4 sm:p-5 rounded-3xl border border-border shadow-xs">
           <span className="text-[11px] font-bold text-muted-foreground uppercase tracking-wide block">Filtrelenen Sipariş</span>
           <div className="text-xl sm:text-2xl font-black text-dark tabular-nums mt-1">{summary.totalOrders || 0} Adet</div>
@@ -220,7 +219,7 @@ export default function LiveAnalysisPage() {
 
       {/* LIVE CHARTS ROW */}
       {showCharts && (
-        <div data-tour="live-charts" className="grid grid-cols-1 lg:grid-cols-12 gap-4 sm:gap-6 animate-in fade-in">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 sm:gap-6 animate-in fade-in">
           
           <div className="lg:col-span-8 bg-white p-4 sm:p-6 rounded-3xl border border-border shadow-xs space-y-4">
             <div className="flex items-center justify-between pb-3 border-b border-border">
@@ -382,7 +381,7 @@ export default function LiveAnalysisPage() {
       </div>
 
       {/* Orders Table */}
-      <div data-tour="live-table" className="bg-white rounded-3xl border border-border shadow-xs overflow-hidden">
+      <div className="bg-white rounded-3xl border border-border shadow-xs overflow-hidden">
                   <>
             {/* Desktop Table View */}
             <div className="hidden md:block overflow-x-auto">

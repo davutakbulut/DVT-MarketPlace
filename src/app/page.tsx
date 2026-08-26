@@ -47,12 +47,10 @@ import {
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { VirtualTourModal } from '@/components/layout/VirtualTourModal';
 import { BrandLogo } from '@/components/common/BrandLogo';
 import { formatCurrency, formatPercentage } from '@/lib/formatters';
 
 export default function LandingHomePage() {
-  const [tourOpen, setTourOpen] = useState(false);
   const [faqOpen, setFaqOpen] = useState<number | null>(0);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [userSession, setUserSession] = useState<{ name: string; email: string; role: string } | null>(null);
@@ -227,16 +225,6 @@ export default function LandingHomePage() {
 
           {/* Right Desktop / Mobile Actions with Auth Session Detection */}
           <div className="flex items-center gap-1.5 sm:gap-2.5 shrink-0">
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => setTourOpen(true)}
-              className="hidden md:flex items-center gap-1.5 text-xs font-bold text-dark hover:text-primary h-9 px-3 rounded-xl"
-            >
-              <Compass className="w-4 h-4 text-primary" />
-              <span>Sistem Turu</span>
-            </Button>
-
             {userSession ? (
               <Link href="/dashboard">
                 <Button size="sm" className="rounded-2xl text-xs font-bold px-3.5 sm:px-4 h-9 bg-dark hover:bg-dark/90 text-white shadow-xs flex items-center gap-2">
@@ -335,15 +323,6 @@ export default function LandingHomePage() {
 
             {/* Drawer Bottom Area: User Session Profile or Login Buttons */}
             <div className="pt-4 border-t border-border space-y-2.5">
-              <Button
-                variant="outline"
-                onClick={() => { setMobileMenuOpen(false); setTourOpen(true); }}
-                className="w-full h-10 text-xs font-bold rounded-2xl gap-2 justify-center"
-              >
-                <Compass className="w-4 h-4 text-primary" />
-                <span>Sistem Turunu Başlat</span>
-              </Button>
-
               {userSession ? (
                 <div className="p-3 bg-canvas rounded-2xl border border-border space-y-2.5">
                   <div className="flex items-center gap-2.5">
@@ -1029,9 +1008,9 @@ export default function LandingHomePage() {
                   </Link>
                 </li>
                 <li>
-                  <button onClick={() => setTourOpen(true)} className="hover:text-primary transition-colors block text-left">
-                    İnteraktif Sistem Rehberi (Nasıl Yapılır?)
-                  </button>
+                  <Link href="/super-admin" className="hover:text-primary transition-colors block">
+                    Süper Admin Komuta Merkezi
+                  </Link>
                 </li>
               </ul>
             </div>
@@ -1094,9 +1073,6 @@ export default function LandingHomePage() {
           </div>
         </div>
       </footer>
-
-      {/* Virtual Tour Modal */}
-      <VirtualTourModal open={tourOpen} onClose={() => setTourOpen(false)} />
     </div>
   );
 }

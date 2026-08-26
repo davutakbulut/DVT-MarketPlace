@@ -122,7 +122,7 @@ export default function ProductsCatalogPage() {
       </div>
 
       {/* Filter and Search Bar */}
-      <div data-tour="products-search" className="bg-white p-4 rounded-2xl sm:rounded-3xl border border-border shadow-xs flex flex-col sm:flex-row items-center justify-between gap-3">
+      <div className="bg-white p-4 rounded-2xl sm:rounded-3xl border border-border shadow-xs flex flex-col sm:flex-row items-center justify-between gap-3">
         <form onSubmit={handleSearchSubmit} className="relative w-full sm:w-80">
           <Search className="w-4 h-4 text-muted-foreground absolute left-3 top-2.5" />
           <input
@@ -178,7 +178,7 @@ export default function ProductsCatalogPage() {
       </div>
 
       {/* Products Table */}
-      <div data-tour="products-table" className="bg-white rounded-3xl border border-border shadow-xs overflow-hidden">
+      <div className="bg-white rounded-3xl border border-border shadow-xs overflow-hidden">
         {loading ? (
           <div className="p-12 text-center text-xs text-gray-500 font-bold flex items-center justify-center gap-2">
             <RefreshCw className="w-4 h-4 animate-spin text-primary" />

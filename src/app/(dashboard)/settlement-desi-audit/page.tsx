@@ -162,7 +162,7 @@ export default function SettlementDesiAuditPage() {
 
       {/* Table Content */}
       {activeTab === 'audits' ? (
-        <div data-tour="desi-audit-table" className="bg-white rounded-3xl border border-border shadow-xs overflow-hidden">
+        <div className="bg-white rounded-3xl border border-border shadow-xs overflow-hidden">
                     <>
             {/* Desktop Table View */}
             <div className="hidden md:block overflow-x-auto">

@@ -4,8 +4,7 @@ import { StoreSelector } from './StoreSelector';
 import { CountrySelector } from './CountrySelector';
 import { DateRangePicker } from './DateRangePicker';
 import { NotificationCenter } from './NotificationCenter';
-import { InteractiveSpotlightGuide } from './InteractiveSpotlightGuide';
-import { Menu, Compass, User, LogOut, ShieldCheck, Crown } from 'lucide-react';
+import { Menu, User, LogOut, ShieldCheck, Crown } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import Link from 'next/link';
@@ -17,7 +16,6 @@ import { BrandLogo } from '@/components/common/BrandLogo';
 export function Header({ onMobileMenuToggle }: { onMobileMenuToggle: () => void }) {
   const router = useRouter();
   const { user } = useAuth();
-  const [guideOpen, setGuideOpen] = useState(false);
   const [userDropdown, setUserDropdown] = useState(false);
 
   const handleLogout = async () => {
@@ -65,18 +63,6 @@ export function Header({ onMobileMenuToggle }: { onMobileMenuToggle: () => void 
           <div className="hidden md:flex items-center shrink-0">
             <DateRangePicker />
           </div>
-
-          {/* Rehber Spotlight Button */}
-          <Button
-            variant="secondary"
-            size="sm"
-            onClick={() => setGuideOpen(true)}
-            className="flex items-center gap-1.5 h-8 text-[11px] rounded-xl font-bold px-2.5 sm:px-3 shrink-0 bg-primary-tint-50 hover:bg-primary-tint-100 text-primary border border-primary-tint-200 shadow-2xs"
-            title="İnteraktif Rehberi Başlat"
-          >
-            <Compass className="w-3.5 h-3.5 text-primary" />
-            <span>Rehber</span>
-          </Button>
 
           {/* 👑 Direct Super Admin Quick Button (Shown for Super Admins) */}
           {user?.isSuperAdmin && (
@@ -149,9 +135,6 @@ export function Header({ onMobileMenuToggle }: { onMobileMenuToggle: () => void 
       <div className="md:hidden px-3 py-2 bg-canvas/60 border-t border-border/60">
         <DateRangePicker isMobileRow={true} />
       </div>
-
-      {/* Dynamic Page-Aware Spotlight Tour Guide */}
-      <InteractiveSpotlightGuide open={guideOpen} onClose={() => setGuideOpen(false)} />
     </header>
   );
 }

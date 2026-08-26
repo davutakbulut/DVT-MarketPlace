@@ -205,7 +205,7 @@ export default function AdsPage() {
       </div>
 
       {/* Invoice Table */}
-      <div data-tour="ads-invoices" className="bg-white rounded-3xl border border-border shadow-xs overflow-hidden">
+      <div className="bg-white rounded-3xl border border-border shadow-xs overflow-hidden">
         {invoices.length === 0 ? (
           <div className="p-12 text-center space-y-2">
             <FileText className="w-8 h-8 text-gray-300 mx-auto" />

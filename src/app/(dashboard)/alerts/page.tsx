@@ -149,7 +149,7 @@ export default function AlertsPage() {
       </div>
 
       {/* Alerts List */}
-      <div data-tour="alerts-list" className="space-y-3">
+      <div className="space-y-3">
         {filteredAlerts.length === 0 ? (
           <div className="bg-white p-8 rounded-3xl border border-border text-center">
             <CheckCircle2 className="w-8 h-8 text-emerald-600 mx-auto mb-2" />

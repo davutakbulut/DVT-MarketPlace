@@ -243,7 +243,7 @@ export default function CargoBaremPage() {
       </div>
 
       {/* TABLE / CARD CONTAINER */}
-      <div data-tour="barem-matrix" className="bg-white rounded-3xl border border-border shadow-xs overflow-hidden">
+      <div className="bg-white rounded-3xl border border-border shadow-xs overflow-hidden">
         {loading ? (
           <div className="py-20 text-center space-y-3">
             <RefreshCw className="w-8 h-8 text-primary animate-spin mx-auto" />

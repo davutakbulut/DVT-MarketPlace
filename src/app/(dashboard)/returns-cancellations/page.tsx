@@ -118,7 +118,7 @@ export default function ReturnsCancellationsPage() {
       </div>
 
       {/* KPI Cards Grid */}
-      <div data-tour="returns-kpis" className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
         {/* 1. Toplam İade */}
         <div className="bg-white p-4 sm:p-5 rounded-3xl border border-border shadow-xs space-y-2">
           <div className="flex items-center justify-between">
@@ -299,7 +299,7 @@ export default function ReturnsCancellationsPage() {
       </div>
 
       {/* ORDERS LIST */}
-      <div data-tour="returns-table" className="bg-white rounded-3xl border border-border shadow-xs overflow-hidden">
+      <div className="bg-white rounded-3xl border border-border shadow-xs overflow-hidden">
         {loading ? (
           <div className="py-20 text-center space-y-3">
             <RefreshCw className="w-8 h-8 text-primary animate-spin mx-auto" />

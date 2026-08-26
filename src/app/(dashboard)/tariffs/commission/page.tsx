@@ -65,7 +65,7 @@ export default function CommissionTariffPage() {
       </div>
 
       {/* Table */}
-      <div data-tour="commission-search" className="bg-white rounded-3xl border border-border shadow-xs overflow-hidden">
+      <div className="bg-white rounded-3xl border border-border shadow-xs overflow-hidden">
         {loading ? (
           <div className="p-12 text-center text-xs text-gray-500 font-bold flex items-center justify-center gap-2">
             <RefreshCw className="w-4 h-4 animate-spin text-primary" />
