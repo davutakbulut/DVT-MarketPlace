@@ -25,7 +25,7 @@ export default function LiveAnalysisPage() {
         const commRate = parseFloat(r.commissionRate) || 18;
         const comm = sale * ((commRate * 1.20) / 100);
         const shipping = 42.50;
-        const service = 8.49;
+        const service = 13.19;
         const withholding = (sale / 1.20) * 0.01;
         const netVat = Math.max(0, (sale * (1 - 1/1.20)) - (cost * (1 - 1/1.20) + shipping * (1 - 1/1.20) + comm * (1 - 1/1.20)));
         const netProfit = sale - (cost + comm + shipping + service + withholding + netVat);
@@ -59,7 +59,7 @@ export default function LiveAnalysisPage() {
         if (r.id === id) {
           const comm = r.salePrice * ((r.commissionRate * 1.20) / 100);
           const shipping = 42.50;
-          const service = 8.49;
+          const service = 13.19;
           const withholding = (r.salePrice / 1.20) * 0.01;
           const netVat = Math.max(0, (r.salePrice * (1 - 1/1.20)) - (newCost * (1 - 1/1.20) + shipping * (1 - 1/1.20) + comm * (1 - 1/1.20)));
           const netProfit = r.salePrice - (newCost + comm + shipping + service + withholding + netVat);

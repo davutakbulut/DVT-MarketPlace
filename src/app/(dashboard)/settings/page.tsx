@@ -24,9 +24,37 @@ export default function SettingsPage() {
     }
   };
 
+
+  const [serviceFee, setServiceFee] = useState(13.19);
+
+  const fetchServiceFee = async () => {
+    try {
+      const res = await fetch('/api/settings/service-fee');
+      const data = await res.json();
+      if (data.feeAmountIncVat) setServiceFee(data.feeAmountIncVat);
+    } catch (e) {}
+  };
+
   useEffect(() => {
     fetchBaremTiers();
+    fetchServiceFee();
   }, []);
+
+  const handleSaveGeneralSettings = async () => {
+    try {
+      const res = await fetch('/api/settings/service-fee', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ feeAmountIncVat: serviceFee }),
+      });
+      if (res.ok) {
+        toast.success(`Platform Hizmet Bedeli (₺${serviceFee}) ve genel ayarlar veritabanına kaydedildi!`);
+      }
+    } catch (e) {
+      toast.error("Ayarlar kaydedilirken hata oluştu.");
+    }
+  };
+
 
   const handleBaremPriceChange = (id: string, field: 'discountedPriceExVat' | 'standardPriceExVat', value: number) => {
     setBaremTiers((prev) =>
@@ -203,15 +231,15 @@ export default function SettingsPage() {
                 </div>
                 <div>
                   <label className="text-xs font-bold text-dark block mb-1">Pazaryeri Hizmet Bedeli (₺)</label>
-                  <input type="number" defaultValue={8.49} className="w-full px-3 py-2 rounded-xl border border-border text-xs font-bold" />
+                  <input type="number" step="0.01" value={serviceFee} onChange={(e) => setServiceFee(parseFloat(e.target.value) || 0)} className="w-full px-3 py-2 rounded-xl border border-primary text-xs font-bold text-primary bg-primary-tint-50/30" />
                 </div>
                 <div>
                   <label className="text-xs font-bold text-dark block mb-1">Minimum Kâr Marjı Uyarısı (%)</label>
                   <input type="number" defaultValue={15} className="w-full px-3 py-2 rounded-xl border border-border text-xs font-bold" />
                 </div>
               </div>
-              <Button onClick={() => toast.success("Genel ayarlar kaydedildi!")} className="text-xs font-bold">
-                Ayarları Kaydet
+              <Button onClick={handleSaveGeneralSettings} className="text-xs font-bold">
+                Ayarları Veritabanına Kaydet
               </Button>
             </div>
           )}

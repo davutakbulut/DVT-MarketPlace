@@ -27,7 +27,7 @@ export interface ReversePricingInput {
   carrier?: string; // e.g. 'TEX', 'Aras'
   isFastDeliveryCompliant?: boolean;
   commissionRate: number; // % (KDV Hariç, e.g. 18.0)
-  serviceFee?: number; // Default 8.49 TL (KDV Dahil)
+  serviceFee?: number; // Default 13.19 TL (KDV Dahil)
   withholdingRate?: number; // Default 1.0 for 1% Stopaj
   extraCost?: number; // Packaging / extra costs (KDV Dahil)
   targetMode: 'margin_percent' | 'cash_amount' | 'markup_percent';

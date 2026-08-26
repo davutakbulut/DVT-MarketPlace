@@ -2,7 +2,7 @@ import { ReversePricingInput, ReversePricingResult } from './types';
 
 export class ReversePricingEngine {
   public static calculate(input: ReversePricingInput): ReversePricingResult {
-    const serviceFee = input.serviceFee ?? 8.49;
+    const serviceFee = input.serviceFee ?? 13.19;
     const withholdingRate = (input.withholdingRate ?? 1.0) / 100;
     const extraCost = input.extraCost ?? 0.0;
     const commRateWithVat = (input.commissionRate * 1.20) / 100;

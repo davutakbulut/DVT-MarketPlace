@@ -21,7 +21,7 @@ export default function ProductPricingPage() {
   const marginFactor = targetMargin / 100;
 
   // Approximate target price for barem lookup
-  let preliminaryPrice = (cogs + 40 + 8.49) / (1 - (commFactor + withholdingFactor + marginFactor));
+  let preliminaryPrice = (cogs + 40 + 13.19) / (1 - (commFactor + withholdingFactor + marginFactor));
   let priceExVat = preliminaryPrice / 1.20;
 
   const cargoResult = calculateCargoBaremCost({
@@ -32,7 +32,7 @@ export default function ProductPricingPage() {
   });
 
   const finalShippingFee = cargoResult.shippingFeeIncVat;
-  const targetSalePrice = Math.round((cogs + finalShippingFee + 8.49) / (1 - (commFactor + withholdingFactor + marginFactor)));
+  const targetSalePrice = Math.round((cogs + finalShippingFee + 13.19) / (1 - (commFactor + withholdingFactor + marginFactor)));
   const netProfit = Math.round(targetSalePrice * marginFactor);
   const commAmount = Math.round(targetSalePrice * commFactor);
   const withholding = Math.round((targetSalePrice / 1.20) * 0.01);
@@ -152,7 +152,7 @@ export default function ProductPricingPage() {
             <div className="flex justify-between text-gray-600"><span>Ürün Alış Maliyeti:</span><strong className="text-dark tabular-nums">₺{cogs.toFixed(2)}</strong></div>
             <div className="flex justify-between text-gray-600"><span>Kargo Maliyeti (Barem {cargoResult.appliedTier}):</span><strong className="text-primary tabular-nums">₺{finalShippingFee.toFixed(2)}</strong></div>
             <div className="flex justify-between text-gray-600"><span>Pazaryeri Komisyonu (%{commissionRate}):</span><strong className="text-dark tabular-nums">₺{commAmount.toFixed(2)}</strong></div>
-            <div className="flex justify-between text-gray-600"><span>Hizmet Bedeli:</span><strong className="text-dark tabular-nums">₺8.49</strong></div>
+            <div className="flex justify-between text-gray-600"><span>Hizmet Bedeli:</span><strong className="text-dark tabular-nums">₺13.19</strong></div>
             <div className="flex justify-between text-gray-600"><span>%1 Stopaj + Net KDV:</span><strong className="text-dark tabular-nums">₺{(withholding + netVat).toFixed(2)}</strong></div>
           </div>
 

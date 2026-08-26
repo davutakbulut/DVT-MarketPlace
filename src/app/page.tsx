@@ -38,7 +38,7 @@ export default function LandingHomePage() {
   // Quick reverse price approximation for the hero widget
   const commWithVat = (calcCommission * 1.20) / 100;
   const withholding = 0.01 / 1.20;
-  const targetPrice = Math.round((calcCost + 45 + 8.49) / (1 - (commWithVat + withholding + calcMargin / 100)));
+  const targetPrice = Math.round((calcCost + 45 + 13.19) / (1 - (commWithVat + withholding + calcMargin / 100)));
   const netProfit = Math.round(targetPrice * (calcMargin / 100));
 
   const faqs = [
@@ -210,7 +210,7 @@ export default function LandingHomePage() {
 
               <div className="pt-3 border-t border-primary-tint-200/80 text-[11px] space-y-1 text-gray-600">
                 <div className="flex justify-between"><span>Kargo (1 Desi):</span><strong className="text-dark">₺45.00</strong></div>
-                <div className="flex justify-between"><span>Pazaryeri Hizmet Bedeli:</span><strong className="text-dark">₺8.49</strong></div>
+                <div className="flex justify-between"><span>Pazaryeri Hizmet Bedeli:</span><strong className="text-dark">₺13.19</strong></div>
                 <div className="flex justify-between"><span>%1 Stopaj & Net KDV:</span><strong className="text-dark">Dahil Edildi</strong></div>
               </div>
             </div>
