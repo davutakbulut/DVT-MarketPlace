@@ -1,4 +1,5 @@
 import { OrderItemProfitInput, OrderItemProfitResult } from './types';
+import { calculateCargoBaremCost } from './cargo-barem';
 
 export class OrderProfitEngine {
   public static calculate(params: OrderItemProfitInput): OrderItemProfitResult {
@@ -10,7 +11,18 @@ export class OrderProfitEngine {
     const commissionAmount = grossRevenue * commRateWithVat;
     const withholdingRate = (params.withholdingRate ?? 1.0) / 100;
     const withholdingTax = (grossRevenue / (1 + params.saleVatRate / 100)) * withholdingRate;
-    const shippingFee = params.shippingFee ?? 42.50;
+
+    // Determine cargo cost dynamically based on Gross Sales Price (Ex VAT)
+    const packetAmountExVat = grossRevenue / (1 + params.saleVatRate / 100);
+    const cargoResult = calculateCargoBaremCost({
+      packetAmountExVat,
+      carrier: params.carrier || 'TEX',
+      isFastDeliveryCompliant: params.isFastDeliveryCompliant !== false,
+      customStandardPrice: params.shippingFee || 81.95,
+    });
+
+    const shippingFee = params.shippingFee ?? cargoResult.shippingFeeIncVat;
+    const baremSaving = cargoResult.baremSupportSaving;
 
     const outputVat = grossRevenue * (1 - 1 / (1 + params.saleVatRate / 100));
     const cogsVat = cogs * (1 - 1 / (1 + params.costVatRate / 100));
@@ -41,7 +53,7 @@ export class OrderProfitEngine {
       cogs: Math.round(cogs * 100) / 100,
       commissionAmount: Math.round(commissionAmount * 100) / 100,
       shippingFee: Math.round(shippingFee * 100) / 100,
-      baremSaving: 0,
+      baremSaving: Math.round(baremSaving * 100) / 100,
       serviceFeeShare: Math.round(params.serviceFeeShare * 100) / 100,
       withholdingTax: Math.round(withholdingTax * 100) / 100,
       netVatPayable: Math.round(netVatPayable * 100) / 100,

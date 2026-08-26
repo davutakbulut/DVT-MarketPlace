@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 import { Calculator, ArrowRight, Sparkles, Truck, ShieldCheck, CheckCircle2 } from "lucide-react";
+import { ReversePricingEngine } from "@/packages/financial-engine/reverse-pricing";
 import { calculateCargoBaremCost } from "@/packages/financial-engine/cargo-barem";
 
 export default function ProductPricingPage() {
@@ -13,37 +14,53 @@ export default function ProductPricingPage() {
   const [commissionRate, setCommissionRate] = useState(18);
   const [carrier, setCarrier] = useState('TEX');
   const [isFastDelivery, setIsFastDelivery] = useState(true);
+  const [serviceFee, setServiceFee] = useState(13.19);
   const [desi, setDesi] = useState(1);
 
-  // Dynamic Barem Calculation based on preliminary sale price estimation
-  const commFactor = (commissionRate * 1.20) / 100;
-  const withholdingFactor = 0.01 / 1.20;
-  const marginFactor = targetMargin / 100;
+  // Exact Calculation using ReversePricingEngine with Sales-Price Driven Barem Logic
+  let pricingResult;
+  try {
+    pricingResult = ReversePricingEngine.calculate({
+      cogs,
+      costVatRate: 20,
+      saleVatRate: 20,
+      desi,
+      carrier,
+      isFastDeliveryCompliant: isFastDelivery,
+      commissionRate,
+      serviceFee,
+      withholdingRate: 1.0,
+      targetMode: 'margin_percent',
+      targetValue: targetMargin,
+    });
+  } catch (err: any) {
+    pricingResult = {
+      targetSalePrice: 0,
+      netProfit: 0,
+      profitMarginPercent: 0,
+      profitMarkupPercent: 0,
+      breakdown: { cogs, shippingFee: 0, baremSaving: 0, commissionAmount: 0, serviceFee, withholdingTax: 0, netVatPayable: 0, extraCost: 0, totalDeductions: 0 }
+    };
+  }
 
-  // Approximate target price for barem lookup
-  let preliminaryPrice = (cogs + 40 + 13.19) / (1 - (commFactor + withholdingFactor + marginFactor));
-  let priceExVat = preliminaryPrice / 1.20;
-
+  const targetSalePrice = pricingResult.targetSalePrice;
+  const salePriceExVat = targetSalePrice / 1.20;
   const cargoResult = calculateCargoBaremCost({
-    packetAmountExVat: priceExVat,
+    packetAmountExVat: salePriceExVat,
     carrier,
     isFastDeliveryCompliant: isFastDelivery,
-    customStandardPrice: 42.50,
+    customStandardPrice: 81.95,
   });
-
-  const finalShippingFee = cargoResult.shippingFeeIncVat;
-  const targetSalePrice = Math.round((cogs + finalShippingFee + 13.19) / (1 - (commFactor + withholdingFactor + marginFactor)));
-  const netProfit = Math.round(targetSalePrice * marginFactor);
-  const commAmount = Math.round(targetSalePrice * commFactor);
-  const withholding = Math.round((targetSalePrice / 1.20) * 0.01);
-  const netVat = Math.max(0, Math.round((targetSalePrice * 0.20/1.20) - (cogs * 0.20/1.20 + finalShippingFee * 0.20/1.20 + commAmount * 0.20/1.20)));
 
   return (
     <div className="space-y-4 sm:space-y-6 max-w-5xl">
       <div>
-        <h3 className="text-base sm:text-lg font-bold text-dark">Ürün Fiyatlandırma & Kargo Barem Motoru</h3>
+        <div className="flex items-center gap-2">
+          <h3 className="text-base sm:text-lg font-bold text-dark">Ürün Fiyatlandırma & Satış Tutarına Dayalı Barem Motoru</h3>
+          <Badge variant="excellent">Satış Fiyatı Bazlı</Badge>
+        </div>
         <p className="text-[11px] sm:text-xs text-muted-foreground">
-          Maliyet ve hedef kâr marjınızı girin; 10 Ağustos 2026 kargo barem desteği ve vergiler dahil doğru satış fiyatını belirleyin.
+          Kargo barem desteği (0-199.99 TL / 200-349.99 TL / 350 TL+) <strong>satış fiyatı baz alınarak</strong> dinamik hesaplanır.
         </p>
       </div>
 
@@ -51,8 +68,8 @@ export default function ProductPricingPage() {
         {/* Left Inputs Card */}
         <div className="lg:col-span-7 bg-white p-4 sm:p-6 rounded-3xl border border-border space-y-4 shadow-xs">
           <div className="flex items-center justify-between pb-3 border-b border-border">
-            <span className="text-xs font-bold text-primary uppercase tracking-wide">Fiyatlama Parametreleri</span>
-            <Badge variant="excellent">Tersine Motor v2.0</Badge>
+            <span className="text-xs font-bold text-primary uppercase tracking-wide">Maliyet & Hedef Parametreleri</span>
+            <Badge variant="excellent">Tersine Motor v2.1</Badge>
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
@@ -105,12 +122,12 @@ export default function ProductPricingPage() {
             </div>
           </div>
 
-          {/* Barem Support Toggle Switch */}
+          {/* Dynamic Barem Status based on Sales Price */}
           <div className="bg-primary-tint-50/70 border border-primary-tint-200 p-3.5 rounded-2xl space-y-2">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <Truck className="w-4 h-4 text-primary" />
-                <span className="text-xs font-bold text-dark">Hızlı Teslimat / 1 Gün Termin (Barem Desteği)</span>
+                <span className="text-xs font-bold text-dark">Hızlı Teslimat / 1 Gün Termin (Avantajlı Fiyat)</span>
               </div>
               <input
                 type="checkbox"
@@ -119,13 +136,25 @@ export default function ProductPricingPage() {
                 className="w-4 h-4 accent-primary cursor-pointer rounded"
               />
             </div>
-            <div className="text-[11px] text-gray-600 flex items-center justify-between pt-1 border-t border-primary-tint-200">
-              <span>Uygulanan Kademe: <strong>{cargoResult.tierLabel}</strong></span>
-              <span className="font-extrabold text-primary">Kargo: ₺{cargoResult.shippingFeeExVat} + KDV</span>
+            
+            <div className="text-[11px] text-gray-700 pt-2 border-t border-primary-tint-200 space-y-1">
+              <div className="flex justify-between font-semibold">
+                <span>Hesaplanan KDV Hariç Satış Tutarı:</span>
+                <strong className="text-dark tabular-nums">₺{salePriceExVat.toFixed(2)}</strong>
+              </div>
+              <div className="flex justify-between items-center">
+                <span>Otomatik Eşleşen Barem Kademesi:</span>
+                <span className="font-extrabold text-primary bg-white px-2 py-0.5 rounded-lg border border-primary-tint-200">{cargoResult.tierLabel}</span>
+              </div>
+              <div className="flex justify-between items-center pt-0.5">
+                <span>Uygulanan Kargo Bedeli (KDV Dahil):</span>
+                <strong className="text-primary tabular-nums">₺{cargoResult.shippingFeeIncVat.toFixed(2)}</strong>
+              </div>
             </div>
+
             {cargoResult.baremSupportSaving > 0 && (
-              <div className="text-[11px] text-emerald-700 font-bold flex items-center gap-1">
-                <CheckCircle2 className="w-3.5 h-3.5" /> Barem desteği sayesinde bu üründe sipariş başı ₺{cargoResult.baremSupportSaving} tasarruf ediyorsunuz!
+              <div className="text-[11px] text-emerald-700 font-bold flex items-center gap-1 pt-1">
+                <CheckCircle2 className="w-3.5 h-3.5" /> Satış tutarı sayesinde bu üründe sipariş başı ₺{cargoResult.baremSupportSaving} kargo tasarrufu sağlandı!
               </div>
             )}
           </div>
@@ -144,19 +173,19 @@ export default function ProductPricingPage() {
             </div>
 
             <div className="text-xs font-bold text-emerald-600 mt-1">
-              Net Nakit Kârınız: {formatCurrency(netProfit)}
+              Net Nakit Kârınız: {formatCurrency(pricingResult.netProfit)}
             </div>
           </div>
 
           <div className="pt-3 border-t border-border space-y-2 text-xs">
             <div className="flex justify-between text-gray-600"><span>Ürün Alış Maliyeti:</span><strong className="text-dark tabular-nums">₺{cogs.toFixed(2)}</strong></div>
-            <div className="flex justify-between text-gray-600"><span>Kargo Maliyeti (Barem {cargoResult.appliedTier}):</span><strong className="text-primary tabular-nums">₺{finalShippingFee.toFixed(2)}</strong></div>
-            <div className="flex justify-between text-gray-600"><span>Pazaryeri Komisyonu (%{commissionRate}):</span><strong className="text-dark tabular-nums">₺{commAmount.toFixed(2)}</strong></div>
-            <div className="flex justify-between text-gray-600"><span>Hizmet Bedeli:</span><strong className="text-dark tabular-nums">₺13.19</strong></div>
-            <div className="flex justify-between text-gray-600"><span>%1 Stopaj + Net KDV:</span><strong className="text-dark tabular-nums">₺{(withholding + netVat).toFixed(2)}</strong></div>
+            <div className="flex justify-between text-gray-600"><span>Kargo Maliyeti ({cargoResult.tierLabel}):</span><strong className="text-primary tabular-nums">₺{pricingResult.breakdown.shippingFee.toFixed(2)}</strong></div>
+            <div className="flex justify-between text-gray-600"><span>Pazaryeri Komisyonu (%{commissionRate}):</span><strong className="text-dark tabular-nums">₺{pricingResult.breakdown.commissionAmount.toFixed(2)}</strong></div>
+            <div className="flex justify-between text-gray-600"><span>Platform Hizmet Bedeli:</span><strong className="text-dark tabular-nums">₺{serviceFee.toFixed(2)}</strong></div>
+            <div className="flex justify-between text-gray-600"><span>%1 Stopaj + Net KDV:</span><strong className="text-dark tabular-nums">₺{(pricingResult.breakdown.withholdingTax + pricingResult.breakdown.netVatPayable).toFixed(2)}</strong></div>
           </div>
 
-          <Button onClick={() => toast.success("Hedef fiyat kopyalandı veya mağazaya gönderilebilir!")} className="w-full text-xs font-bold h-10 rounded-xl gap-2 shadow-xs">
+          <Button onClick={() => toast.success("Satış fiyatı panoya kopyalandı!")} className="w-full text-xs font-bold h-10 rounded-xl gap-2 shadow-xs">
             <span>Fiyatı Listeye Ekle</span>
             <ArrowRight className="w-4 h-4" />
           </Button>
