@@ -78,6 +78,7 @@ export default function DashboardPage() {
     { name: `Ekstra Operasyon (%${d.extraOperationRate || 6})`, value: parseFloat(d.extraOperationTotal || 0), color: "#EC4899" },
     { name: "Hizmet Bedeli", value: parseFloat(d.serviceFeeTotal || 0), color: "#8B5CF6" },
     { name: "Vergi & Stopaj", value: parseFloat(d.taxesTotal || 0), color: "#64748B" },
+    { name: "Reklam Harcaması", value: parseFloat(exp.adSpendCost || 0), color: "#EAB308" },
   ].filter(x => x.value > 0);
 
   // 14 Masraf Kalemleri Donut Chart Data (Açılır-Kapanır Kart İçin)

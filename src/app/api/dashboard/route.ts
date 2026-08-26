@@ -9,37 +9,70 @@ export async function GET(request: Request) {
     const { searchParams } = new URL(request.url);
     const storeId = searchParams.get('storeId');
 
-    // Fetch dynamic extra operation rate from company_settings (default 6.00%)
-    const settingsRes = await query(`SELECT extra_operation_rate as "extraOperationRate" FROM company_settings LIMIT 1`);
+    // Fetch dynamic company settings
+    const settingsRes = await query(`
+      SELECT 
+        extra_operation_rate as "extraOperationRate",
+        early_payout_rate as "earlyPayoutRate"
+      FROM company_settings 
+      LIMIT 1
+    `);
     const extraOpRate = parseFloat(settingsRes[0]?.extraOperationRate ?? 6.00);
     const extraOpFraction = extraOpRate / 100.0;
+    const earlyPayoutRate = parseFloat(settingsRes[0]?.earlyPayoutRate ?? 0.16);
+    const earlyPayoutFraction = earlyPayoutRate / 100.0;
 
-    let conditions: string[] = [];
-    let params: any[] = [];
+    let baseConditions: string[] = [];
+    let baseParams: any[] = [];
     let pIdx = 1;
 
     if (storeId && storeId !== 'all') {
-      conditions.push(`o.store_id::text = $${pIdx}`);
-      params.push(storeId);
+      baseConditions.push(`o.store_id::text = $${pIdx}`);
+      baseParams.push(storeId);
       pIdx++;
     }
 
-    // Apply Date Conditions
+    // Apply Date Conditions on orders
     const dateHelper = buildDateConditions(searchParams, 'o.order_date', pIdx);
     if (dateHelper.whereClause && dateHelper.whereClause !== '1=1') {
-      conditions.push(dateHelper.whereClause);
-      params.push(...dateHelper.params);
+      baseConditions.push(dateHelper.whereClause);
+      baseParams.push(...dateHelper.params);
       pIdx = dateHelper.nextIndex;
     }
 
-    const whereClause = conditions.length > 0 ? conditions.join(' AND ') : '1=1';
+    const whereClause = baseConditions.length > 0 ? baseConditions.join(' AND ') : '1=1';
 
-    // Add extraOpFraction as parameter for dynamic calculation
+    // 1. Query Ad Invoices for the same store and date period
+    let adConditions: string[] = [];
+    let adParams: any[] = [];
+    let adPIdx = 1;
+
+    if (storeId && storeId !== 'all') {
+      adConditions.push(`store_id::text = $${adPIdx}`);
+      adParams.push(storeId);
+      adPIdx++;
+    }
+
+    const adDateHelper = buildDateConditions(searchParams, 'invoice_date', adPIdx);
+    if (adDateHelper.whereClause && adDateHelper.whereClause !== '1=1') {
+      adConditions.push(adDateHelper.whereClause);
+      adParams.push(...adDateHelper.params);
+    }
+
+    const adWhereClause = adConditions.length > 0 ? adConditions.join(' AND ') : '1=1';
+    const adInvoicesRes = await query(`
+      SELECT COALESCE(SUM(amount_inc_vat), 0) as "totalAdSpend"
+      FROM ad_invoices
+      WHERE ${adWhereClause}
+    `, adParams);
+
+    const totalAdInvoices = parseFloat(adInvoicesRes[0]?.totalAdSpend || 0);
+
+    // 2. Query Orders Aggregation
     const extraParamIdx = pIdx;
-    params.push(extraOpFraction);
-    pIdx++;
+    const earlyParamIdx = pIdx + 1;
+    const orderAggParams = [...baseParams, extraOpFraction, earlyPayoutFraction];
 
-    // Overall Totals for Selected Period with 14 Masraf Kalemleri
     const orderAgg = await query(`
       SELECT 
         COUNT(o.id) as total_orders,
@@ -62,25 +95,22 @@ export async function GET(request: Request) {
         COALESCE(SUM(o.intl_operation_fee), 0) as intl_operation_fee,
         COALESCE(SUM(o.withholding_tax), 0) as withholding_tax,
         COALESCE(SUM(o.net_vat), 0) as net_vat,
-        COALESCE(SUM(o.ad_spend_cost), 0) as ad_spend_cost,
+        COALESCE(SUM(o.ad_spend_cost), 0) as order_ad_spend,
         COALESCE(SUM(o.penalty_cost), 0) as penalty_cost,
-        COALESCE(SUM(o.early_payout_cost), 0) as early_payout_cost,
+        COALESCE(SUM(CASE WHEN o.early_payout_cost > 0 THEN o.early_payout_cost ELSE o.gross_amount * $${earlyParamIdx} END), 0) as early_payout_cost,
         COALESCE(SUM(o.gross_amount * $${extraParamIdx}), 0) as fixed_extra_operation_cost,
         
-        COALESCE(SUM(o.paid_amount - (o.total_cost + o.total_commission + o.total_shipping_cost + o.service_fee + o.withholding_tax + o.net_vat + (o.gross_amount * $${extraParamIdx}))), 0) as net_profit
+        COALESCE(SUM(o.paid_amount - (o.total_cost + o.total_commission + o.total_shipping_cost + o.service_fee + o.withholding_tax + o.net_vat + (o.gross_amount * $${extraParamIdx}))), 0) as net_profit_base
       FROM orders o
       WHERE ${whereClause}
-    `, params);
+    `, orderAggParams);
 
     const agg = orderAgg[0] || {};
     const gross = parseFloat(agg.gross_revenue) || 0;
     const paid = parseFloat(agg.invoiced_revenue) || gross;
-    const netProfit = parseFloat(agg.net_profit) || 0;
     const cogs = parseFloat(agg.cogs) || 0;
-    const netProfitMargin = paid > 0 ? (netProfit / paid) * 100 : 0;
-    const netProfitMarkup = cogs > 0 ? (netProfit / cogs) * 100 : 0;
 
-    // Expenses breakdown object
+    // Expenses breakdown object (14 Items)
     const cogsVal = parseFloat(agg.cogs) || 0;
     const commVal = parseFloat(agg.commission) || 0;
     const shipVal = parseFloat(agg.shipping) || 0;
@@ -90,13 +120,22 @@ export async function GET(request: Request) {
     const intlOpVal = parseFloat(agg.intl_operation_fee) || 0;
     const wTaxVal = parseFloat(agg.withholding_tax) || 0;
     const nVatVal = parseFloat(agg.net_vat) || 0;
-    const adSpendVal = parseFloat(agg.ad_spend_cost) || 0;
+    // Ad spend takes ad_invoices if present, fallback to order ad spend
+    const adSpendVal = totalAdInvoices > 0 ? totalAdInvoices : (parseFloat(agg.order_ad_spend) || 0);
     const penaltyVal = parseFloat(agg.penalty_cost) || 0;
     const earlyPayoutVal = parseFloat(agg.early_payout_cost) || 0;
     const otherInvoicesVal = 0.00;
     const fixedExtraOpVal = parseFloat(agg.fixed_extra_operation_cost) || 0;
 
     const totalCostSum = cogsVal + commVal + shipVal + retShipVal + sFeeVal + intlSFeeVal + intlOpVal + wTaxVal + nVatVal + adSpendVal + penaltyVal + earlyPayoutVal + otherInvoicesVal + fixedExtraOpVal;
+
+    // Net profit after all 14 expenses
+    const netProfit = paid - (totalCostSum - retShipVal); // retShipVal is already included in shipping
+    const netProfitMargin = paid > 0 ? (netProfit / paid) * 100 : 0;
+    const netProfitMarkup = cogs > 0 ? (netProfit / cogs) * 100 : 0;
+
+    // Standard params with extraOpFraction for other queries
+    const standardParams = [...baseParams, extraOpFraction];
 
     // Daily Profit Performance Trends
     const dailyProfitTrends = await query(`
@@ -110,7 +149,7 @@ export async function GET(request: Request) {
       WHERE ${whereClause}
       GROUP BY TO_CHAR(o.order_date, 'DD.MM'), TO_CHAR(o.order_date, 'YYYY-MM-DD')
       ORDER BY TO_CHAR(o.order_date, 'YYYY-MM-DD') ASC
-    `, params);
+    `, standardParams);
 
     // Monthly breakdown (All Months)
     const monthlyTrends = await query(`
@@ -138,7 +177,7 @@ export async function GET(request: Request) {
       WHERE ${whereClause}
       GROUP BY COALESCE(NULLIF(o.carrier_name, ''), 'Trendyol Express')
       ORDER BY COUNT(o.id) DESC
-    `, params);
+    `, standardParams);
 
     // Hourly Order Distribution (Heatmap 0-23 hours)
     const hourlyDistribution = await query(`
@@ -151,7 +190,7 @@ export async function GET(request: Request) {
       WHERE ${whereClause}
       GROUP BY EXTRACT(HOUR FROM o.order_date)
       ORDER BY EXTRACT(HOUR FROM o.order_date) ASC
-    `, params);
+    `, standardParams);
 
     // Top profitable products for Selected Period (calculated using unit_sale_price and unit_cost_price)
     const topProducts = await query(`
@@ -169,7 +208,7 @@ export async function GET(request: Request) {
       GROUP BY oi.barcode, oi.title, oi.brand
       ORDER BY SUM((oi.unit_sale_price * oi.quantity) - (COALESCE(oi.unit_cost_price, 0) * oi.quantity + (oi.unit_sale_price * oi.quantity * 0.16) + (oi.unit_sale_price * oi.quantity * $${extraParamIdx}))) DESC
       LIMIT 5
-    `, params);
+    `, standardParams);
 
     // Recent orders for Selected Period
     const recentOrders = await query(`
@@ -188,7 +227,7 @@ export async function GET(request: Request) {
       WHERE ${whereClause}
       ORDER BY o.order_date DESC
       LIMIT 8
-    `, params);
+    `, standardParams);
 
     // Stores list
     const stores = await query(`SELECT id, store_name as "storeName", marketplace FROM stores ORDER BY created_at ASC`);
@@ -201,12 +240,14 @@ export async function GET(request: Request) {
       netProfit,
       extraOperationTotal: fixedExtraOpVal,
       extraOperationRate: extraOpRate,
+      earlyPayoutRate: earlyPayoutRate,
       netProfitMargin: Math.round(netProfitMargin * 100) / 100,
       netProfitMarkup: Math.round(netProfitMarkup * 100) / 100,
       shippingTotal: shipVal,
       commissionTotal: commVal,
       taxesTotal: wTaxVal + nVatVal,
       serviceFeeTotal: sFeeVal,
+      adSpendTotal: adSpendVal,
       totalOrders: parseInt(agg.total_orders || 0),
       activeOrders: parseInt(agg.active_orders || 0),
       cancelledOrders: parseInt(agg.cancelled_orders || 0),
@@ -232,7 +273,8 @@ export async function GET(request: Request) {
         otherInvoices: otherInvoicesVal,
         fixedExtraOperation: fixedExtraOpVal,
         totalCostSum: Math.round(totalCostSum * 100) / 100,
-        extraOperationRate: extraOpRate
+        extraOperationRate: extraOpRate,
+        earlyPayoutRate: earlyPayoutRate
       },
 
       dailyProfitTrends,
