@@ -60,12 +60,14 @@ export default function SettingsPage() {
       // Fetch RBAC users
       const usersRes = await fetch('/api/settings/users');
       const usersData = await usersRes.json();
-      setUsers(usersData.users || []);
+      const usersList = Array.isArray(usersData) ? usersData : (usersData.users || []);
+      setUsers(usersList);
 
       // Fetch Barem tiers
       const baremRes = await fetch('/api/tariffs/cargo-barem');
       const baremData = await baremRes.json();
-      setBaremTiers(baremData || []);
+      const tiersList = Array.isArray(baremData) ? baremData : (baremData.tiers || []);
+      setBaremTiers(tiersList);
     } catch (e) {
       console.error("Settings load error:", e);
       toast.error("Ayarlar veritabanından yüklenirken hata oluştu.");
@@ -112,7 +114,7 @@ export default function SettingsPage() {
 
   const handleBaremPriceChange = (id: string, field: 'discountedPriceExVat' | 'standardPriceExVat', value: number) => {
     setBaremTiers((prev) =>
-      prev.map((t) => (t.id === id ? { ...t, [field]: value, isDirty: true } : t))
+      (Array.isArray(prev) ? prev : []).map((t) => (t.id === id ? { ...t, [field]: value, isDirty: true } : t))
     );
   };
 
@@ -128,7 +130,7 @@ export default function SettingsPage() {
         }),
       });
       if (res.ok) {
-        setBaremTiers((prev) => prev.map((t) => (t.id === tier.id ? { ...t, isDirty: false } : t)));
+        setBaremTiers((prev) => (Array.isArray(prev) ? prev : []).map((t) => (t.id === tier.id ? { ...t, isDirty: false } : t)));
         toast.success(`${tier.carrierName} (${tier.tierName}) barem fiyatı veritabanına kaydedildi!`);
       }
     } catch (e) {
@@ -324,7 +326,7 @@ export default function SettingsPage() {
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-border/60">
-                        {baremTiers.map((t) => (
+                        {(Array.isArray(baremTiers) ? baremTiers : []).map((t) => (
                           <tr key={t.id} className="hover:bg-canvas/50">
                             <td className="py-2 px-2 table-sticky-first-col font-bold text-dark">{t.carrierName}</td>
                             <td className="py-2 px-2 font-semibold text-gray-700">{t.tierName}</td>
@@ -414,7 +416,7 @@ export default function SettingsPage() {
                   </div>
 
                   <div className="space-y-3">
-                    {users.map((u) => (
+                    {(Array.isArray(users) ? users : []).map((u) => (
                       <div key={u.id} className="p-3.5 rounded-2xl border border-border space-y-2 bg-canvas/30">
                         <div className="flex items-center justify-between">
                           <div>
