@@ -10,6 +10,7 @@ export async function GET(request: Request) {
     const search = searchParams.get('search') || '';
     const status = searchParams.get('status') || '';
     const carrier = searchParams.get('carrier') || '';
+    const marketplace = searchParams.get('marketplace') || 'all';
     const storeId = searchParams.get('storeId') || 'all';
     const limit = parseInt(searchParams.get('limit') || '50');
     const offset = parseInt(searchParams.get('offset') || '0');
@@ -28,6 +29,12 @@ export async function GET(request: Request) {
     if (storeId && storeId !== 'all') {
       periodConditions.push(`o.store_id::text = $${periodIdx}`);
       periodParams.push(storeId);
+      periodIdx++;
+    }
+
+    if (marketplace && marketplace !== 'all') {
+      periodConditions.push(`o.marketplace = $${periodIdx}`);
+      periodParams.push(marketplace);
       periodIdx++;
     }
 
@@ -65,7 +72,7 @@ export async function GET(request: Request) {
     const totalPeriodOrders = parseInt(periodOrdersRes[0]?.totalPeriodOrders || 0);
     const adSpendPerOrder = totalPeriodOrders > 0 ? (totalAdSpend / totalPeriodOrders) : 0;
 
-    // 3. Filtered Conditions (for search, status, carrier filters)
+    // 3. Filtered Conditions (for search, status, carrier, marketplace filters)
     let conditions: string[] = ['1=1'];
     let params: any[] = [];
     let pIdx = 1;
@@ -91,6 +98,12 @@ export async function GET(request: Request) {
     if (carrier && carrier !== 'all') {
       conditions.push(`o.carrier_name ILIKE $${pIdx}`);
       params.push(`%${carrier}%`);
+      pIdx++;
+    }
+
+    if (marketplace && marketplace !== 'all') {
+      conditions.push(`o.marketplace = $${pIdx}`);
+      params.push(marketplace);
       pIdx++;
     }
 
@@ -154,6 +167,7 @@ export async function GET(request: Request) {
     const listQuery = `
       SELECT 
         o.id,
+        o.marketplace,
         o.marketplace_order_number as "orderNumber",
         o.package_number as "packageNumber",
         TO_CHAR(o.order_date, 'YYYY-MM-DD HH24:MI') as "orderDate",
