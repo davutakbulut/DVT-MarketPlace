@@ -42,7 +42,8 @@ import {
   Eye,
   Sliders,
   Activity,
-  Award
+  Award,
+  MessageCircle
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -1137,17 +1138,30 @@ export default function LandingHomePage() {
               <div className="space-y-2.5 text-xs text-gray-400">
                 <div className="flex items-center gap-2">
                   <Mail className="w-3.5 h-3.5 text-primary shrink-0" />
-                  <a href="mailto:destek@dvtmarketplace.com" className="hover:text-white transition-colors">
-                    destek@dvtmarketplace.com
+                  <a href="mailto:bilgi@davutakbulut.co" className="hover:text-white transition-colors">
+                    bilgi@davutakbulut.co
                   </a>
                 </div>
                 <div className="flex items-center gap-2">
                   <Phone className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
-                  <span className="font-mono text-gray-300">0850 308 00 00 (Canlı Destek)</span>
+                  <a href="tel:05378826858" className="font-mono text-gray-300 hover:text-white transition-colors">
+                    0 537 882 68 58 (Canlı Destek)
+                  </a>
                 </div>
                 <div className="flex items-start gap-2">
                   <MapPin className="w-3.5 h-3.5 text-primary shrink-0 mt-0.5" />
-                  <span>Levent Finans Merkezi, Beşiktaş / İstanbul</span>
+                  <span className="leading-snug">Molla Gürani, Uygar Sokağı No:17/A, Fatih/İstanbul</span>
+                </div>
+                <div className="pt-1">
+                  <a
+                    href="https://wa.me/905378826858?text=Merhaba%20Davut%20Bey,%20DVT-MarketPlace%20hakk%C4%B1nda%20bilgi%20almak%20istiyorum."
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[#25D366]/20 border border-[#25D366]/40 text-[#25D366] hover:bg-[#25D366] hover:text-white transition-all text-xs font-bold"
+                  >
+                    <MessageCircle className="w-3.5 h-3.5" />
+                    <span>WhatsApp Canlı Destek</span>
+                  </a>
                 </div>
               </div>
 

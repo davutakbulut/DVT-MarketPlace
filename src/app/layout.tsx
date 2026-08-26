@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import "./globals.css";
 import { TelemetryTracker } from "@/components/common/TelemetryTracker";
+import { FloatingWhatsAppModal } from "@/components/layout/FloatingWhatsAppModal";
 
 export const viewport: Viewport = {
   width: "device-width",
@@ -146,6 +147,7 @@ export default function RootLayout({
       <body className="antialiased font-sans bg-canvas text-dark selection:bg-primary-tint-200">
         <TelemetryTracker />
         {children}
+        <FloatingWhatsAppModal />
       </body>
     </html>
   );
