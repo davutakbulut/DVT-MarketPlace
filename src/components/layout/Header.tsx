@@ -5,10 +5,11 @@ import { CountrySelector } from './CountrySelector';
 import { DateRangePicker } from './DateRangePicker';
 import { NotificationCenter } from './NotificationCenter';
 import { VirtualTourModal } from './VirtualTourModal';
-import { Menu, Compass, User, LogOut, ShieldCheck } from 'lucide-react';
+import { Menu, Compass, User, LogOut, ShieldCheck, Database } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
+import { BrandLogo } from '@/components/common/BrandLogo';
 
 export function Header({ onMobileMenuToggle }: { onMobileMenuToggle: () => void }) {
   const router = useRouter();
@@ -24,7 +25,7 @@ export function Header({ onMobileMenuToggle }: { onMobileMenuToggle: () => void 
 
   return (
     <header className="sticky top-0 z-40 h-14 sm:h-16 bg-white/95 backdrop-blur-md border-b border-border px-3 sm:px-6 flex items-center justify-between transition-all">
-      {/* Left: Mobile Toggle & Logo & Store Selector */}
+      {/* Left: Mobile Toggle & Brand Logo & Store Selector */}
       <div className="flex items-center gap-2 sm:gap-3">
         <button
           onClick={onMobileMenuToggle}
@@ -34,17 +35,11 @@ export function Header({ onMobileMenuToggle }: { onMobileMenuToggle: () => void 
           <Menu className="w-5 h-5" />
         </button>
 
-        <div className="flex items-center gap-1.5">
-          <span className="text-xs sm:text-sm font-extrabold tracking-tight text-primary flex items-center gap-1">
-            <span className="w-2 h-2 rounded-full bg-primary inline-block" />
-            DVT<span className="text-dark font-normal">Market</span>
-          </span>
-          <span className="hidden md:inline-block bg-primary-tint-100 text-primary text-[9px] font-bold px-1.5 py-0.2 rounded-full">
-            v1.0
-          </span>
+        <div className="lg:hidden">
+          <BrandLogo size="sm" showBadge={false} showSlogan={false} />
         </div>
 
-        <div className="flex items-center gap-1.5 ml-1 sm:ml-3">
+        <div className="flex items-center gap-1.5 ml-1 sm:ml-2">
           <StoreSelector />
           <div className="hidden sm:block">
             <CountrySelector />
@@ -52,8 +47,13 @@ export function Header({ onMobileMenuToggle }: { onMobileMenuToggle: () => void 
         </div>
       </div>
 
-      {/* Right: Date picker, Virtual Tour, Notifications, Profile */}
+      {/* Right: Live DB Status, Date picker, Virtual Tour, Notifications, Profile */}
       <div className="flex items-center gap-1.5 sm:gap-2.5">
+        <div className="hidden xl:flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-800 text-[11px] font-bold">
+          <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+          <span>Canlı PostgreSQL Aktif</span>
+        </div>
+
         <div className="hidden md:block">
           <DateRangePicker />
         </div>
@@ -83,13 +83,13 @@ export function Header({ onMobileMenuToggle }: { onMobileMenuToggle: () => void 
           {userDropdown && (
             <>
               <div className="fixed inset-0 z-50" onClick={() => setUserDropdown(false)} />
-              <div className="absolute right-0 mt-2 w-52 sm:w-56 bg-white rounded-2xl shadow-xl border border-border z-60 p-3 animate-in fade-in zoom-in-95 space-y-2">
+              <div className="absolute right-0 mt-2 w-56 sm:w-60 bg-white rounded-2xl shadow-xl border border-border z-60 p-3 animate-in fade-in zoom-in-95 space-y-2">
                 <div className="px-2 py-1 border-b border-border">
                   <div className="text-xs font-bold text-dark flex items-center gap-1">
                     Davut Akbulut <ShieldCheck className="w-3.5 h-3.5 text-primary" />
                   </div>
                   <div className="text-[10px] text-gray-500 font-mono">dvtakblt@gmail.com</div>
-                  <div className="text-[10px] text-primary font-bold mt-0.5">Admin (Firma Sahibi)</div>
+                  <div className="text-[10px] text-primary font-bold mt-0.5">Admin (Firma Yöneticisi)</div>
                 </div>
 
                 <button

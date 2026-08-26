@@ -24,6 +24,7 @@ import {
   Users,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { BrandLogo } from '@/components/common/BrandLogo';
 
 const navItems = [
   { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
@@ -74,18 +75,14 @@ export function Sidebar({ mobileOpen, onMobileClose }: { mobileOpen: boolean; on
         )}
       >
         {/* Brand Header */}
-        <div className="flex items-center justify-between px-5 h-16 border-b border-border">
-          <Link href="/dashboard" className="flex items-center gap-3 overflow-hidden">
-            <div className="w-9 h-9 rounded-2xl bg-gradient-to-tr from-primary to-primary-hover flex items-center justify-center text-white shadow-xs shrink-0 font-black text-sm">
-              DVT
-            </div>
-            {!collapsed && (
-              <div className="flex flex-col">
-                <span className="font-black text-sm text-dark tracking-tight leading-none">DVT Market</span>
-                <span className="text-[10px] text-muted-foreground font-semibold mt-0.5">Finans & Fiyatlama</span>
-              </div>
-            )}
-          </Link>
+        <div className="flex items-center justify-between px-4 sm:px-5 h-16 border-b border-border">
+          <BrandLogo 
+            size="md" 
+            showText={!collapsed} 
+            showSlogan={!collapsed}
+            showBadge={!collapsed}
+            href="/dashboard"
+          />
 
           <button
             onClick={() => setCollapsed(!collapsed)}
@@ -119,8 +116,9 @@ export function Sidebar({ mobileOpen, onMobileClose }: { mobileOpen: boolean; on
                             ? 'bg-primary text-white shadow-xs font-bold'
                             : 'text-gray-600 hover:bg-canvas hover:text-dark'
                         )}
+                        title={collapsed ? child.label : undefined}
                       >
-                        <item.icon className={cn('w-4 h-4 shrink-0', isActive ? 'text-white' : 'text-muted-foreground')} />
+                        <span className="w-1.5 h-1.5 rounded-full bg-current opacity-60" />
                         {!collapsed && <span>{child.label}</span>}
                       </Link>
                     );
@@ -138,38 +136,53 @@ export function Sidebar({ mobileOpen, onMobileClose }: { mobileOpen: boolean; on
                 href={item.href!}
                 onClick={onMobileClose}
                 className={cn(
-                  'flex items-center justify-between px-3 py-2 rounded-xl text-xs font-semibold transition-all group',
+                  'flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-semibold transition-all group relative',
                   isActive
                     ? 'bg-primary text-white shadow-xs font-bold'
-                    : 'text-gray-600 hover:bg-canvas hover:text-dark'
+                    : 'text-dark hover:bg-canvas'
                 )}
+                title={collapsed ? item.label : undefined}
               >
-                <div className="flex items-center gap-3">
-                  <Icon className={cn('w-4 h-4 shrink-0', isActive ? 'text-white' : 'text-muted-foreground')} />
-                  {!collapsed && <span>{item.label}</span>}
-                </div>
-
-                {!collapsed && item.badge && (
-                  <span className="text-[10px] bg-primary-tint-100 text-primary font-bold px-1.5 py-0.5 rounded-full group-hover:bg-white group-hover:text-primary">
-                    {item.badge}
-                  </span>
+                <Icon className={cn('w-4 h-4 shrink-0', isActive ? 'text-white' : 'text-gray-500 group-hover:text-dark')} />
+                {!collapsed && (
+                  <div className="flex items-center justify-between flex-1 overflow-hidden">
+                    <span className="truncate">{item.label}</span>
+                    {item.badge && (
+                      <span className={cn(
+                        "text-[9px] font-bold px-1.5 py-0.5 rounded-md",
+                        isActive ? "bg-white/20 text-white" : "bg-primary-tint-100 text-primary"
+                      )}>
+                        {item.badge}
+                      </span>
+                    )}
+                    {item.badgeCount && (
+                      <span className="bg-red-500 text-white text-[9px] font-black px-1.5 py-0.5 rounded-full">
+                        {item.badgeCount}
+                      </span>
+                    )}
+                  </div>
                 )}
               </Link>
             );
           })}
         </div>
 
-        {/* Footer User Info */}
-        <div className="p-4 border-t border-border flex items-center gap-3 bg-canvas/40">
-          <div className="w-8 h-8 rounded-xl bg-primary text-white font-bold text-xs flex items-center justify-center shrink-0">
-            DA
-          </div>
-          {!collapsed && (
-            <div className="flex flex-col truncate">
-              <span className="text-xs font-bold text-dark truncate">Davut Akbulut</span>
-              <span className="text-[10px] text-muted-foreground">Admin • Trendyol Mağaza</span>
+        {/* Sidebar Footer */}
+        <div className="p-3 border-t border-border">
+          <div className={cn(
+            'flex items-center gap-3 p-2 rounded-2xl bg-canvas border border-border/80',
+            collapsed && 'justify-center p-2'
+          )}>
+            <div className="w-7 h-7 rounded-xl bg-primary/10 text-primary flex items-center justify-center font-black text-xs shrink-0">
+              DA
             </div>
-          )}
+            {!collapsed && (
+              <div className="flex flex-col flex-1 overflow-hidden">
+                <span className="text-xs font-bold text-dark truncate">Davut Akbulut</span>
+                <span className="text-[10px] text-gray-500 truncate font-mono">dvtakblt@gmail.com</span>
+              </div>
+            )}
+          </div>
         </div>
       </aside>
     </>

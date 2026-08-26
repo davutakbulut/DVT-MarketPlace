@@ -9,8 +9,14 @@ export const viewport: Viewport = {
 };
 
 export const metadata: Metadata = {
-  title: "DVT-MarketPlace | Pazaryeri Finansal Analiz ve Fiyatlandırma Sistemi",
-  description: "Trendyol, Hepsiburada ve Amazon TR kârlılık takibi ve tersine fiyatlandırma motoru.",
+  title: "DVT MarketPlace | Akıllı Pazaryeri Finans & Kârlılık Zekası",
+  description: "Trendyol, Hepsiburada ve Amazon TR için çoklu mağaza finansal yönetim, kargo barem denetimi, otomatik net kâr ve tersine fiyatlandırma motoru.",
+  keywords: [
+    "DVT MarketPlace", "Trendyol Kârlılık", "Pazaryeri Finans", 
+    "Kargo Barem Desteği", "Komisyon Hesaplama", "E-Ticaret Net Kâr",
+    "Tersine Fiyatlandırma", "Hakediş Denetimi"
+  ],
+  authors: [{ name: "Davut Akbulut" }],
   icons: {
     icon: [
       { url: "/icon.svg", type: "image/svg+xml" },
