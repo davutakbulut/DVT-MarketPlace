@@ -46,7 +46,7 @@ export async function POST(request: Request) {
     await query(`
       UPDATE cargo_barem_tiers
       SET discounted_price_ex_vat = $1, standard_price_ex_vat = $2, updated_at = now()
-      WHERE id = $3
+      WHERE id::text = $3
     `, [discountedPriceExVat, standardPriceExVat, id]);
 
     return NextResponse.json({ success: true, message: 'Kargo barem tarifesi başarıyla güncellendi.' });

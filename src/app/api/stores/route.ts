@@ -94,7 +94,7 @@ export async function DELETE(request: Request) {
       return NextResponse.json({ error: 'Sistemde en az 1 bağlı mağaza kalmalıdır.' }, { status: 400 });
     }
 
-    await query('DELETE FROM stores WHERE id = $1', [id]);
+    await query('DELETE FROM stores WHERE id::text = $1', [id]);
 
     return NextResponse.json({
       success: true,
@@ -119,7 +119,7 @@ export async function PUT(request: Request) {
       await query(`
         UPDATE stores 
         SET sync_status = 'synced', last_synced_at = now(), updated_at = now() 
-        WHERE id = $1
+        WHERE id::text = $1
       `, [id]);
 
       return NextResponse.json({
@@ -129,7 +129,7 @@ export async function PUT(request: Request) {
     }
 
     // Full store update
-    const currentStore = await query('SELECT extra_config FROM stores WHERE id = $1', [id]);
+    const currentStore = await query('SELECT extra_config FROM stores WHERE id::text = $1', [id]);
     const prevConfig = currentStore[0]?.extra_config || {};
     const updatedConfig = {
       ...prevConfig,
@@ -147,7 +147,7 @@ export async function PUT(request: Request) {
           extra_config = $6,
           is_active = COALESCE($7, is_active),
           updated_at = now()
-      WHERE id = $8
+      WHERE id::text = $8
     `, [storeName, sellerId, supplierId || sellerId, apiKey, apiSecret, JSON.stringify(updatedConfig), isActive, id]);
 
     return NextResponse.json({
