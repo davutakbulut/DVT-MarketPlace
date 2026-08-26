@@ -9,7 +9,7 @@ import {
   HelpCircle, RefreshCw, Send, CheckCircle2, AlertTriangle, 
   Clock, ArrowRight, Zap, Target, Package, Award, Sparkles,
   Layers, Check, ChevronRight, Eye, Info, Sliders, ArrowDownRight,
-  TrendingDown
+  TrendingDown, Search, Filter, X, ZoomIn, ExternalLink
 } from "lucide-react";
 import { calculateTrendyolShipping, BaremTier, DesiRate } from "@/lib/shippingCalculator";
 
@@ -21,6 +21,13 @@ export default function ProductPricingPage() {
   const [selectedProductId, setSelectedProductId] = useState<string>("");
   const [selectedProductObj, setSelectedProductObj] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+
+  // Modal & Lightbox States
+  const [showProductModal, setShowProductModal] = useState(false);
+  const [modalSearch, setModalSearch] = useState("");
+  const [modalBrandFilter, setModalBrandFilter] = useState("all");
+  const [modalStockFilter, setModalStockFilter] = useState<"all" | "in_stock" | "out_of_stock">("all");
+  const [zoomImageUrl, setZoomImageUrl] = useState<string | null>(null);
 
   // Pricing Mode: 'target_margin' (Hedef Kârdan Fiyat Bul) vs 'manual_price' (Fiyattan Kâr Hesapla)
   const [pricingMode, setPricingMode] = useState<'target_margin' | 'manual_price'>('target_margin');
@@ -80,6 +87,7 @@ export default function ProductPricingPage() {
     setManualSalePrice(sale);
     setCompetitorBuyboxPrice(sale > 0 ? sale * 0.98 : 139.90);
     setLeadTimeDays(p.deliveryType === 'fast_delivery' ? 1 : 2);
+    setShowProductModal(false);
   };
 
   // Fixed Platform Service Fee (₺13.19 KDV Dahil)
@@ -159,6 +167,23 @@ export default function ProductPricingPage() {
     }
   };
 
+  // Filter products for the Modal Picker
+  const brandsList = Array.from(new Set(dbProducts.map(p => p.brand).filter(Boolean)));
+  const filteredModalProducts = dbProducts.filter((p) => {
+    const s = modalSearch.toLowerCase();
+    const matchesSearch = !s || 
+      (p.title || '').toLowerCase().includes(s) ||
+      (p.barcode || '').toLowerCase().includes(s) ||
+      (p.modelCode || '').toLowerCase().includes(s) ||
+      (p.brand || '').toLowerCase().includes(s);
+
+    const matchesBrand = modalBrandFilter === 'all' || p.brand === modalBrandFilter;
+    const matchesStock = modalStockFilter === 'all' || 
+      (modalStockFilter === 'in_stock' ? (p.stockQuantity > 0) : (p.stockQuantity === 0));
+
+    return matchesSearch && matchesBrand && matchesStock;
+  });
+
   return (
     <div className="space-y-4 sm:space-y-6 max-w-7xl">
       {/* Top Banner */}
@@ -179,34 +204,87 @@ export default function ProductPricingPage() {
         </Button>
       </div>
 
-      {/* Select Product from Live DB */}
-      <div className="bg-white p-4 sm:p-5 rounded-3xl border border-border shadow-xs space-y-3">
-        <div className="flex items-center justify-between">
+      {/* RICH SELECTED PRODUCT CARD (POPUP TRIGGER) */}
+      <div className="bg-white p-4 sm:p-5 rounded-3xl border border-border shadow-xs">
+        <div className="flex items-center justify-between pb-3 border-b border-border mb-3">
           <label className="text-xs font-black text-dark flex items-center gap-2">
             <Package className="w-4 h-4 text-primary" />
-            <span>Veritabanından Ürün Seçerek Otomatik Doldur:</span>
+            <span>Fiyatlandırılan Ürün Bilgisi:</span>
           </label>
-          {selectedProductObj && (
-            <span className="text-[11px] font-mono text-gray-500 font-bold">
-              Barkod: {selectedProductObj.barcode}
-            </span>
-          )}
+          <Button
+            size="sm"
+            onClick={() => setShowProductModal(true)}
+            className="h-8 text-xs font-bold gap-1.5 bg-primary hover:bg-primary-hover text-white rounded-xl shadow-xs"
+          >
+            <Search className="w-3.5 h-3.5" />
+            <span>Katalogdan Ürün Seç / Değiştir ({dbProducts.length} Ürün)</span>
+          </Button>
         </div>
 
-        <select
-          value={selectedProductId}
-          onChange={(e) => {
-            const found = dbProducts.find(p => p.id === e.target.value);
-            if (found) handleSelectProduct(found);
-          }}
-          className="w-full px-3 py-2.5 rounded-2xl border border-border text-xs font-bold text-dark bg-white focus:ring-2 focus:ring-primary shadow-xs cursor-pointer"
-        >
-          {dbProducts.map((p) => (
-            <option key={p.id} value={p.id}>
-              {p.title} (Fiyat: ₺{parseFloat(p.salePrice || 0).toFixed(2)} | Stok: {p.stockQuantity} | Komisyon: %{p.commissionRate || 16.15})
-            </option>
-          ))}
-        </select>
+        {selectedProductObj ? (
+          <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+            <div className="flex items-start gap-3.5">
+              {/* Thumbnail with zoom click */}
+              <div 
+                onClick={() => selectedProductObj.imageUrl && setZoomImageUrl(selectedProductObj.imageUrl)}
+                className="w-14 h-14 rounded-2xl bg-canvas border border-border shrink-0 overflow-hidden flex items-center justify-center relative group cursor-pointer"
+              >
+                {selectedProductObj.imageUrl ? (
+                  <>
+                    <img 
+                      src={selectedProductObj.imageUrl} 
+                      alt={selectedProductObj.title} 
+                      className="w-full h-full object-contain p-1 group-hover:scale-105 transition-transform" 
+                    />
+                    <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity">
+                      <ZoomIn className="w-4 h-4 text-white" />
+                    </div>
+                  </>
+                ) : (
+                  <Package className="w-6 h-6 text-gray-400" />
+                )}
+              </div>
+
+              <div className="space-y-1">
+                <h4 className="text-xs sm:text-sm font-black text-dark leading-snug">
+                  {selectedProductObj.title}
+                </h4>
+                <div className="flex items-center gap-2 flex-wrap text-xs">
+                  <span className="px-2 py-0.5 rounded-lg bg-canvas text-gray-600 font-mono text-[11px] font-bold border border-border">
+                    Barkod: {selectedProductObj.barcode}
+                  </span>
+                  {selectedProductObj.modelCode && (
+                    <span className="text-[11px] text-gray-500 font-semibold">
+                      Model: <strong className="text-dark">{selectedProductObj.modelCode}</strong>
+                    </span>
+                  )}
+                  {selectedProductObj.brand && (
+                    <Badge variant="outline">{selectedProductObj.brand}</Badge>
+                  )}
+                  <Badge variant={selectedProductObj.stockQuantity > 0 ? "excellent" : "secondary"}>
+                    {selectedProductObj.stockQuantity > 0 ? `Stokta: ${selectedProductObj.stockQuantity} Adet` : "Tükendi"}
+                  </Badge>
+                </div>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-3 self-end md:self-auto bg-canvas p-2.5 rounded-2xl border border-border text-xs">
+              <div>
+                <span className="text-[10px] text-gray-400 font-bold block">Katalog Satış Fiyatı</span>
+                <span className="font-black text-dark text-sm tabular-nums">₺{parseFloat(selectedProductObj.salePrice || 0).toFixed(2)}</span>
+              </div>
+              <div className="w-px h-6 bg-border"></div>
+              <div>
+                <span className="text-[10px] text-gray-400 font-bold block">Komisyon</span>
+                <span className="font-black text-primary text-sm">%{selectedProductObj.commissionRate || 16.15}</span>
+              </div>
+            </div>
+          </div>
+        ) : (
+          <div className="text-center py-4 text-xs text-gray-500">
+            Henüz ürün seçilmedi. Lütfen ürün seçin.
+          </div>
+        )}
       </div>
 
       {/* MODE TOGGLE BUTTONS */}
@@ -596,6 +674,220 @@ export default function ProductPricingPage() {
         </div>
 
       </div>
+
+      {/* PRODUCT PICKER MODAL DIALOG */}
+      {showProductModal && (
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-3 sm:p-6 animate-in fade-in duration-200">
+          <div className="bg-white w-full max-w-5xl max-h-[90vh] rounded-3xl border border-border shadow-2xl flex flex-col overflow-hidden animate-in zoom-in-95 duration-200">
+            
+            {/* Modal Header */}
+            <div className="p-4 sm:p-5 border-b border-border flex items-center justify-between gap-3 bg-canvas/40">
+              <div className="flex items-center gap-2">
+                <div className="p-2 rounded-2xl bg-primary/10 text-primary">
+                  <Package className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="text-sm sm:text-base font-black text-dark">Katalogdan Ürün Seç</h3>
+                  <p className="text-xs text-gray-500">283 benzersiz ürün arasından arayın, filtreleyin ve tek tıkla fiyatlandırmaya aktarın</p>
+                </div>
+              </div>
+
+              <button
+                onClick={() => setShowProductModal(false)}
+                className="p-2 rounded-2xl hover:bg-canvas text-gray-400 hover:text-dark transition-colors"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Modal Search & Filters */}
+            <div className="p-4 border-b border-border flex items-center gap-3 flex-wrap bg-white">
+              {/* Search input */}
+              <div className="relative flex-1 min-w-[240px]">
+                <Search className="w-4 h-4 text-gray-400 absolute left-3 top-2.5" />
+                <input
+                  type="text"
+                  placeholder="Başlık, barkod, model kodu veya marka ile anlık ara..."
+                  value={modalSearch}
+                  onChange={(e) => setModalSearch(e.target.value)}
+                  className="w-full pl-9 pr-3 py-2 rounded-2xl border border-border text-xs font-bold text-dark bg-white focus:ring-2 focus:ring-primary shadow-xs"
+                />
+              </div>
+
+              {/* Brand Filter */}
+              <select
+                value={modalBrandFilter}
+                onChange={(e) => setModalBrandFilter(e.target.value)}
+                className="px-3 py-2 rounded-2xl border border-border text-xs font-bold text-dark bg-white focus:ring-2 focus:ring-primary cursor-pointer shadow-xs"
+              >
+                <option value="all">Tüm Markalar ({brandsList.length})</option>
+                {brandsList.map((b) => (
+                  <option key={b} value={b}>{b}</option>
+                ))}
+              </select>
+
+              {/* Stock Filter */}
+              <select
+                value={modalStockFilter}
+                onChange={(e) => setModalStockFilter(e.target.value as any)}
+                className="px-3 py-2 rounded-2xl border border-border text-xs font-bold text-dark bg-white focus:ring-2 focus:ring-primary cursor-pointer shadow-xs"
+              >
+                <option value="all">Tüm Stok Durumları</option>
+                <option value="in_stock">Yalnızca Stokta Olanlar</option>
+                <option value="out_of_stock">Tükenen Ürünler</option>
+              </select>
+
+              <span className="text-xs text-gray-500 font-bold ml-auto">
+                {filteredModalProducts.length} Ürün Bulundu
+              </span>
+            </div>
+
+            {/* Modal Products Table */}
+            <div className="flex-1 overflow-y-auto p-4 custom-scrollbar">
+              {filteredModalProducts.length === 0 ? (
+                <div className="text-center py-12 space-y-2">
+                  <Package className="w-10 h-10 text-gray-300 mx-auto" />
+                  <h4 className="text-sm font-bold text-dark">Arama kriterlerinize uygun ürün bulunamadı.</h4>
+                  <p className="text-xs text-gray-400">Arama kelimenizi veya filtreleri temizleyip tekrar deneyin.</p>
+                </div>
+              ) : (
+                <table className="w-full text-xs text-left">
+                  <thead>
+                    <tr className="border-b border-border text-gray-500 font-black">
+                      <th className="pb-2.5 px-3 w-16 text-center">Görsel</th>
+                      <th className="pb-2.5 px-3">Ürün Başlığı & Model</th>
+                      <th className="pb-2.5 px-3">Barkod & Marka</th>
+                      <th className="pb-2.5 px-3 text-center">Stok</th>
+                      <th className="pb-2.5 px-3 text-right">Satış Fiyatı</th>
+                      <th className="pb-2.5 px-3 text-right">Maliyet</th>
+                      <th className="pb-2.5 px-3 text-right">Komisyon</th>
+                      <th className="pb-2.5 px-3 text-right">İşlem</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-border/60">
+                    {filteredModalProducts.map((p) => {
+                      const isSelected = selectedProductId === p.id;
+                      return (
+                        <tr 
+                          key={p.id} 
+                          className={`hover:bg-canvas/60 transition-colors ${isSelected ? 'bg-primary/5' : ''}`}
+                        >
+                          {/* Image Thumbnail with zoom trigger */}
+                          <td className="py-2.5 px-3 text-center">
+                            <div 
+                              onClick={() => p.imageUrl && setZoomImageUrl(p.imageUrl)}
+                              className="w-11 h-11 rounded-xl bg-canvas border border-border mx-auto overflow-hidden flex items-center justify-center relative group cursor-pointer"
+                            >
+                              {p.imageUrl ? (
+                                <>
+                                  <img src={p.imageUrl} alt={p.title} className="w-full h-full object-contain p-0.5 group-hover:scale-110 transition-transform" />
+                                  <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity">
+                                    <ZoomIn className="w-3 h-3 text-white" />
+                                  </div>
+                                </>
+                              ) : (
+                                <Package className="w-5 h-5 text-gray-300" />
+                              )}
+                            </div>
+                          </td>
+
+                          {/* Title & Model */}
+                          <td className="py-2.5 px-3 font-bold text-dark max-w-sm">
+                            <span className="block truncate font-bold text-dark">{p.title}</span>
+                            {p.modelCode && (
+                              <span className="text-[10px] font-mono text-gray-400 block mt-0.5">Model: {p.modelCode}</span>
+                            )}
+                          </td>
+
+                          {/* Barcode & Brand */}
+                          <td className="py-2.5 px-3">
+                            <span className="px-2 py-0.5 rounded-lg bg-canvas text-gray-700 font-mono text-[10px] font-bold border border-border block w-max">
+                              {p.barcode}
+                            </span>
+                            {p.brand && (
+                              <span className="text-[10px] text-gray-500 font-semibold block mt-0.5">{p.brand}</span>
+                            )}
+                          </td>
+
+                          {/* Stock Quantity */}
+                          <td className="py-2.5 px-3 text-center">
+                            <Badge variant={p.stockQuantity > 0 ? "excellent" : "secondary"}>
+                              {p.stockQuantity} Adet
+                            </Badge>
+                          </td>
+
+                          {/* Sale Price */}
+                          <td className="py-2.5 px-3 text-right font-black text-dark tabular-nums">
+                            ₺{parseFloat(p.salePrice || 0).toFixed(2)}
+                          </td>
+
+                          {/* Cost Price */}
+                          <td className="py-2.5 px-3 text-right font-bold text-red-700 tabular-nums">
+                            ₺{parseFloat(p.costPrice || 50).toFixed(2)}
+                          </td>
+
+                          {/* Commission Rate */}
+                          <td className="py-2.5 px-3 text-right font-black text-primary">
+                            %{p.commissionRate || 16.15}
+                          </td>
+
+                          {/* Select Action */}
+                          <td className="py-2.5 px-3 text-right">
+                            <Button
+                              size="sm"
+                              variant={isSelected ? "outline" : "default"}
+                              onClick={() => handleSelectProduct(p)}
+                              className={`h-7 text-xs font-bold gap-1 rounded-xl ${
+                                isSelected ? 'border-primary text-primary bg-primary/5' : 'bg-primary hover:bg-primary-hover text-white'
+                              }`}
+                            >
+                              {isSelected ? <Check className="w-3 h-3" /> : <ChevronRight className="w-3 h-3" />}
+                              <span>{isSelected ? "Seçili" : "Seç"}</span>
+                            </Button>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              )}
+            </div>
+
+            {/* Modal Footer */}
+            <div className="p-3.5 border-t border-border bg-canvas/40 flex items-center justify-between text-xs text-gray-500">
+              <span>Toplam <strong>{dbProducts.length}</strong> katalog ürünü listelendi. Görsellere tıklayarak büyütebilirsiniz.</span>
+              <Button size="sm" variant="outline" onClick={() => setShowProductModal(false)} className="h-8 text-xs font-bold">
+                Kapat
+              </Button>
+            </div>
+
+          </div>
+        </div>
+      )}
+
+      {/* FULLSCREEN IMAGE LIGHTBOX MODAL */}
+      {zoomImageUrl && (
+        <div 
+          onClick={() => setZoomImageUrl(null)}
+          className="fixed inset-0 z-50 bg-black/80 backdrop-blur-md flex items-center justify-center p-4 animate-in fade-in duration-200 cursor-zoom-out"
+        >
+          <div className="relative max-w-2xl max-h-[85vh] bg-white p-4 rounded-3xl border border-white/20 shadow-2xl flex flex-col items-center justify-center">
+            <button
+              onClick={() => setZoomImageUrl(null)}
+              className="absolute top-3 right-3 p-2 rounded-full bg-black/60 text-white hover:bg-black transition-colors"
+            >
+              <X className="w-5 h-5" />
+            </button>
+            <img 
+              src={zoomImageUrl} 
+              alt="Büyütülmüş Ürün Görseli" 
+              className="max-w-full max-h-[75vh] object-contain rounded-2xl" 
+            />
+            <span className="text-xs font-bold text-gray-500 mt-2">Kapatmak için herhangi bir yere tıklayın</span>
+          </div>
+        </div>
+      )}
+
     </div>
   );
 }
