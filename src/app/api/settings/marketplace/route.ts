@@ -1,3 +1,16 @@
+export async function GET() {
+  try {
+    const stores = await query(`
+      SELECT id, store_name, marketplace, supplier_id, api_key, is_active, updated_at
+      FROM stores
+      ORDER BY created_at ASC
+    `);
+    return NextResponse.json({ success: true, integrations: stores });
+  } catch (error: any) {
+    return NextResponse.json({ error: error.message }, { status: 500 });
+  }
+}
+
 import { NextResponse } from 'next/server';
 import { query } from '@/lib/db';
 

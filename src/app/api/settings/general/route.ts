@@ -1,3 +1,26 @@
+export async function GET() {
+  try {
+    const res = await query(`
+      SELECT 
+        default_vat_rate as "defaultVatRate",
+        default_withholding_rate as "defaultWithholdingRate",
+        default_service_fee as "defaultServiceFee",
+        min_profit_margin_warning as "minProfitMarginWarning",
+        default_shipping_carrier as "defaultShippingCarrier",
+        default_packaging_cost as "defaultPackagingCost",
+        invoice_fixed_cost as "invoiceFixedCost",
+        extra_operation_cost as "extraOperationCost",
+        email_daily_summary_enabled as "emailDailySummaryEnabled",
+        email_negative_profit_alert as "emailNegativeProfitAlert"
+      FROM company_settings
+      LIMIT 1
+    `);
+    return NextResponse.json({ success: true, settings: res[0] || {} });
+  } catch (error: any) {
+    return NextResponse.json({ error: error.message }, { status: 500 });
+  }
+}
+
 import { NextResponse } from 'next/server';
 import { query } from '@/lib/db';
 

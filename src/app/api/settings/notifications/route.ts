@@ -1,3 +1,19 @@
+export async function GET() {
+  try {
+    const res = await query(`
+      SELECT 
+        email_daily_summary_enabled as "emailDailySummaryEnabled",
+        email_negative_profit_alert as "emailNegativeProfitAlert",
+        min_profit_margin_warning as "minProfitMarginWarning"
+      FROM company_settings
+      LIMIT 1
+    `);
+    return NextResponse.json({ success: true, preferences: res[0] || {} });
+  } catch (error: any) {
+    return NextResponse.json({ error: error.message }, { status: 500 });
+  }
+}
+
 import { NextResponse } from 'next/server';
 import { query } from '@/lib/db';
 
