@@ -288,22 +288,22 @@ export default function ProductPricingPage() {
         )}
       </div>
 
-      {/* MODE TOGGLE BUTTONS */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+      {/* MODE TOGGLE BUTTONS - 2 COLUMN COMPACT GRID FOR MOBILE & DESKTOP */}
+      <div className="grid grid-cols-2 gap-2.5 sm:gap-3">
         <button
           type="button"
           onClick={() => setPricingMode('target_margin')}
-          className={`p-4 rounded-3xl border text-left transition-all flex items-start gap-3 shadow-xs ${
+          className={`p-3 sm:p-4 rounded-2xl sm:rounded-3xl border text-left transition-all flex flex-col xs:flex-row items-start gap-2 sm:gap-3 shadow-xs cursor-pointer ${
             pricingMode === 'target_margin'
               ? 'bg-primary text-white border-primary ring-2 ring-primary/20'
               : 'bg-white text-dark border-border hover:bg-canvas'
           }`}
         >
-          <Target className={`w-5 h-5 shrink-0 mt-0.5 ${pricingMode === 'target_margin' ? 'text-white' : 'text-primary'}`} />
-          <div>
-            <span className="font-black text-sm block">1. Mod: Hedef Kâr Marjından Fiyat Bul (Ters Fiyatlama)</span>
-            <span className={`text-xs block mt-1 ${pricingMode === 'target_margin' ? 'text-white/80' : 'text-gray-500'}`}>
-              Hedef kâr marjınızı (%) girin, sistem barem desteği ve komisyonu düşerek satmanız gereken fiyatı otomatik hesaplasın.
+          <Target className={`w-4 h-4 sm:w-5 sm:h-5 shrink-0 mt-0.5 ${pricingMode === 'target_margin' ? 'text-white' : 'text-primary'}`} />
+          <div className="min-w-0">
+            <span className="font-black text-xs sm:text-sm block truncate">1. Hedef Kârdan Fiyat</span>
+            <span className={`text-[10px] sm:text-xs block mt-0.5 leading-tight ${pricingMode === 'target_margin' ? 'text-white/85' : 'text-gray-500'}`}>
+              Marj gir ➔ Fiyat bul
             </span>
           </div>
         </button>
@@ -311,17 +311,17 @@ export default function ProductPricingPage() {
         <button
           type="button"
           onClick={() => setPricingMode('manual_price')}
-          className={`p-4 rounded-3xl border text-left transition-all flex items-start gap-3 shadow-xs ${
+          className={`p-3 sm:p-4 rounded-2xl sm:rounded-3xl border text-left transition-all flex flex-col xs:flex-row items-start gap-2 sm:gap-3 shadow-xs cursor-pointer ${
             pricingMode === 'manual_price'
               ? 'bg-primary text-white border-primary ring-2 ring-primary/20'
               : 'bg-white text-dark border-border hover:bg-canvas'
           }`}
         >
-          <Sliders className={`w-5 h-5 shrink-0 mt-0.5 ${pricingMode === 'manual_price' ? 'text-white' : 'text-primary'}`} />
-          <div>
-            <span className="font-black text-sm block">2. Mod: Son Satış Fiyatından Net Kârı Gör (İleri Simülasyon)</span>
-            <span className={`text-xs block mt-1 ${pricingMode === 'manual_price' ? 'text-white/80' : 'text-gray-500'}`}>
-              Belirlediğiniz satış fiyatını (₺) girin, net nakit kârınızı, kâr marjınızı ve kesintileri anlık inceleyin.
+          <Sliders className={`w-4 h-4 sm:w-5 sm:h-5 shrink-0 mt-0.5 ${pricingMode === 'manual_price' ? 'text-white' : 'text-primary'}`} />
+          <div className="min-w-0">
+            <span className="font-black text-xs sm:text-sm block truncate">2. Fiyattan Kâr Gör</span>
+            <span className={`text-[10px] sm:text-xs block mt-0.5 leading-tight ${pricingMode === 'manual_price' ? 'text-white/85' : 'text-gray-500'}`}>
+              Fiyat gir ➔ Net kârı gör
             </span>
           </div>
         </button>
@@ -339,73 +339,58 @@ export default function ProductPricingPage() {
 
           <div className="space-y-4 text-xs">
             
-            {/* HEDEF KÂR GİRİŞİ (VURGULANMIŞ) */}
-            <div className={`p-4 rounded-2xl border transition-all ${
-              pricingMode === 'target_margin' 
-                ? 'bg-emerald-50/50 border-emerald-300 ring-2 ring-emerald-500/20' 
-                : 'bg-canvas/50 border-border'
-            }`}>
-              <div className="flex items-center justify-between mb-1.5">
-                <label className="font-black text-emerald-800 flex items-center gap-1.5 text-xs">
-                  <Target className="w-4 h-4 text-emerald-600" />
-                  <span>Hedef Net Kâr Marjı (%) *</span>
-                </label>
-                {pricingMode === 'target_margin' && (
-                  <Badge variant="excellent">Aktif Hesaplama Modu</Badge>
-                )}
+            {/* DYNAMIC MODE MODULE: ONLY SHOWS THE SELECTED MODE'S INPUT CARD */}
+            {pricingMode === 'target_margin' ? (
+              /* 1. HEDEF KÂR MARJI MODÜLÜ */
+              <div className="p-4 rounded-2xl border border-emerald-300 bg-emerald-50/50 ring-2 ring-emerald-500/20 animate-in fade-in zoom-in-95 space-y-2">
+                <div className="flex items-center justify-between">
+                  <label className="font-black text-emerald-800 flex items-center gap-1.5 text-xs">
+                    <Target className="w-4 h-4 text-emerald-600" />
+                    <span>Hedef Net Kâr Marjı (%) *</span>
+                  </label>
+                  <Badge variant="excellent" className="text-[10px]">Ters Fiyatlama Aktif</Badge>
+                </div>
+                
+                <div className="relative">
+                  <input
+                    type="number"
+                    step="1"
+                    value={targetMargin}
+                    onChange={(e) => setTargetMargin(Math.max(0, parseFloat(e.target.value) || 0))}
+                    className="w-full pl-8 pr-3 py-2.5 rounded-xl border border-emerald-400 font-black text-emerald-800 text-sm bg-white focus:ring-2 focus:ring-emerald-500 shadow-xs"
+                  />
+                  <span className="absolute left-3 top-2.5 font-bold text-emerald-600 text-sm">%</span>
+                </div>
+                <span className="text-[11px] text-emerald-700 font-semibold block">
+                  Belirlediğiniz %{targetMargin} kâr marjını elde etmek için gereken Trendyol satış fiyatı sağda anlık hesaplanır.
+                </span>
               </div>
-              
-              <div className="relative">
-                <input
-                  type="number"
-                  step="1"
-                  value={targetMargin}
-                  onChange={(e) => {
-                    setTargetMargin(Math.max(0, parseFloat(e.target.value) || 0));
-                    if (pricingMode !== 'target_margin') setPricingMode('target_margin');
-                  }}
-                  className="w-full pl-8 pr-3 py-2.5 rounded-xl border border-emerald-400 font-black text-emerald-800 text-sm bg-white focus:ring-2 focus:ring-emerald-500 shadow-xs"
-                />
-                <span className="absolute left-3 top-2.5 font-bold text-emerald-600 text-sm">%</span>
-              </div>
-              <span className="text-[11px] text-emerald-700 font-semibold block mt-1.5">
-                Bu marjı değiştirdiğinizde hedef satış fiyatı otomatik olarak anında hesaplanır.
-              </span>
-            </div>
+            ) : (
+              /* 2. MANUEL SATIŞ FİYATI MODÜLÜ */
+              <div className="p-4 rounded-2xl border border-primary bg-primary-tint-50/50 ring-2 ring-primary/20 animate-in fade-in zoom-in-95 space-y-2">
+                <div className="flex items-center justify-between">
+                  <label className="font-black text-primary flex items-center gap-1.5 text-xs">
+                    <Sliders className="w-4 h-4 text-primary" />
+                    <span>Satış Fiyatı (₺ KDV Dahil) *</span>
+                  </label>
+                  <Badge variant="default" className="text-[10px]">Kâr Simülasyonu Aktif</Badge>
+                </div>
 
-            {/* SON SATIŞ FİYATI GİRİŞİ */}
-            <div className={`p-4 rounded-2xl border transition-all ${
-              pricingMode === 'manual_price' 
-                ? 'bg-primary-tint-50/50 border-primary ring-2 ring-primary/20' 
-                : 'bg-canvas/50 border-border'
-            }`}>
-              <div className="flex items-center justify-between mb-1.5">
-                <label className="font-black text-primary flex items-center gap-1.5 text-xs">
-                  <Sliders className="w-4 h-4 text-primary" />
-                  <span>Son Satış Fiyatı (₺ KDV Dahil) *</span>
-                </label>
-                {pricingMode === 'manual_price' && (
-                  <Badge variant="default">Aktif Hesaplama Modu</Badge>
-                )}
+                <div className="relative">
+                  <input
+                    type="number"
+                    step="0.5"
+                    value={manualSalePrice || ''}
+                    onChange={(e) => setManualSalePrice(parseFloat(e.target.value) || 0)}
+                    className="w-full pl-8 pr-3 py-2.5 rounded-xl border border-primary font-black text-dark text-sm bg-white focus:ring-2 focus:ring-primary shadow-xs"
+                  />
+                  <span className="absolute left-3 top-2.5 font-bold text-primary text-sm">₺</span>
+                </div>
+                <span className="text-[11px] text-gray-600 block">
+                  ₺{manualSalePrice} satış fiyatında Trendyol kesintileri düşüldükten sonra cebinize kalacak net kâr sağda listelenir.
+                </span>
               </div>
-
-              <div className="relative">
-                <input
-                  type="number"
-                  step="0.5"
-                  value={manualSalePrice || ''}
-                  onChange={(e) => {
-                    setManualSalePrice(parseFloat(e.target.value) || 0);
-                    if (pricingMode !== 'manual_price') setPricingMode('manual_price');
-                  }}
-                  className="w-full pl-8 pr-3 py-2.5 rounded-xl border border-primary font-black text-dark text-sm bg-white focus:ring-2 focus:ring-primary shadow-xs"
-                />
-                <span className="absolute left-3 top-2.5 font-bold text-primary text-sm">₺</span>
-              </div>
-              <span className="text-[11px] text-gray-500 block mt-1.5">
-                Fiyat girdiğinizde elde edeceğiniz net kâr ve marj anında listelenir.
-              </span>
-            </div>
+            )}
 
             {/* Alış Maliyeti & KDV Oranı */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
