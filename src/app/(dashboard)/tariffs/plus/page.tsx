@@ -15,7 +15,8 @@ export default function PlusTariffPage() {
     try {
       const res = await fetch('/api/products');
       const data = await res.json();
-      setProducts(data || []);
+      const list = Array.isArray(data) ? data : (data.products || []);
+      setProducts(list);
     } catch (e) {
       toast.error("Ürünler yüklenemedi.");
     } finally {
@@ -54,7 +55,7 @@ export default function PlusTariffPage() {
             <RefreshCw className="w-4 h-4 animate-spin text-primary" />
             <span>Veritabanından ürünler yükleniyor...</span>
           </div>
-        ) : products.length === 0 ? (
+        ) : (products || []).length === 0 ? (
           <div className="p-12 text-center text-xs text-gray-400 font-bold">
             Veritabanında ürün bulunamadı.
           </div>
@@ -72,12 +73,12 @@ export default function PlusTariffPage() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-border/60">
-                {products.map((p) => {
+                {(products || []).map((p) => {
                   const currentPrice = parseFloat(p.salePrice || 100);
                   const cost = parseFloat(p.costPrice || 50);
                   const currentComm = parseFloat(p.commissionRate || 18);
-                  const plusPrice = currentPrice * 0.90; // %10 Plus İndirimi
-                  const plusComm = Math.max(10, currentComm - 5); // %5 Komisyon İndirimi
+                  const plusPrice = currentPrice * 0.90;
+                  const plusComm = Math.max(10, currentComm - 5);
                   
                   const currentProfit = currentPrice - (cost + (currentPrice * currentComm / 100) + 45 + 13.19);
                   const plusProfit = plusPrice - (cost + (plusPrice * plusComm / 100) + 45 + 13.19);

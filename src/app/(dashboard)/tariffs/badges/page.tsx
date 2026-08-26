@@ -15,7 +15,8 @@ export default function AdvantageousBadgesPage() {
     try {
       const res = await fetch('/api/products');
       const data = await res.json();
-      setProducts(data || []);
+      const list = Array.isArray(data) ? data : (data.products || []);
+      setProducts(list);
     } catch (e) {
       toast.error("Ürünler yüklenemedi.");
     } finally {
@@ -54,7 +55,7 @@ export default function AdvantageousBadgesPage() {
             <RefreshCw className="w-4 h-4 animate-spin text-primary" />
             <span>Veritabanından ürünler yükleniyor...</span>
           </div>
-        ) : products.length === 0 ? (
+        ) : (products || []).length === 0 ? (
           <div className="p-12 text-center text-xs text-gray-400 font-bold">
             Veritabanında ürün bulunamadı.
           </div>
@@ -71,7 +72,7 @@ export default function AdvantageousBadgesPage() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-border/60">
-                {products.map((p) => {
+                {(products || []).map((p) => {
                   const currentPrice = parseFloat(p.salePrice || 100);
                   const cost = parseFloat(p.costPrice || 50);
                   const comm = parseFloat(p.commissionRate || 18);

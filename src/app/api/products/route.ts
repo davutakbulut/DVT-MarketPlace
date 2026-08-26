@@ -7,8 +7,9 @@ export async function GET(request: Request) {
     const search = searchParams.get('search') || '';
     const brand = searchParams.get('brand') || 'all';
     const stockStatus = searchParams.get('stockStatus') || 'all';
+    const hasPagination = searchParams.has('page') || searchParams.has('pageSize');
     const page = Math.max(1, parseInt(searchParams.get('page') || '1'));
-    const pageSize = Math.min(250, Math.max(10, parseInt(searchParams.get('pageSize') || '50')));
+    const pageSize = Math.min(500, Math.max(10, parseInt(searchParams.get('pageSize') || '50')));
     const offset = (page - 1) * pageSize;
 
     let conditions: string[] = ['1=1'];
@@ -44,6 +45,8 @@ export async function GET(request: Request) {
     const brandsRes = await query(`SELECT DISTINCT brand FROM products WHERE brand IS NOT NULL AND brand != '' ORDER BY brand ASC`);
     const brands = brandsRes.map((r: any) => r.brand);
 
+    const limitClause = hasPagination ? `LIMIT ${pageSize} OFFSET ${offset}` : `LIMIT 500`;
+
     const products = await query(`
       SELECT 
         p.id, 
@@ -66,8 +69,12 @@ export async function GET(request: Request) {
       FROM products p
       WHERE ${whereClause}
       ORDER BY p.stock_quantity DESC, p.created_at DESC
-      LIMIT ${pageSize} OFFSET ${offset}
+      ${limitClause}
     `, params);
+
+    if (!hasPagination && searchParams.get('format') !== 'object') {
+      return NextResponse.json(products);
+    }
 
     return NextResponse.json({
       products,
