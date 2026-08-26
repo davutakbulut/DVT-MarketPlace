@@ -90,20 +90,26 @@ export async function GET(request: Request) {
         p.delivery_type as "deliveryType",
         p.selected_tariff_tier as "selectedTariffTier",
         p.is_active as "isActive",
-        ROUND((p.current_sale_price - (
-          COALESCE(p.current_cost, 0) + 
-          (p.current_sale_price * (COALESCE(p.commission_rate, 15) / 100)) + 
-          46.50 + 
-          (p.current_sale_price * 0.06)
-        ))::numeric, 2) as "calculatedNetProfit",
-        ROUND((
-          (p.current_sale_price - (
+        CASE 
+          WHEN p.current_sale_price <= 0 THEN 0
+          ELSE ROUND((p.current_sale_price - (
             COALESCE(p.current_cost, 0) + 
             (p.current_sale_price * (COALESCE(p.commission_rate, 15) / 100)) + 
             46.50 + 
             (p.current_sale_price * 0.06)
-          )) / NULLIF(p.current_sale_price, 0) * 100
-        )::numeric, 1) as "calculatedMarginPercent"
+          ))::numeric, 2)
+        END as "calculatedNetProfit",
+        CASE 
+          WHEN p.current_sale_price <= 0 OR p.current_cost IS NULL OR p.current_cost <= 0 THEN 0
+          ELSE ROUND((
+            (p.current_sale_price - (
+              COALESCE(p.current_cost, 0) + 
+              (p.current_sale_price * (COALESCE(p.commission_rate, 15) / 100)) + 
+              46.50 + 
+              (p.current_sale_price * 0.06)
+            )) / NULLIF(p.current_sale_price, 0) * 100
+          )::numeric, 1)
+        END as "calculatedMarginPercent"
       FROM products p
       WHERE ${whereClause}
       ORDER BY p.created_at DESC
