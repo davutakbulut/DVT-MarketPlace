@@ -1,6 +1,8 @@
 import { NextResponse } from 'next/server';
 import { query } from '@/lib/db';
 
+export const dynamic = 'force-dynamic';
+
 export async function GET(request: Request) {
   try {
     const { searchParams } = new URL(request.url);
@@ -75,8 +77,10 @@ export async function GET(request: Request) {
         p.marketplace_product_url as "marketplaceUrl",
         p.current_sale_price as "salePrice", 
         p.current_cost as "currentCost", 
+        p.current_cost as "costPrice",
         p.vat_rate as "vatRate", 
         p.commission_rate as "commissionRate", 
+        p.shipment_desi as "desi",
         p.shipment_desi as "shipmentDesi", 
         p.measured_desi as "measuredDesi",
         p.stock_quantity as "stockQuantity",
@@ -125,31 +129,64 @@ export async function GET(request: Request) {
 export async function POST(request: Request) {
   try {
     const body = await request.json();
-    const { barcode, currentCost } = body;
+    const productId = body.productId || body.id;
+    const barcode = body.barcode;
+    const costPrice = body.costPrice !== undefined ? body.costPrice : body.currentCost;
+    const salePrice = body.salePrice;
+    const stockQuantity = body.stockQuantity;
 
-    if (!barcode || currentCost === undefined) {
-      return NextResponse.json({ error: 'Barkod ve maliyet zorunludur' }, { status: 400 });
+    if (!productId && !barcode) {
+      return NextResponse.json({ error: 'Ürün ID veya Barkod zorunludur' }, { status: 400 });
     }
 
-    const updatedProduct = await query(`
-      UPDATE products 
-      SET current_cost = $1, updated_at = NOW() 
-      WHERE barcode = $2 
-      RETURNING *
-    `, [currentCost, barcode]);
+    let updateQuery = 'UPDATE products SET updated_at = NOW()';
+    const params: any[] = [];
+    let pIdx = 1;
+
+    if (costPrice !== undefined) {
+      updateQuery += `, current_cost = $${pIdx}`;
+      params.push(costPrice);
+      pIdx++;
+    }
+
+    if (salePrice !== undefined) {
+      updateQuery += `, current_sale_price = $${pIdx}`;
+      params.push(salePrice);
+      pIdx++;
+    }
+
+    if (stockQuantity !== undefined) {
+      updateQuery += `, stock_quantity = $${pIdx}`;
+      params.push(stockQuantity);
+      pIdx++;
+    }
+
+    if (productId) {
+      updateQuery += ` WHERE id = $${pIdx} RETURNING *`;
+      params.push(productId);
+    } else {
+      updateQuery += ` WHERE barcode = $${pIdx} RETURNING *`;
+      params.push(barcode);
+    }
+
+    const updatedProduct = await query(updateQuery, params);
 
     if (updatedProduct.length === 0) {
       return NextResponse.json({ error: 'Ürün bulunamadı' }, { status: 404 });
     }
 
-    // Also update order_items with this cost for live consistency
-    await query(`
-      UPDATE order_items 
-      SET unit_cost_price = $1, updated_at = NOW() 
-      WHERE barcode = $2
-    `, [currentCost, barcode]);
+    const prod = updatedProduct[0];
 
-    return NextResponse.json({ success: true, product: updatedProduct[0] });
+    // Also update order_items with this cost for live consistency
+    if (costPrice !== undefined && prod.barcode) {
+      await query(`
+        UPDATE order_items 
+        SET unit_cost_price = $1, updated_at = NOW() 
+        WHERE barcode = $2
+      `, [costPrice, prod.barcode]);
+    }
+
+    return NextResponse.json({ success: true, product: prod });
   } catch (error: any) {
     console.error('Update Product Cost error:', error);
     return NextResponse.json({ error: error.message }, { status: 500 });

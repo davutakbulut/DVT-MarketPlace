@@ -63,7 +63,7 @@ export default function ProductsCatalogPage() {
   const handleStartEdit = (p: any) => {
     setEditingId(p.id);
     setEditPrice(parseFloat(p.salePrice || 0));
-    setEditCost(parseFloat(p.costPrice || 0));
+    setEditCost(parseFloat(p.costPrice ?? p.currentCost ?? 0));
     setEditStock(parseInt(p.stockQuantity || 0));
   };
 
@@ -279,7 +279,7 @@ export default function ProductsCatalogPage() {
                               className="w-20 px-2 py-1 rounded-lg border border-red-500 font-bold text-red-700"
                             />
                           ) : (
-                            `₺${parseFloat(p.costPrice || 0).toFixed(2)}`
+                            `₺${parseFloat(p.costPrice ?? p.currentCost ?? 0).toFixed(2)}`
                           )}
                         </td>
                         <td className="py-3 px-4 text-gray-600 text-[11px] tabular-nums">
@@ -287,7 +287,7 @@ export default function ProductsCatalogPage() {
                           <span className="text-[10px] text-gray-400 block">KDV: %{p.vatRate || 10}</span>
                         </td>
                         <td className="py-3 px-4 font-bold text-dark font-mono text-[11px]">
-                          {p.desi || 1.0} Desi
+                          {p.desi ?? p.shipmentDesi ?? 1.0} Desi
                         </td>
                         <td className="py-3 px-4 text-right">
                           <div className="flex items-center justify-end gap-1.5">
@@ -414,13 +414,13 @@ export default function ProductsCatalogPage() {
                             className="w-full px-1.5 py-1 rounded-lg border border-red-500 font-bold text-red-700 bg-white text-xs"
                           />
                         ) : (
-                          <span className="font-bold text-red-700 tabular-nums">₺{parseFloat(p.costPrice || 0).toFixed(2)}</span>
+                          <span className="font-bold text-red-700 tabular-nums">₺{parseFloat(p.costPrice ?? p.currentCost ?? 0).toFixed(2)}</span>
                         )}
                       </div>
 
                       <div>
                         <span className="text-[10px] text-gray-400 block font-semibold">Komisyon/Desi</span>
-                        <span className="font-bold text-gray-700 tabular-nums">%{p.commissionRate || 16.15} / {p.desi || 1}D</span>
+                        <span className="font-bold text-gray-700 tabular-nums">%{p.commissionRate || 16.15} / {p.desi ?? p.shipmentDesi ?? 1}D</span>
                       </div>
                     </div>
 
