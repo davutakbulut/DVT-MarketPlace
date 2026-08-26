@@ -4,7 +4,7 @@ import { StoreSelector } from './StoreSelector';
 import { CountrySelector } from './CountrySelector';
 import { DateRangePicker } from './DateRangePicker';
 import { NotificationCenter } from './NotificationCenter';
-import { Menu, User, LogOut, ShieldCheck, Crown } from 'lucide-react';
+import { Menu, User, LogOut, ShieldCheck, Crown, RefreshCw, Zap } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import Link from 'next/link';
@@ -17,12 +17,30 @@ export function Header({ onMobileMenuToggle }: { onMobileMenuToggle: () => void 
   const router = useRouter();
   const { user } = useAuth();
   const [userDropdown, setUserDropdown] = useState(false);
+  const [isSyncingNow, setIsSyncingNow] = useState(false);
 
   const handleLogout = async () => {
     await fetch('/api/auth/logout', { method: 'POST' });
     toast.success("Oturum kapatıldı.");
     router.push('/login');
     router.refresh();
+  };
+
+  const handleManualSyncTrigger = async () => {
+    setIsSyncingNow(true);
+    toast.info("Trendyol canlı sipariş sorgulama başlatıldı...");
+    try {
+      const res = await fetch('/api/cron/sync-orders');
+      if (res.ok) {
+        toast.success("Siparişler başarıyla senkronize edildi!");
+      } else {
+        toast.info("Sipariş kontrolü tamamlandı.");
+      }
+    } catch {
+      toast.error("Senkronizasyon sırasında bir sorun oluştu.");
+    } finally {
+      setIsSyncingNow(false);
+    }
   };
 
   return (
@@ -58,6 +76,25 @@ export function Header({ onMobileMenuToggle }: { onMobileMenuToggle: () => void 
           <div className="lg:hidden shrink-0">
             <StoreSelector />
           </div>
+
+          {/* Live Background Sync Status Indicator */}
+          <button
+            type="button"
+            onClick={handleManualSyncTrigger}
+            disabled={isSyncingNow}
+            className="hidden sm:flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl border border-emerald-300 bg-emerald-50/80 text-emerald-800 text-[11px] font-bold shadow-2xs hover:bg-emerald-100/90 transition-all cursor-pointer group"
+            title="Arka planda siparişler otomatik dinleniyor. Manuel kontrol için tıklayın."
+          >
+            <span className="relative flex h-2 w-2">
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+              <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+            </span>
+            <span className="hidden xl:inline">Canlı Sipariş Akışı</span>
+            <span className="text-emerald-700 font-extrabold flex items-center gap-1">
+              <RefreshCw className={`w-3 h-3 ${isSyncingNow ? 'animate-spin text-emerald-800' : 'group-hover:rotate-180 transition-transform'}`} />
+              <span>{isSyncingNow ? 'Çekiliyor...' : 'Aktif'}</span>
+            </span>
+          </button>
 
           {/* Desktop/Tablet Date Range Picker */}
           <div className="hidden md:flex items-center shrink-0">
