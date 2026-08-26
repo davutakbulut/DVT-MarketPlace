@@ -33,6 +33,26 @@ const defaultStores: StoreInfo[] = [
   { id: '62610a67-3f0f-4780-9afb-405e251f9640', name: 'HepsiBurada Davye Medikal', marketplace: 'hepsiburada', sellerId: '867a6d46-c62e-4f21-beb1-50225bd14205' },
 ];
 
+function getInitialStoreId(): string {
+  if (typeof window !== 'undefined') {
+    // 1. Try Cookie
+    const match = document.cookie.match(new RegExp('(^| )dvt_active_store=([^;]+)'));
+    if (match && match[2]) {
+      const decoded = decodeURIComponent(match[2]);
+      if (decoded) return decoded;
+    }
+    // 2. Try localStorage
+    try {
+      const saved = localStorage.getItem('dvt_tenant_store');
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (parsed?.state?.activeStoreId) return parsed.state.activeStoreId;
+      }
+    } catch {}
+  }
+  return 'all';
+}
+
 const safeStorage = {
   getItem: (name: string) => {
     if (typeof window === 'undefined') return null;
@@ -50,13 +70,16 @@ const safeStorage = {
   },
 };
 
+const initialStoreId = getInitialStoreId();
+const initialActive = defaultStores.find(s => s.id === initialStoreId) || defaultStores[0];
+
 export const useTenantStore = create<TenantState>()(
   persist(
     (set, get) => ({
       companyId: '11111111-1111-1111-1111-111111111111',
       companyName: 'Akbulut Ticaret A.Ş.',
-      activeStoreId: 'all',
-      activeStore: defaultStores[0],
+      activeStoreId: initialStoreId,
+      activeStore: initialActive,
       availableStores: defaultStores,
       userRole: 'admin',
       permissions: {
@@ -67,12 +90,15 @@ export const useTenantStore = create<TenantState>()(
         allowed_modules: ['all'],
       },
       setActiveStoreId: (storeId: string) => {
+        if (typeof window !== 'undefined') {
+          document.cookie = `dvt_active_store=${encodeURIComponent(storeId)}; path=/; max-age=31536000; SameSite=Lax`;
+        }
         const store = get().availableStores.find((s) => s.id === storeId) || 
                       defaultStores.find((s) => s.id === storeId) || 
                       get().availableStores[0] || 
                       defaultStores[0];
         set({
-          activeStoreId: store.id,
+          activeStoreId: storeId,
           activeStore: store,
         });
       },
@@ -87,7 +113,8 @@ export const useTenantStore = create<TenantState>()(
             sellerId: s.sellerId || s.id,
           }))
         ];
-        const active = stores.find(s => s.id === get().activeStoreId) || stores[0];
+        const savedId = getInitialStoreId() || get().activeStoreId;
+        const active = stores.find(s => s.id === savedId) || stores.find(s => s.id === get().activeStoreId) || stores[0];
         set({
           companyId: data.user.companyId || '11111111-1111-1111-1111-111111111111',
           companyName: data.user.companyName || 'Akbulut Ticaret A.Ş.',
@@ -112,8 +139,8 @@ export const useTenantStore = create<TenantState>()(
                 sellerId: s.sellerId || s.id,
               }))
             ];
-            const currentActiveId = get().activeStoreId;
-            const currentActive = apiStores.find(s => s.id === currentActiveId) || apiStores[0];
+            const savedId = getInitialStoreId() || get().activeStoreId;
+            const currentActive = apiStores.find(s => s.id === savedId) || apiStores.find(s => s.id === get().activeStoreId) || apiStores[0];
             set({
               availableStores: apiStores,
               activeStore: currentActive,
