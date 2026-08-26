@@ -109,6 +109,7 @@ export async function GET(request: Request) {
     const gross = parseFloat(agg.gross_revenue) || 0;
     const paid = parseFloat(agg.invoiced_revenue) || gross;
     const cogs = parseFloat(agg.cogs) || 0;
+    const totalOrdersCount = parseInt(agg.total_orders || 0);
 
     // Expenses breakdown object (14 Items)
     const cogsVal = parseFloat(agg.cogs) || 0;
@@ -133,37 +134,68 @@ export async function GET(request: Request) {
     const netProfit = paid - (totalCostSum - retShipVal); // retShipVal is already included in shipping
     const netProfitMargin = paid > 0 ? (netProfit / paid) * 100 : 0;
     const netProfitMarkup = cogs > 0 ? (netProfit / cogs) * 100 : 0;
+    const avgOrderValue = totalOrdersCount > 0 ? (paid / totalOrdersCount) : 0;
 
     // Standard params with extraOpFraction for other queries
     const standardParams = [...baseParams, extraOpFraction];
 
-    // Daily Profit Performance Trends
+    // 1. Daily Profit Performance Trends
     const dailyProfitTrends = await query(`
       SELECT 
         TO_CHAR(o.order_date, 'DD.MM') as "dayLabel",
         TO_CHAR(o.order_date, 'YYYY-MM-DD') as "fullDate",
         COUNT(o.id) as "orderCount",
         COALESCE(SUM(o.gross_amount), 0) as "revenue",
-        COALESCE(SUM(o.paid_amount - (o.total_cost + o.total_commission + o.total_shipping_cost + o.service_fee + o.withholding_tax + o.net_vat + (o.gross_amount * $${extraParamIdx}))), 0) as "profit"
+        COALESCE(SUM(o.paid_amount - (o.total_cost + o.total_commission + o.total_shipping_cost + o.service_fee + o.withholding_tax + o.net_vat + (o.gross_amount * $${extraParamIdx}))), 0) as "profit",
+        ROUND((COALESCE(SUM(o.paid_amount), 0) / NULLIF(COUNT(o.id), 0))::numeric, 2) as "avgOrderValue"
       FROM orders o
       WHERE ${whereClause}
       GROUP BY TO_CHAR(o.order_date, 'DD.MM'), TO_CHAR(o.order_date, 'YYYY-MM-DD')
       ORDER BY TO_CHAR(o.order_date, 'YYYY-MM-DD') ASC
     `, standardParams);
 
-    // Monthly breakdown (All Months)
+    // 2. Weekly Trends (Haftalık Sipariş ve Ortalama Sepet Raporu)
+    const weeklyTrends = await query(`
+      SELECT 
+        TO_CHAR(o.order_date, 'IYYY-"W"IW') as "weekKey",
+        TO_CHAR(MIN(o.order_date), 'DD.MM') || ' - ' || TO_CHAR(MAX(o.order_date), 'DD.MM') as "weekLabel",
+        COUNT(o.id) as "orderCount",
+        COALESCE(SUM(o.gross_amount), 0) as "revenue",
+        COALESCE(SUM(o.paid_amount - (o.total_cost + o.total_commission + o.total_shipping_cost + o.service_fee + o.withholding_tax + o.net_vat + (o.gross_amount * $${extraParamIdx}))), 0) as "profit",
+        ROUND((COALESCE(SUM(o.paid_amount), 0) / NULLIF(COUNT(o.id), 0))::numeric, 2) as "avgOrderValue"
+      FROM orders o
+      WHERE ${whereClause}
+      GROUP BY TO_CHAR(o.order_date, 'IYYY-"W"IW')
+      ORDER BY TO_CHAR(o.order_date, 'IYYY-"W"IW') ASC
+    `, standardParams);
+
+    // 3. Monthly breakdown (Aylık Sipariş, Ciro ve Kâr Raporu)
     const monthlyTrends = await query(`
       SELECT 
         TO_CHAR(o.order_date, 'YYYY-MM') as "monthKey",
         TO_CHAR(o.order_date, 'TMMonth YYYY') as "monthLabel",
         COUNT(o.id) as "orderCount",
         COALESCE(SUM(o.gross_amount), 0) as "revenue",
-        COALESCE(SUM(o.paid_amount - (o.total_cost + o.total_commission + o.total_shipping_cost + o.service_fee + o.withholding_tax + o.net_vat + (o.gross_amount * $1))), 0) as "profit",
-        ROUND((COALESCE(SUM(o.paid_amount - (o.total_cost + o.total_commission + o.total_shipping_cost + o.service_fee + o.withholding_tax + o.net_vat + (o.gross_amount * $1))), 0) / NULLIF(SUM(o.paid_amount), 0) * 100)::numeric, 1) as "margin"
+        COALESCE(SUM(o.paid_amount - (o.total_cost + o.total_commission + o.total_shipping_cost + o.service_fee + o.withholding_tax + o.net_vat + (o.gross_amount * $${extraParamIdx}))), 0) as "profit",
+        ROUND((COALESCE(SUM(o.paid_amount), 0) / NULLIF(COUNT(o.id), 0))::numeric, 2) as "avgOrderValue",
+        ROUND((COALESCE(SUM(o.paid_amount - (o.total_cost + o.total_commission + o.total_shipping_cost + o.service_fee + o.withholding_tax + o.net_vat + (o.gross_amount * $${extraParamIdx}))), 0) / NULLIF(SUM(o.paid_amount), 0) * 100)::numeric, 1) as "margin"
       FROM orders o
+      WHERE ${whereClause}
       GROUP BY TO_CHAR(o.order_date, 'YYYY-MM'), TO_CHAR(o.order_date, 'TMMonth YYYY')
       ORDER BY TO_CHAR(o.order_date, 'YYYY-MM') ASC
-    `, [extraOpFraction]);
+    `, standardParams);
+
+    // Weekly & Monthly Average Calculations
+    const totalWeeks = Math.max(1, weeklyTrends.length);
+    const totalMonths = Math.max(1, monthlyTrends.length);
+    const totalDays = Math.max(1, dailyProfitTrends.length);
+
+    const avgWeeklyOrders = Math.round(totalOrdersCount / totalWeeks);
+    const avgMonthlyOrders = Math.round(totalOrdersCount / totalMonths);
+    const avgDailyOrders = Math.round((totalOrdersCount / totalDays) * 10) / 10;
+
+    const avgWeeklyRevenue = Math.round(paid / totalWeeks);
+    const avgMonthlyRevenue = Math.round(paid / totalMonths);
 
     // Carrier distribution for Selected Period
     const carrierDistribution = await query(`
@@ -192,7 +224,7 @@ export async function GET(request: Request) {
       ORDER BY EXTRACT(HOUR FROM o.order_date) ASC
     `, standardParams);
 
-    // Top profitable products for Selected Period (calculated using unit_sale_price and unit_cost_price)
+    // Top profitable products for Selected Period
     const topProducts = await query(`
       SELECT 
         oi.barcode,
@@ -238,6 +270,7 @@ export async function GET(request: Request) {
       invoicedRevenue: paid,
       grossProfit: gross - cogs,
       netProfit,
+      avgOrderValue: Math.round(avgOrderValue * 100) / 100,
       extraOperationTotal: fixedExtraOpVal,
       extraOperationRate: extraOpRate,
       earlyPayoutRate: earlyPayoutRate,
@@ -248,13 +281,26 @@ export async function GET(request: Request) {
       taxesTotal: wTaxVal + nVatVal,
       serviceFeeTotal: sFeeVal,
       adSpendTotal: adSpendVal,
-      totalOrders: parseInt(agg.total_orders || 0),
+      totalOrders: totalOrdersCount,
       activeOrders: parseInt(agg.active_orders || 0),
       cancelledOrders: parseInt(agg.cancelled_orders || 0),
       returnedOrders: parseInt(agg.returned_orders || 0),
       cancelledAmount: parseFloat(agg.cancelled_amount || 0),
       returnedAmount: parseFloat(agg.returned_amount || 0),
       discountAmount: parseFloat(agg.total_discount || 0),
+
+      // Velocity & Averages (Haftalık & Aylık Sipariş Hızları)
+      velocity: {
+        avgOrderValue: Math.round(avgOrderValue * 100) / 100,
+        avgWeeklyOrders,
+        avgMonthlyOrders,
+        avgDailyOrders,
+        avgWeeklyRevenue,
+        avgMonthlyRevenue,
+        totalWeeks,
+        totalMonths,
+        totalDays
+      },
 
       // 14 Masraf Kalemleri Detailed Breakdown
       expenses: {
@@ -278,6 +324,7 @@ export async function GET(request: Request) {
       },
 
       dailyProfitTrends,
+      weeklyTrends,
       monthlyTrends,
       carrierDistribution,
       hourlyDistribution,

@@ -9,7 +9,7 @@ import {
   Percent, RefreshCw, ArrowUpRight, CheckCircle2, ShieldCheck, 
   Layers, Package, Calendar, Award, ExternalLink, Users, Eye,
   Clock, Store, Filter, PieChart as PieIcon, BarChart3, Activity,
-  ChevronDown, ChevronUp, Receipt, Info
+  ChevronDown, ChevronUp, Receipt, Info, ShoppingBag, Zap, CalendarDays
 } from "lucide-react";
 import Link from "next/link";
 import { OrderDetailModal } from "@/components/orders/OrderDetailModal";
@@ -17,15 +17,16 @@ import { useDateStore } from "@/store/useDateStore";
 import { useTenantStore } from "@/stores/useTenantStore";
 import {
   ResponsiveContainer, AreaChart, Area, BarChart, Bar,
-  PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend
+  PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend,
+  ComposedChart, Line
 } from "recharts";
 
 export default function DashboardPage() {
   const [data, setData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [mounted, setMounted] = useState(false);
-  // Kart varsayılan olarak kapalı gelir (alandan kazanmak için)
   const [isExpensesExpanded, setIsExpensesExpanded] = useState(false);
+  const [velocityTab, setVelocityTab] = useState<"weekly" | "monthly">("weekly");
   const { period, startDate, endDate, label } = useDateStore();
   const { activeStoreId } = useTenantStore();
   const [selectedOrderId, setSelectedOrderId] = useState<string | null>(null);
@@ -61,6 +62,8 @@ export default function DashboardPage() {
 
   const d = data || {};
   const exp = d.expenses || {};
+  const velocity = d.velocity || {};
+  const weeklyTrends = d.weeklyTrends || [];
   const monthlyTrends = d.monthlyTrends || [];
   const topProducts = d.topProducts || [];
   const recentOrders = d.recentOrders || [];
@@ -81,7 +84,7 @@ export default function DashboardPage() {
     { name: "Reklam Harcaması", value: parseFloat(exp.adSpendCost || 0), color: "#EAB308" },
   ].filter(x => x.value > 0);
 
-  // 14 Masraf Kalemleri Donut Chart Data (Açılır-Kapanır Kart İçin)
+  // 14 Masraf Kalemleri Donut Chart Data
   const donutExpensesList = [
     { id: "cogs", name: "Toplam Ürün Maliyeti (COGS)", value: exp.cogs || 0, color: "#F97316" },
     { id: "comm", name: "Toplam Komisyon", value: exp.commission || 0, color: "#0EA5E9" },
@@ -122,19 +125,19 @@ export default function DashboardPage() {
 
   return (
     <div className="space-y-4 sm:space-y-6 max-w-7xl">
-      {/* Top Banner with Clean Responsive Layout */}
+      {/* Top Banner */}
       <div className="flex items-start sm:items-center justify-between gap-3 bg-white p-4 sm:p-6 rounded-3xl border border-border shadow-xs">
         <div className="space-y-1">
           <div className="flex items-center gap-2 flex-wrap">
-            <h3 className="text-base sm:text-lg font-black text-dark">Trendyol Finansal Kontrol Paneli</h3>
-            <Badge variant="excellent" className="text-[10px] sm:text-xs">Canlı Analitik</Badge>
+            <h3 className="text-base sm:text-lg font-black text-dark">Trendyol & Pazaryeri Finansal Kontrol Paneli</h3>
+            <Badge variant="excellent" className="text-[10px] sm:text-xs">Canlı Veritabanı</Badge>
           </div>
           <p className="text-xs text-muted-foreground">
-            {d.totalOrders || 0} sipariş, kargo baremi, komisyon kesintileri ve interaktif kârlılık grafikleri
+            {d.totalOrders || 0} sipariş, kargo baremi, komisyon kesintileri, haftalık/aylık sipariş hızları ve kârlılık grafikleri
           </p>
         </div>
 
-        {/* Action Group: Global Period Indicator on Large Screens & Unified Refresh Button */}
+        {/* Action Group */}
         <div className="flex items-center gap-2 shrink-0">
           <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-canvas border border-border text-xs font-bold text-dark">
             <Calendar className="w-3.5 h-3.5 text-primary" />
@@ -155,9 +158,9 @@ export default function DashboardPage() {
       </div>
 
       {/* ========================================================= */}
-      {/* 1. ORIGINAL 4 MAIN KPI CARDS (Kuruşsuz Tam TL Formatı) */}
+      {/* 1. TOP 5 FINANCIAL & VELOCITY KPI CARDS */}
       {/* ========================================================= */}
-      <div data-tour="dashboard-kpis" className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+      <div data-tour="dashboard-kpis" className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 sm:gap-4">
         
         {/* Total Invoiced Revenue */}
         <div className="bg-white p-4 sm:p-5 rounded-3xl border border-border shadow-xs hover:border-primary/40 transition-all">
@@ -167,7 +170,7 @@ export default function DashboardPage() {
               <DollarSign className="w-4 h-4" />
             </div>
           </div>
-          <div className="text-lg xs:text-xl sm:text-2xl lg:text-3xl font-black text-primary tabular-nums mt-1.5 truncate">
+          <div className="text-lg xs:text-xl sm:text-2xl font-black text-primary tabular-nums mt-1.5 truncate">
             {formatCurrencyNoCents(d.invoicedRevenue || 0)}
           </div>
           <span className="text-[11px] text-gray-500 font-semibold mt-1 block">
@@ -193,7 +196,7 @@ export default function DashboardPage() {
               {parseFloat(d.netProfit || 0) < 0 ? <TrendingDown className="w-4 h-4" /> : <TrendingUp className="w-4 h-4" />}
             </div>
           </div>
-          <div className={`text-lg xs:text-xl sm:text-2xl lg:text-3xl font-black tabular-nums mt-1.5 truncate ${
+          <div className={`text-lg xs:text-xl sm:text-2xl font-black tabular-nums mt-1.5 truncate ${
             parseFloat(d.netProfit || 0) < 0 ? 'text-red-600' : 'text-emerald-700'
           }`}>
             {formatCurrencyNoCents(d.netProfit || 0)}
@@ -205,42 +208,58 @@ export default function DashboardPage() {
           </span>
         </div>
 
-        {/* Commission & Service Fee Total */}
-        <div className="bg-white p-4 sm:p-5 rounded-3xl border border-border shadow-xs hover:border-amber-400/40 transition-all">
+        {/* Average Order Value (AOV) */}
+        <div className="bg-white p-4 sm:p-5 rounded-3xl border border-border shadow-xs hover:border-indigo-400/40 transition-all">
           <div className="flex items-center justify-between">
-            <span className="text-[11px] font-bold text-muted-foreground uppercase tracking-wide">Komisyon & Hizmet</span>
-            <div className="p-2 rounded-2xl bg-amber-100 text-amber-700">
-              <Percent className="w-4 h-4" />
+            <span className="text-[11px] font-bold text-muted-foreground uppercase tracking-wide">Ort. Sepet Tutarı</span>
+            <div className="p-2 rounded-2xl bg-indigo-50 text-indigo-700">
+              <ShoppingBag className="w-4 h-4" />
             </div>
           </div>
-          <div className="text-lg xs:text-xl sm:text-2xl lg:text-3xl font-black text-dark tabular-nums mt-1.5 truncate">
-            {formatCurrencyNoCents((d.commissionTotal || 0) + (d.serviceFeeTotal || 0))}
+          <div className="text-lg xs:text-xl sm:text-2xl font-black text-indigo-700 tabular-nums mt-1.5 truncate">
+            {formatCurrency(d.avgOrderValue || (parseFloat(d.invoicedRevenue || 0) / (d.totalOrders || 1)))}
           </div>
-          <span className="text-[11px] text-gray-500 font-semibold mt-1 block">
-            {formatCurrencyNoCents(d.commissionTotal || 0)} Komisyon + {formatCurrencyNoCents(d.serviceFeeTotal || 0)} Hizmet
+          <span className="text-[11px] text-indigo-600 font-bold mt-1 block">
+            Sipariş Başına (AOV)
           </span>
         </div>
 
-        {/* Shipping Total */}
+        {/* Weekly Average Order Count */}
         <div className="bg-white p-4 sm:p-5 rounded-3xl border border-border shadow-xs hover:border-sky-400/40 transition-all">
           <div className="flex items-center justify-between">
-            <span className="text-[11px] font-bold text-muted-foreground uppercase tracking-wide">Kargo Giderleri</span>
-            <div className="p-2 rounded-2xl bg-sky-100 text-sky-700">
-              <Truck className="w-4 h-4" />
+            <span className="text-[11px] font-bold text-muted-foreground uppercase tracking-wide">Haftalık Ort. Sipariş</span>
+            <div className="p-2 rounded-2xl bg-sky-50 text-sky-700">
+              <CalendarDays className="w-4 h-4" />
             </div>
           </div>
-          <div className="text-lg xs:text-xl sm:text-2xl lg:text-3xl font-black text-dark tabular-nums mt-1.5 truncate">
-            {formatCurrencyNoCents(d.shippingTotal || 0)}
+          <div className="text-lg xs:text-xl sm:text-2xl font-black text-sky-800 tabular-nums mt-1.5 truncate">
+            {velocity.avgWeeklyOrders || Math.round((d.totalOrders || 0) / Math.max(1, weeklyTrends.length))} Adet
           </div>
-          <span className="text-[11px] text-gray-500 font-semibold mt-1 block">
-            Faturalanan Kargo Bedelleri
+          <span className="text-[11px] text-sky-600 font-bold mt-1 block">
+            {formatCurrencyNoCents(velocity.avgWeeklyRevenue || ((d.invoicedRevenue || 0) / Math.max(1, weeklyTrends.length)))} / Hafta
+          </span>
+        </div>
+
+        {/* Monthly Average Order Count */}
+        <div className="bg-white p-4 sm:p-5 rounded-3xl border border-border shadow-xs hover:border-amber-400/40 transition-all col-span-2 sm:col-span-1">
+          <div className="flex items-center justify-between">
+            <span className="text-[11px] font-bold text-muted-foreground uppercase tracking-wide">Aylık Ort. Sipariş</span>
+            <div className="p-2 rounded-2xl bg-amber-50 text-amber-700">
+              <Zap className="w-4 h-4" />
+            </div>
+          </div>
+          <div className="text-lg xs:text-xl sm:text-2xl font-black text-amber-800 tabular-nums mt-1.5 truncate">
+            {velocity.avgMonthlyOrders || Math.round((d.totalOrders || 0) / Math.max(1, monthlyTrends.length))} Adet
+          </div>
+          <span className="text-[11px] text-amber-700 font-bold mt-1 block">
+            {formatCurrencyNoCents(velocity.avgMonthlyRevenue || ((d.invoicedRevenue || 0) / Math.max(1, monthlyTrends.length)))} / Ay
           </span>
         </div>
 
       </div>
 
       {/* ========================================================= */}
-      {/* 2. [EK ALAN] AÇILIR-KAPANIR (COLLAPSIBLE) MASRAF KALEMLERİ (₺) */}
+      {/* 2. AÇILIR-KAPANIR 14 MASRAF KALEMLERİ (₺) */}
       {/* ========================================================= */}
       <div data-tour="dashboard-expenses" className="bg-white rounded-3xl border border-border shadow-xs overflow-hidden transition-all">
         {/* Header Bar */}
@@ -249,89 +268,86 @@ export default function DashboardPage() {
           className="p-4 sm:p-5 flex items-center justify-between bg-canvas/40 hover:bg-canvas/80 cursor-pointer border-b border-border/60 transition-colors"
         >
           <div className="flex items-center gap-2.5">
-            <Receipt className="w-4 h-4 text-primary" />
-            <h4 className="text-sm sm:text-base font-black text-dark">Masraf Kalemleri & Kesinti Dökümü (₺)</h4>
-            <Badge variant="secondary" className="text-[10px] font-bold">14 Ayrık Gider Kalemi</Badge>
+            <div className="p-2 rounded-2xl bg-primary text-white shadow-xs">
+              <Receipt className="w-4 h-4" />
+            </div>
+            <div>
+              <div className="flex items-center gap-2">
+                <h4 className="text-xs sm:text-sm font-black text-dark">
+                  14 Masraf Kalemi ve Kesinti Dökümü (Melontik Finansal Matrisi)
+                </h4>
+                <Badge variant="outline" className="text-[10px] font-bold">
+                  {isExpensesExpanded ? 'Detayları Gizle' : 'Tüm Masrafları Göster'}
+                </Badge>
+              </div>
+              <p className="text-[11px] text-gray-500">
+                COGS, Komisyon, Kargo, İade Kargo, Stopaj (%1), Net KDV, Reklam, Erken Ödeme ve %{exp.extraOperationRate || 6} Ekstra Operasyon Kesintisi
+              </p>
+            </div>
           </div>
 
           <div className="flex items-center gap-3">
-            <div className="hidden sm:flex items-center gap-1.5 text-xs font-bold text-gray-600">
-              <span>Toplam Masraf:</span>
-              <strong className="text-dark font-black tabular-nums">{formatCurrencyNoCents(exp.totalCostSum || 0)}</strong>
+            <div className="text-right hidden sm:block">
+              <span className="text-[10px] text-gray-400 font-bold block">Toplam Kesinti & Masraf</span>
+              <span className="text-xs font-black text-red-600 tabular-nums">
+                -{formatCurrency(exp.totalCostSum || 0)}
+              </span>
             </div>
-
-            <Button size="sm" variant="ghost" className="h-7 text-xs font-bold gap-1 text-gray-600 hover:text-primary">
-              <span>{isExpensesExpanded ? 'Alanı Daralt' : 'Tüm Masrafları Göster'}</span>
-              {isExpensesExpanded ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
-            </Button>
+            <button className="p-1.5 rounded-xl hover:bg-white text-gray-400 hover:text-dark transition-colors">
+              {isExpensesExpanded ? <ChevronUp className="w-5 h-5" /> : <ChevronDown className="w-5 h-5" />}
+            </button>
           </div>
         </div>
 
-        {/* Content Body (When Expanded) */}
+        {/* Collapsible Content Grid */}
         {isExpensesExpanded && (
-          <div className="p-4 sm:p-6 animate-in fade-in zoom-in-95 duration-200">
-            <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-center">
-              
-              {/* Left: Donut Chart with Center Total Cost */}
-              <div className="lg:col-span-4 flex flex-col items-center justify-center p-2 relative">
-                <div className="h-64 w-64 relative flex items-center justify-center">
-                  {mounted && (
-                    <ResponsiveContainer width="100%" height="100%">
-                      <PieChart>
-                        <Pie
-                          data={filteredDonutData}
-                          cx="50%"
-                          cy="50%"
-                          innerRadius={75}
-                          outerRadius={105}
-                          paddingAngle={3}
-                          dataKey="value"
-                        >
-                          {filteredDonutData.map((entry, index) => (
-                            <Cell key={`cell-${index}`} fill={entry.color} />
-                          ))}
-                        </Pie>
-                        <Tooltip 
-                          formatter={(val: any) => formatCurrencyNoCents(parseFloat(val || 0))}
-                          contentStyle={{ borderRadius: '16px', border: '1px solid #E5E7EB', fontWeight: 'bold', fontSize: '11px' }}
-                        />
-                      </PieChart>
-                    </ResponsiveContainer>
-                  )}
+          <div className="p-4 sm:p-6 space-y-6 animate-in slide-in-from-top-2 duration-200">
+            {/* 14 Individual Expense Cards */}
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-7 gap-2.5 sm:gap-3">
+              {donutExpensesList.map((item) => (
+                <div key={item.id} className="p-3 rounded-2xl bg-canvas/60 border border-border/80 flex flex-col justify-between space-y-1 hover:bg-white hover:shadow-xs transition-all">
+                  <div className="flex items-center gap-1.5">
+                    <span className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: item.color }} />
+                    <span className="text-[10px] font-bold text-gray-600 truncate" title={item.name}>{item.name}</span>
+                  </div>
+                  <div className="text-xs sm:text-sm font-black text-dark tabular-nums">
+                    {formatCurrency(item.value)}
+                  </div>
+                </div>
+              ))}
+            </div>
 
-                  <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none text-center px-4">
-                    <span className="text-[11px] font-bold text-gray-500">Toplam Maliyet</span>
-                    <span className="text-base sm:text-lg font-black text-dark tabular-nums mt-0.5">
-                      {formatCurrencyNoCents(exp.totalCostSum || 0)}
-                    </span>
+            {/* Waterfall Summary Row */}
+            <div className="p-4 rounded-2xl bg-dark text-white flex flex-col sm:flex-row items-center justify-between gap-4">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-2xl bg-white/10 flex items-center justify-center text-primary shrink-0">
+                  <DollarSign className="w-5 h-5" />
+                </div>
+                <div>
+                  <span className="text-[11px] text-gray-300 font-bold block">14 Kalem Sonrası Gerçekleşen Net Bakiye</span>
+                  <div className="text-lg sm:text-xl font-black text-emerald-400 tabular-nums">
+                    {formatCurrency(d.netProfit || 0)}
                   </div>
                 </div>
               </div>
 
-              {/* Right: 14 Expense Items Grid */}
-              <div className="lg:col-span-8">
-                <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-3.5">
-                  {donutExpensesList.map((item) => (
-                    <div key={item.id} className="p-3 rounded-2xl bg-canvas/30 border border-border/80 hover:border-primary/30 transition-all space-y-1">
-                      <div className="flex items-center gap-1.5">
-                        <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: item.color }} />
-                        <span className="text-[11px] font-bold text-gray-600 truncate" title={item.name}>{item.name}</span>
-                      </div>
-                      <div className="text-sm font-black text-dark tabular-nums pl-4">
-                        {formatCurrencyNoCents(item.value || 0)}
-                      </div>
-                    </div>
-                  ))}
+              <div className="flex items-center gap-3 text-xs">
+                <div className="bg-white/10 px-3 py-1.5 rounded-xl border border-white/10">
+                  <span className="text-[10px] text-gray-400 block">Kâr Marjı</span>
+                  <span className="font-black text-white tabular-nums">%{d.netProfitMargin || 0}</span>
+                </div>
+                <div className="bg-white/10 px-3 py-1.5 rounded-xl border border-white/10">
+                  <span className="text-[10px] text-gray-400 block">Kâr Çarpanı (Markup)</span>
+                  <span className="font-black text-white tabular-nums">%{d.netProfitMarkup || 0}</span>
                 </div>
               </div>
-
             </div>
           </div>
         )}
       </div>
 
       {/* ========================================================= */}
-      {/* 3. [EK ALAN] CHART: GÜNLÜK KÂR PERFORMANSI (Spline Curve) */}
+      {/* 3. CHART: GÜNLÜK KÂR PERFORMANSI (Spline Curve) */}
       {/* ========================================================= */}
       <div data-tour="dashboard-daily-profit" className="bg-white p-4 sm:p-6 rounded-3xl border border-border shadow-xs space-y-4">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-3 border-b border-border gap-2">
@@ -403,7 +419,112 @@ export default function DashboardPage() {
       </div>
 
       {/* ========================================================= */}
-      {/* 4. CHARTS ROW 1 (3d9cc39): Monthly Trend + Cost Breakdown */}
+      {/* 4. NEW: HAFTALIK & AYLIK SİPARİŞ HIZI VE ORTALAMA SEPET ANALİZİ */}
+      {/* ========================================================= */}
+      <div className="bg-white p-4 sm:p-6 rounded-3xl border border-border shadow-xs space-y-4">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-3 border-b border-border gap-2">
+          <div>
+            <h4 className="text-xs sm:text-sm font-black text-dark flex items-center gap-2">
+              <BarChart3 className="w-4 h-4 text-primary" />
+              <span>Haftalık & Aylık Sipariş Hacmi ve Ortalama Sepet Analizi</span>
+            </h4>
+            <p className="text-[11px] text-gray-500">
+              Haftalar ve aylar bazında sipariş sayıları ve sepet büyüklüğü (AOV) trendleri
+            </p>
+          </div>
+
+          <div className="flex items-center gap-2">
+            <div className="flex items-center p-1 bg-canvas rounded-xl border border-border text-xs">
+              <button
+                onClick={() => setVelocityTab("weekly")}
+                className={`px-3 py-1.5 rounded-lg font-bold transition-all cursor-pointer ${
+                  velocityTab === "weekly"
+                    ? "bg-primary text-white shadow-xs"
+                    : "text-dark hover:bg-white"
+                }`}
+              >
+                Haftalık Trend ({weeklyTrends.length} Hafta)
+              </button>
+              <button
+                onClick={() => setVelocityTab("monthly")}
+                className={`px-3 py-1.5 rounded-lg font-bold transition-all cursor-pointer ${
+                  velocityTab === "monthly"
+                    ? "bg-primary text-white shadow-xs"
+                    : "text-dark hover:bg-white"
+                }`}
+              >
+                Aylık Trend ({monthlyTrends.length} Ay)
+              </button>
+            </div>
+          </div>
+        </div>
+
+        {/* 4 Velocity Summary Metrics */}
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 bg-canvas/60 p-3 rounded-2xl border border-border/80 text-xs">
+          <div>
+            <span className="text-[10px] text-gray-500 font-semibold block">Genel Ortalama Sepet</span>
+            <span className="text-sm sm:text-base font-black text-indigo-700 tabular-nums">
+              {formatCurrency(d.avgOrderValue || 0)}
+            </span>
+          </div>
+          <div>
+            <span className="text-[10px] text-gray-500 font-semibold block">Haftalık Ortalama Sipariş</span>
+            <span className="text-sm sm:text-base font-black text-sky-800 tabular-nums">
+              {velocity.avgWeeklyOrders || 0} Sipariş / Hafta
+            </span>
+          </div>
+          <div>
+            <span className="text-[10px] text-gray-500 font-semibold block">Aylık Ortalama Sipariş</span>
+            <span className="text-sm sm:text-base font-black text-amber-800 tabular-nums">
+              {velocity.avgMonthlyOrders || 0} Sipariş / Ay
+            </span>
+          </div>
+          <div>
+            <span className="text-[10px] text-gray-500 font-semibold block">Günlük Ortalama Sipariş</span>
+            <span className="text-sm sm:text-base font-black text-emerald-700 tabular-nums">
+              {velocity.avgDailyOrders || 0} Sipariş / Gün
+            </span>
+          </div>
+        </div>
+
+        {/* Chart View */}
+        <div className="h-64 sm:h-72 w-full">
+          {mounted && (
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart 
+                data={velocityTab === "weekly" ? weeklyTrends : monthlyTrends} 
+                margin={{ top: 10, right: 10, left: -20, bottom: 0 }}
+              >
+                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E5E7EB" />
+                <XAxis 
+                  dataKey={velocityTab === "weekly" ? "weekLabel" : "monthLabel"} 
+                  stroke="#6B7280" 
+                  fontSize={11} 
+                  tickLine={false} 
+                />
+                <YAxis 
+                  stroke="#6B7280" 
+                  fontSize={11} 
+                  tickLine={false} 
+                  tickFormatter={(v) => `${v} Adet`} 
+                />
+                <Tooltip 
+                  formatter={(val: any, name: any) => [
+                    name === "orderCount" ? `${val} Sipariş` : formatCurrency(parseFloat(val || 0)),
+                    name === "orderCount" ? "Sipariş Sayısı" : name === "avgOrderValue" ? "Ortalama Sepet (AOV)" : "Ciro"
+                  ]}
+                  contentStyle={{ backgroundColor: "#FFFFFF", borderRadius: "16px", border: "1px solid #E5E7EB", boxShadow: "0 10px 25px -5px rgba(0,0,0,0.1)" }}
+                />
+                <Legend wrapperStyle={{ fontSize: "11px", paddingTop: "8px" }} />
+                <Bar dataKey="orderCount" name="Sipariş Sayısı" fill="#FF7855" radius={[6, 6, 0, 0]} />
+              </BarChart>
+            </ResponsiveContainer>
+          )}
+        </div>
+      </div>
+
+      {/* ========================================================= */}
+      {/* 5. CHARTS ROW 1: Monthly Trend + Cost Breakdown */}
       {/* ========================================================= */}
       <div data-tour="dashboard-monthly-trend" className="grid grid-cols-1 lg:grid-cols-12 gap-4 sm:gap-6">
         
@@ -508,7 +629,7 @@ export default function DashboardPage() {
       </div>
 
       {/* ========================================================= */}
-      {/* 5. CHARTS ROW 2 (3d9cc39): Hourly Bar Chart + Carrier Cards */}
+      {/* 6. CHARTS ROW 2: Hourly Bar Chart + Carrier Cards */}
       {/* ========================================================= */}
       <div data-tour="dashboard-hourly-carrier" className="grid grid-cols-1 lg:grid-cols-12 gap-4 sm:gap-6">
         
@@ -518,140 +639,158 @@ export default function DashboardPage() {
             <div>
               <h4 className="text-xs sm:text-sm font-bold text-dark flex items-center gap-2">
                 <Clock className="w-4 h-4 text-primary" />
-                24 Saatlik Sipariş Yoğunluğu & Ciro Grafiği
+                24 Saatlik Sipariş Yoğunluğu Dağılımı
               </h4>
-              <p className="text-[11px] text-gray-500">Günün saatlerine göre sipariş adedi ve oluşturulan ciro hacmi</p>
+              <p className="text-[11px] text-gray-500">Günün saatlerine göre sipariş adedi dökümü</p>
             </div>
+            <Badge variant="outline" className="text-[10px] font-bold">24 Saatlik Akış</Badge>
           </div>
 
-          <div className="h-60 w-full">
+          <div className="h-56 w-full">
             {mounted && (
               <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={hourlyChartData} margin={{ top: 10, right: 10, left: -15, bottom: 0 }}>
+                <BarChart data={hourlyChartData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
                   <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E5E7EB" />
-                  <XAxis dataKey="hour" stroke="#9CA3AF" fontSize={10} tickLine={false} interval={2} />
+                  <XAxis dataKey="hour" stroke="#9CA3AF" fontSize={10} tickLine={false} interval={1} />
                   <YAxis stroke="#9CA3AF" fontSize={10} tickLine={false} />
                   <Tooltip 
-                    contentStyle={{ backgroundColor: "#FFFFFF", borderRadius: "1rem", border: "1px solid #E5E7EB" }}
-                    formatter={(val: any, name: string) => [
-                      name === "siparis" ? `${val} Adet` : formatCurrencyNoCents(parseFloat(val || 0)),
-                      name === "siparis" ? "Sipariş Sayısı" : "Saatlik Ciro"
-                    ]}
+                    contentStyle={{ backgroundColor: "#FFFFFF", borderRadius: "0.75rem", border: "1px solid #E5E7EB" }}
+                    formatter={(val: any) => [`${val} Sipariş`, "Adet"]}
+                    labelFormatter={(label) => `Saat Dilimi: ${label}`}
                   />
-                  <Bar dataKey="siparis" fill="#FF7855" radius={[6, 6, 0, 0]} name="siparis" />
+                  <Bar dataKey="siparis" fill="#FF7855" radius={[4, 4, 0, 0]} name="Sipariş Adedi" />
                 </BarChart>
               </ResponsiveContainer>
             )}
           </div>
         </div>
 
-        {/* Carrier Distribution Comparison (4 Cols) */}
-        <div className="lg:col-span-4 bg-white p-4 sm:p-6 rounded-3xl border border-border shadow-xs space-y-4">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-3 border-b border-border">
-            <h4 className="text-xs sm:text-sm font-bold text-dark flex items-center gap-2">
+        {/* Carrier Distribution Cards (4 Cols) */}
+        <div className="lg:col-span-4 bg-white p-4 sm:p-6 rounded-3xl border border-border shadow-xs space-y-3 flex flex-col justify-between">
+          <div>
+            <h4 className="text-xs sm:text-sm font-bold text-dark flex items-center gap-2 pb-2 border-b border-border">
               <Truck className="w-4 h-4 text-primary" />
-              Kargo Dağılımı
+              Kargo Firmaları Dağılımı
             </h4>
+            <p className="text-[11px] text-gray-500 mt-1">Hangi kargo şirketiyle kaç paket gönderildi</p>
           </div>
 
-          <div className="space-y-2.5">
-            {carrierDistribution.map((c: any, idx: number) => (
-              <div key={idx} className="p-3 rounded-2xl bg-canvas border border-border flex items-center justify-between text-xs hover:border-primary/30 transition-all">
-                <div>
-                  <span className="font-bold text-dark block">{c.carrier}</span>
-                  <span className="text-[10px] text-gray-500">{c.orderCount} Sipariş • Ort. {c.avgDesi} Desi</span>
-                </div>
-                <div className="text-right">
-                  <span className="font-black text-primary block tabular-nums">{formatCurrencyNoCents(parseFloat(c.totalShippingCost || 0))}</span>
-                  <span className="text-[10px] font-bold text-emerald-700">Kâr: {formatCurrencyNoCents(parseFloat(c.profit || 0))}</span>
-                </div>
-              </div>
-            ))}
+          <div className="space-y-2 overflow-y-auto max-h-56 pr-1 custom-scrollbar">
+            {carrierDistribution.length === 0 ? (
+              <div className="py-6 text-center text-xs text-gray-400">Kargo verisi bulunamadı</div>
+            ) : (
+              carrierDistribution.map((c: any, idx: number) => {
+                const totalOrdersCount = carrierDistribution.reduce((acc: number, curr: any) => acc + parseInt(curr.orderCount || 0), 0) || 1;
+                const pct = Math.round((parseInt(c.orderCount || 0) / totalOrdersCount) * 100);
+                return (
+                  <div key={idx} className="p-2.5 rounded-2xl bg-canvas/70 border border-border/80 flex items-center justify-between text-xs hover:bg-white transition-all">
+                    <div>
+                      <span className="font-bold text-dark block">{c.carrier}</span>
+                      <span className="text-[10px] text-gray-500 font-mono">Ort. {c.avgDesi || 1} Desi • {formatCurrency(c.totalShippingCost)}</span>
+                    </div>
+                    <div className="text-right">
+                      <span className="font-black text-primary tabular-nums">{c.orderCount} Paket</span>
+                      <span className="text-[10px] text-emerald-700 font-bold block">%{pct}</span>
+                    </div>
+                  </div>
+                );
+              })
+            )}
           </div>
         </div>
 
       </div>
 
       {/* ========================================================= */}
-      {/* 6. BOTTOM ROW (3d9cc39): Top Products & Recent Live Orders */}
+      {/* 7. TOP PRODUCTS & RECENT ORDERS STREAM */}
       {/* ========================================================= */}
       <div data-tour="dashboard-top-products" className="grid grid-cols-1 lg:grid-cols-12 gap-4 sm:gap-6">
         
-        {/* Top Profitable Products */}
-        <div className="lg:col-span-6 bg-white p-4 sm:p-6 rounded-3xl border border-border shadow-xs space-y-3">
-          <div className="flex items-center justify-between pb-2 border-b border-border">
-            <h4 className="text-xs sm:text-sm font-bold text-dark flex items-center gap-2">
+        {/* Top Profitable Products (6 Cols) */}
+        <div className="lg:col-span-6 bg-white p-4 sm:p-6 rounded-3xl border border-border shadow-xs space-y-4">
+          <div className="flex items-center justify-between pb-3 border-b border-border">
+            <div className="flex items-center gap-2">
               <Award className="w-4 h-4 text-primary" />
-              En Kârlı Ürünler
-            </h4>
-            <Link href="/profit-margin-list">
-              <span className="text-xs text-primary font-bold hover:underline">Tümünü Gör ➔</span>
+              <h4 className="text-xs sm:text-sm font-bold text-dark">En Kârlı Ürünler (Dönem Liderleri)</h4>
+            </div>
+            <Link href="/product-profitability" className="text-xs text-primary font-bold hover:underline flex items-center gap-1">
+              Tümü ➔
             </Link>
           </div>
 
-          <div className="divide-y divide-border/60">
-            {topProducts.map((p: any, idx: number) => (
-              <div key={idx} className="py-2.5 flex items-center justify-between text-xs">
-                <div className="max-w-[240px]">
-                  <span className="font-bold text-dark block truncate">{p.title}</span>
-                  <span className="text-[10px] text-gray-400 font-mono">{p.barcode} • {p.totalQuantity} Adet Satıldı</span>
+          <div className="space-y-2.5">
+            {topProducts.length === 0 ? (
+              <div className="py-8 text-center text-xs text-gray-400">Kârlı ürün verisi bulunamadı</div>
+            ) : (
+              topProducts.map((p: any, idx: number) => (
+                <div key={idx} className="p-3 rounded-2xl bg-canvas/60 border border-border/80 flex items-center justify-between gap-2 hover:bg-white transition-all text-xs">
+                  <div className="min-w-0 flex-1">
+                    <h5 className="font-bold text-dark truncate">{p.title}</h5>
+                    <span className="text-[10px] text-gray-400 font-mono block mt-0.5">{p.barcode} • {p.totalQuantity} Adet Satıldı</span>
+                  </div>
+                  <div className="text-right shrink-0">
+                    <span className="font-black text-emerald-700 block tabular-nums">{formatCurrency(p.totalProfit)}</span>
+                    <Badge variant="excellent" className="text-[10px] py-0 font-bold">
+                      %{p.avgMargin} Marj
+                    </Badge>
+                  </div>
                 </div>
-                <div className="text-right">
-                  <span className="font-black text-emerald-700 block tabular-nums">{formatCurrencyNoCents(parseFloat(p.totalProfit || 0))}</span>
-                  <span className="text-[10px] font-bold text-gray-500">Marj: %{p.avgMargin}</span>
-                </div>
-              </div>
-            ))}
+              ))
+            )}
           </div>
         </div>
 
-        {/* Recent Orders Feed */}
-        <div className="lg:col-span-6 bg-white p-4 sm:p-6 rounded-3xl border border-border shadow-xs space-y-3">
-          <div className="flex items-center justify-between pb-2 border-b border-border">
-            <h4 className="text-xs sm:text-sm font-bold text-dark flex items-center gap-2">
-              <Package className="w-4 h-4 text-primary" />
-              Son Siparişler (Canlı Akış)
-            </h4>
-            <Link href="/live-analysis">
-              <span className="text-xs text-primary font-bold hover:underline">Canlı Analiz ➔</span>
+        {/* Live Recent Orders Stream (6 Cols) */}
+        <div className="lg:col-span-6 bg-white p-4 sm:p-6 rounded-3xl border border-border shadow-xs space-y-4">
+          <div className="flex items-center justify-between pb-3 border-b border-border">
+            <div className="flex items-center gap-2">
+              <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse" />
+              <h4 className="text-xs sm:text-sm font-bold text-dark">Canlı Son Siparişler Akışı</h4>
+            </div>
+            <Link href="/live-analysis" className="text-xs text-primary font-bold hover:underline flex items-center gap-1">
+              Canlı Analiz ➔
             </Link>
           </div>
 
-          <div className="divide-y divide-border/60">
-            {recentOrders.map((o: any) => (
-              <div 
-                key={o.id} 
-                onClick={() => setSelectedOrderId(o.id)}
-                className="py-2 flex items-center justify-between text-xs hover:bg-primary-tint-50/30 cursor-pointer p-1 rounded-xl transition-colors"
-              >
-                <div>
-                  <div className="flex items-center gap-1.5">
-                    <span className="font-black text-dark font-mono">{o.orderNumber}</span>
-                    <span className="text-[10px] text-gray-400">{o.city}</span>
+          <div className="space-y-2 overflow-y-auto max-h-80 pr-1 custom-scrollbar">
+            {recentOrders.length === 0 ? (
+              <div className="py-8 text-center text-xs text-gray-400">Son sipariş bulunamadı</div>
+            ) : (
+              recentOrders.map((ord: any) => (
+                <div 
+                  key={ord.id} 
+                  onClick={() => setSelectedOrderId(ord.id)}
+                  className="p-3 rounded-2xl bg-canvas/60 border border-border/80 flex items-center justify-between gap-2 hover:bg-white cursor-pointer transition-all text-xs"
+                >
+                  <div className="min-w-0">
+                    <div className="flex items-center gap-1.5">
+                      <span className="font-bold text-dark font-mono">{ord.orderNumber}</span>
+                      <span className="text-[10px] text-gray-400">• {ord.city}</span>
+                    </div>
+                    <span className="text-[10px] text-gray-400 block">{ord.orderDate} • {ord.customerName}</span>
                   </div>
-                  <span className="text-[10px] text-gray-500 block truncate max-w-[180px]">{o.customerName}</span>
-                </div>
 
-                <div className="text-right flex items-center gap-2">
-                  <div>
-                    <span className="font-black text-primary block tabular-nums">{formatCurrencyNoCents(parseFloat(o.paidAmount || 0))}</span>
-                    <span className="text-[10px] font-black text-emerald-700 block">Kâr: {formatCurrencyNoCents(parseFloat(o.netProfit || 0))}</span>
+                  <div className="text-right shrink-0">
+                    <span className="font-black text-primary block tabular-nums">{formatCurrencyNoCents(parseFloat(ord.paidAmount || 0))}</span>
+                    <span className={`text-[11px] font-black tabular-nums ${parseFloat(ord.netProfit) >= 0 ? 'text-emerald-700' : 'text-red-600'}`}>
+                      {formatCurrencyNoCents(parseFloat(ord.netProfit || 0))} Kâr
+                    </span>
                   </div>
-                  <Eye className="w-3.5 h-3.5 text-gray-400 hover:text-primary" />
                 </div>
-              </div>
-            ))}
+              ))
+            )}
           </div>
         </div>
 
       </div>
 
       {/* Order Detail Modal */}
-      <OrderDetailModal
-        orderId={selectedOrderId}
-        onClose={() => setSelectedOrderId(null)}
-        onUpdated={fetchDashboard}
-      />
+      {selectedOrderId && (
+        <OrderDetailModal
+          orderId={selectedOrderId}
+          onClose={() => setSelectedOrderId(null)}
+        />
+      )}
     </div>
   );
 }
