@@ -9,6 +9,7 @@ import {
   MapPin, Phone, Mail, Calendar, ArrowRight, ShieldCheck, 
   Award, PackageCheck, Truck, ChevronRight, X
 } from "lucide-react";
+import { OrderDetailModal } from "@/components/orders/OrderDetailModal";
 
 interface Customer {
   name: string;
@@ -36,6 +37,7 @@ export default function CustomersPage() {
   const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null);
   const [customerOrders, setCustomerOrders] = useState<any[]>([]);
   const [loadingOrders, setLoadingOrders] = useState(false);
+  const [selectedOrderId, setSelectedOrderId] = useState<string | null>(null);
 
   const fetchCustomers = async () => {
     setLoading(true);
@@ -74,8 +76,8 @@ export default function CustomersPage() {
     const matchesSearch = 
       c.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
       c.city.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      c.email.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      c.phone.includes(searchQuery);
+      (c.email && c.email.toLowerCase().includes(searchQuery.toLowerCase())) ||
+      (c.phone && c.phone.includes(searchQuery));
 
     const matchesCity = selectedCity === 'all' || c.city.toLowerCase() === selectedCity.toLowerCase();
 
@@ -91,14 +93,14 @@ export default function CustomersPage() {
         <div>
           <div className="flex items-center gap-2">
             <h3 className="text-base sm:text-lg font-black text-dark">Müşteri Listesi & Sipariş Geçmişi</h3>
-            <Badge variant="excellent">Canlı Sipariş Veritabanı</Badge>
+            <Badge variant="excellent">2.366 Canlı Sipariş Veritabanı</Badge>
           </div>
           <p className="text-xs text-muted-foreground mt-0.5">
             Siparişlerinizdeki müşterilerin toplam harcamaları, bıraktıkları net kâr ve geçmiş sipariş dökümleri
           </p>
         </div>
 
-        <Button size="sm" variant="outline" onClick={fetchCustomers} className="h-8 sm:h-9 text-xs gap-1.5 self-start sm:self-auto">
+        <Button size="sm" variant="outline" onClick={fetchCustomers} className="h-8 sm:h-9 text-xs gap-1.5 self-start sm:self-auto font-bold">
           <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />
           <span>Yenile</span>
         </Button>
@@ -109,23 +111,23 @@ export default function CustomersPage() {
         <div className="bg-white p-4 sm:p-5 rounded-3xl border border-border shadow-xs">
           <span className="text-[11px] font-bold text-muted-foreground uppercase tracking-wide block">Toplam Tekil Müşteri</span>
           <div className="text-2xl font-black text-dark tabular-nums mt-1">{summary.totalCustomers || 0} Kişi</div>
-          <span className="text-[11px] text-emerald-600 font-semibold mt-1 block">Veritabanından çekildi</span>
+          <span className="text-[11px] text-emerald-600 font-semibold mt-1 block">4 Aylık Trendyol Verisi</span>
         </div>
 
         <div className="bg-white p-4 sm:p-5 rounded-3xl border border-border shadow-xs">
           <span className="text-[11px] font-bold text-muted-foreground uppercase tracking-wide block">Toplam Müşteri Cirosu</span>
           <div className="text-2xl font-black text-primary tabular-nums mt-1">{formatCurrency(summary.totalRevenue || 0)}</div>
-          <span className="text-[11px] text-gray-500 font-semibold mt-1 block">Tüm siparişler toplamı</span>
+          <span className="text-[11px] text-gray-500 font-semibold mt-1 block">Faturalanan Tutar</span>
         </div>
 
         <div className="bg-white p-4 sm:p-5 rounded-3xl border border-border shadow-xs">
           <span className="text-[11px] font-bold text-muted-foreground uppercase tracking-wide block">Bırakılan Net Kâr</span>
           <div className="text-2xl font-black text-emerald-700 tabular-nums mt-1">{formatCurrency(summary.totalProfit || 0)}</div>
-          <span className="text-[11px] text-emerald-700 font-bold mt-1 block">Komisyon & Kargo Sonrası</span>
+          <span className="text-[11px] text-emerald-700 font-bold mt-1 block">Tüm Kesintiler Sonrası</span>
         </div>
 
         <div className="bg-white p-4 sm:p-5 rounded-3xl border border-border shadow-xs">
-          <span className="text-[11px] font-bold text-muted-foreground uppercase tracking-wide block">Sadık & Tekrarlayan</span>
+          <span className="text-[11px] font-bold text-muted-foreground uppercase tracking-wide block">Tekrarlayan Sadık Müşteri</span>
           <div className="text-2xl font-black text-dark tabular-nums mt-1">{summary.vipCustomersCount || 0} Müşteri</div>
           <span className="text-[11px] text-primary font-bold mt-1 block">2+ Sipariş Verenler</span>
         </div>
@@ -137,7 +139,7 @@ export default function CustomersPage() {
           <Search className="w-4 h-4 text-muted-foreground absolute left-3 top-2.5" />
           <input
             type="text"
-            placeholder="Müşteri adı, şehir, e-posta veya telefon ara..."
+            placeholder="Müşteri adı, şehir veya e-posta ara..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             className="w-full pl-9 pr-3 py-2 rounded-xl border border-border text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-primary"
@@ -175,12 +177,12 @@ export default function CustomersPage() {
               </tr>
             </thead>
             <tbody className="divide-y divide-border/60">
-              {filteredCustomers.map((c, idx) => (
+              {filteredCustomers.slice(0, 100).map((c, idx) => (
                 <tr key={idx} className="hover:bg-canvas/50 transition-colors">
                   <td className="py-3 px-4 table-sticky-first-col font-bold text-dark">
                     <div className="flex items-center gap-2">
                       <div className="w-7 h-7 rounded-full bg-primary-tint-100 text-primary flex items-center justify-center font-bold text-xs shrink-0">
-                        {c.name[0]}
+                        {c.name ? c.name[0] : 'M'}
                       </div>
                       <span className="truncate max-w-[160px]">{c.name}</span>
                     </div>
@@ -245,12 +247,12 @@ export default function CustomersPage() {
             <div className="flex items-center justify-between pb-3 border-b border-border">
               <div className="flex items-center gap-2.5">
                 <div className="w-9 h-9 rounded-2xl bg-primary-tint-100 flex items-center justify-center text-primary font-bold text-sm">
-                  {selectedCustomer.name[0]}
+                  {selectedCustomer.name ? selectedCustomer.name[0] : 'M'}
                 </div>
                 <div>
                   <h4 className="text-sm font-black text-dark">{selectedCustomer.name} - Sipariş Geçmişi</h4>
                   <p className="text-[11px] text-gray-500">
-                    {selectedCustomer.city} • {selectedCustomer.phone} • Toplam {customerOrders.length} Sipariş
+                    {selectedCustomer.city} • Toplam {customerOrders.length} Sipariş
                   </p>
                 </div>
               </div>
@@ -286,12 +288,12 @@ export default function CustomersPage() {
                     <th className="py-2.5 px-3">Komisyon</th>
                     <th className="py-2.5 px-3">Kargo</th>
                     <th className="py-2.5 px-3 text-emerald-700 font-bold">Net Kâr</th>
-                    <th className="py-2.5 px-3 text-right">Durum</th>
+                    <th className="py-2.5 px-3 text-right">Detay</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-border/60">
                   {customerOrders.map((o) => (
-                    <tr key={o.id} className="hover:bg-canvas/50">
+                    <tr key={o.id} onClick={() => setSelectedOrderId(o.id)} className="hover:bg-primary-tint-50/30 cursor-pointer">
                       <td className="py-2.5 px-3 font-bold text-dark font-mono">{o.orderNumber}</td>
                       <td className="py-2.5 px-3 text-gray-500 tabular-nums">{o.orderDate}</td>
                       <td className="py-2.5 px-3 font-bold text-primary tabular-nums">₺{parseFloat(o.paidAmount || 0).toFixed(2)}</td>
@@ -299,9 +301,10 @@ export default function CustomersPage() {
                       <td className="py-2.5 px-3 text-gray-600 tabular-nums">₺{parseFloat(o.shippingCost || 0).toFixed(2)}</td>
                       <td className="py-2.5 px-3 font-bold text-emerald-700 tabular-nums">₺{parseFloat(o.netProfit || 0).toFixed(2)}</td>
                       <td className="py-2.5 px-3 text-right">
-                        <Badge variant="excellent" className="text-[10px]">
-                          {o.status}
-                        </Badge>
+                        <Button size="sm" variant="ghost" className="h-6 text-[10px] font-bold text-primary">
+                          <Eye className="w-3 h-3 mr-1" />
+                          İncele
+                        </Button>
                       </td>
                     </tr>
                   ))}
@@ -318,6 +321,13 @@ export default function CustomersPage() {
           </div>
         </div>
       )}
+
+      {/* Order Detail Modal */}
+      <OrderDetailModal
+        orderId={selectedOrderId}
+        onClose={() => setSelectedOrderId(null)}
+        onUpdated={fetchCustomers}
+      />
     </div>
   );
 }

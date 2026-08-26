@@ -1,231 +1,242 @@
 "use client";
-import React, { useEffect, useState } from "react";
+import React, { useState, useEffect } from "react";
 import { formatCurrency, formatPercentage } from "@/lib/formatters";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { useTableDensityStore } from "@/stores/useTableDensityStore";
-import { useTenantStore } from "@/stores/useTenantStore";
 import { toast } from "sonner";
-import { RefreshCw, Save, CheckCircle2, ZoomIn } from "lucide-react";
+import { 
+  Activity, RefreshCw, Search, Eye, Filter, Truck, CheckCircle2, 
+  AlertTriangle, DollarSign, Package, Clock, ShieldCheck, ChevronRight, Layers
+} from "lucide-react";
+import { OrderDetailModal } from "@/components/orders/OrderDetailModal";
 
 export default function LiveAnalysisPage() {
-  const { activeStore } = useTenantStore();
-  const [rows, setRows] = useState<any[]>([]);
+  const [orders, setOrders] = useState<any[]>([]);
+  const [summary, setSummary] = useState<any>({});
   const [loading, setLoading] = useState(true);
-  const { zoomLevel, setZoomLevel } = useTableDensityStore();
+  const [search, setSearch] = useState("");
+  const [statusFilter, setStatusFilter] = useState("all");
+  const [carrierFilter, setCarrierFilter] = useState("all");
+  
+  // Selected Order for Detail Modal
+  const [selectedOrderId, setSelectedOrderId] = useState<string | null>(null);
 
-  const fetchProducts = async () => {
+  const fetchOrders = async () => {
     setLoading(true);
     try {
-      const res = await fetch(`/api/products?storeId=${activeStore?.id || ''}`);
+      const url = `/api/orders?search=${encodeURIComponent(search)}&status=${statusFilter}&carrier=${carrierFilter}&limit=100`;
+      const res = await fetch(url);
       const data = await res.json();
-      const enhanced = data.map((r: any) => {
-        const sale = parseFloat(r.salePrice) || 0;
-        const cost = parseFloat(r.costPrice) || 0;
-        const commRate = parseFloat(r.commissionRate) || 18;
-        const comm = sale * ((commRate * 1.20) / 100);
-        const shipping = 42.50;
-        const service = 13.19;
-        const withholding = (sale / 1.20) * 0.01;
-        const netVat = Math.max(0, (sale * (1 - 1/1.20)) - (cost * (1 - 1/1.20) + shipping * (1 - 1/1.20) + comm * (1 - 1/1.20)));
-        const netProfit = sale - (cost + comm + shipping + service + withholding + netVat);
-        const margin = sale > 0 ? (netProfit / sale) * 100 : 0;
-        return {
-          ...r,
-          salePrice: sale,
-          costPrice: cost,
-          commissionRate: commRate,
-          ordersCount: Math.floor(Math.random() * 20) + 5,
-          netProfit: Math.round(netProfit * 100) / 100,
-          marginPercent: Math.round(margin * 100) / 100,
-          isSaved: true
-        };
-      });
-      setRows(enhanced);
+      setOrders(data.orders || []);
+      setSummary(data.summary || {});
     } catch (e) {
-      console.error(e);
+      toast.error("Canlı sipariş verileri alınamadı.");
     } finally {
       setLoading(false);
     }
   };
 
   useEffect(() => {
-    fetchProducts();
-  }, [activeStore?.id]);
+    fetchOrders();
+  }, [statusFilter, carrierFilter]);
 
-  const handleCostChange = (id: string, newCost: number) => {
-    setRows((prev) =>
-      prev.map((r) => {
-        if (r.id === id) {
-          const comm = r.salePrice * ((r.commissionRate * 1.20) / 100);
-          const shipping = 42.50;
-          const service = 13.19;
-          const withholding = (r.salePrice / 1.20) * 0.01;
-          const netVat = Math.max(0, (r.salePrice * (1 - 1/1.20)) - (newCost * (1 - 1/1.20) + shipping * (1 - 1/1.20) + comm * (1 - 1/1.20)));
-          const netProfit = r.salePrice - (newCost + comm + shipping + service + withholding + netVat);
-          const margin = (netProfit / r.salePrice) * 100;
-          return { ...r, costPrice: newCost, netProfit: Math.round(netProfit * 100) / 100, marginPercent: Math.round(margin * 100) / 100, isSaved: false };
-        }
-        return r;
-      })
-    );
+  const handleSearchSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    fetchOrders();
   };
-
-  const handleSaveRow = async (id: string, costPrice: number) => {
-    try {
-      const res = await fetch('/api/products', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ productId: id, costPrice }),
-      });
-      if (res.ok) {
-        setRows((prev) => prev.map((r) => (r.id === id ? { ...r, isSaved: true } : r)));
-        toast.success("Maliyet Supabase veritabanına kaydedildi!");
-      }
-    } catch (e) {
-      toast.error("Kaydedilirken hata oluştu.");
-    }
-  };
-
-  const totalLiveProfit = rows.reduce((acc, r) => acc + (r.netProfit || 0) * (r.ordersCount || 1), 0);
 
   return (
-    <div className="space-y-4 sm:space-y-6">
-      {/* Live Header Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
-        <div className="bg-white p-4 rounded-2xl border border-primary-tint-200 bg-primary-tint-50/20 shadow-xs">
-          <span className="text-[10px] sm:text-[11px] font-bold text-primary uppercase">Bugünkü Canlı Net Kârım</span>
-          <div className="text-xl sm:text-2xl font-black text-primary tabular-nums mt-1">{formatCurrency(totalLiveProfit)}</div>
-          <div className="text-[10px] text-muted-foreground mt-0.5">Canlı sipariş kârı</div>
+    <div className="space-y-4 sm:space-y-6 max-w-7xl">
+      {/* Top Banner */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-white p-4 sm:p-6 rounded-3xl border border-border shadow-xs">
+        <div>
+          <div className="flex items-center gap-2">
+            <h3 className="text-base sm:text-lg font-black text-dark">Canlı Sipariş & Kâr Analiz Akışı</h3>
+            <span className="flex items-center gap-1 bg-emerald-50 text-emerald-700 font-bold px-2 py-0.5 rounded-full text-xs border border-emerald-200">
+              <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+              Canlı DB
+            </span>
+          </div>
+          <p className="text-xs text-muted-foreground mt-0.5">
+            Trendyol mağazanızdan çekilen gerçek siparişler, komisyon, kargo baremi ve net kâr dökümleri
+          </p>
         </div>
 
-        <div className="bg-white p-4 rounded-2xl border border-border shadow-xs">
-          <span className="text-[10px] sm:text-[11px] font-bold text-dark uppercase">Kâr / Satış Oranı</span>
-          <div className="text-xl sm:text-2xl font-black text-emerald-600 tabular-nums mt-1">%28.4</div>
-          <div className="text-[10px] text-muted-foreground mt-0.5">Günlük ortalama marj</div>
-        </div>
-
-        <div className="bg-white p-4 rounded-2xl border border-border shadow-xs">
-          <span className="text-[10px] sm:text-[11px] font-bold text-dark uppercase">Kâr / Maliyet Oranı</span>
-          <div className="text-xl sm:text-2xl font-black text-emerald-600 tabular-nums mt-1">%54.2</div>
-          <div className="text-[10px] text-muted-foreground mt-0.5">Sermaye kârlılığı</div>
+        <div className="flex items-center gap-2">
+          <Button size="sm" variant="outline" onClick={fetchOrders} className="h-8 sm:h-9 text-xs gap-1.5 font-bold">
+            <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />
+            <span>Yenile</span>
+          </Button>
         </div>
       </div>
 
-      {/* Table Toolbar & Zoom Control */}
-      <div className="bg-white p-3.5 sm:p-5 rounded-3xl border border-border shadow-xs">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-3 sm:pb-4 border-b border-border gap-3">
-          <div>
-            <h4 className="text-xs sm:text-sm font-bold text-dark">Bugün Sipariş Alan Ürünler (Canlı Maliyet Düzenleyici)</h4>
-            <p className="text-[11px] sm:text-xs text-muted-foreground">Maliyeti düzenlediğiniz an kâr ve marjlar anında hesaplanır</p>
-          </div>
-
-          <div className="flex items-center gap-2 self-start sm:self-auto">
-            <div className="hidden sm:flex items-center bg-canvas p-1 rounded-xl border border-border text-xs">
-              <span className="text-[10px] font-bold text-gray-500 px-2 flex items-center gap-1">
-                <ZoomIn className="w-3 h-3" /> Yakınlaştır:
-              </span>
-              {[85, 90, 100].map((z) => (
-                <button
-                  key={z}
-                  onClick={() => setZoomLevel(z as 85 | 90 | 100)}
-                  className={`px-2 py-1 rounded-lg font-bold text-[11px] transition-colors ${
-                    zoomLevel === z ? "bg-primary text-white" : "text-dark hover:bg-border/50"
-                  }`}
-                >
-                  %{z}
-                </button>
-              ))}
-            </div>
-
-            <Button size="sm" variant="outline" onClick={fetchProducts} className="gap-1.5 text-xs h-8">
-              <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} /> Yenile
-            </Button>
-          </div>
+      {/* Summary KPI Cards */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+        <div className="bg-white p-4 sm:p-5 rounded-3xl border border-border shadow-xs">
+          <span className="text-[11px] font-bold text-muted-foreground uppercase tracking-wide block">Toplam Sipariş</span>
+          <div className="text-2xl font-black text-dark tabular-nums mt-1">{summary.totalOrders || 0} Adet</div>
+          <span className="text-[11px] text-gray-500 font-semibold mt-1 block">4 Aylık Canlı Veri</span>
         </div>
 
-        {/* Live Products Table with Horizontal Swipe Support */}
-        <div className={`overflow-x-auto mt-3 sm:mt-4 transition-all ${zoomLevel === 85 ? 'table-zoom-85' : zoomLevel === 90 ? 'table-zoom-90' : 'table-zoom-100'}`}>
-          <table className="w-full text-left text-xs border-collapse min-w-[700px]">
+        <div className="bg-white p-4 sm:p-5 rounded-3xl border border-border shadow-xs">
+          <span className="text-[11px] font-bold text-muted-foreground uppercase tracking-wide block">Toplam Ciro</span>
+          <div className="text-2xl font-black text-primary tabular-nums mt-1">{formatCurrency(parseFloat(summary.totalInvoicedRevenue || 0))}</div>
+          <span className="text-[11px] text-gray-500 font-semibold mt-1 block">Faturalanan Tutar</span>
+        </div>
+
+        <div className="bg-white p-4 sm:p-5 rounded-3xl border border-border shadow-xs">
+          <span className="text-[11px] font-bold text-muted-foreground uppercase tracking-wide block">Toplam Net Kâr</span>
+          <div className="text-2xl font-black text-emerald-700 tabular-nums mt-1">{formatCurrency(parseFloat(summary.totalNetProfit || 0))}</div>
+          <span className="text-[11px] text-emerald-700 font-bold mt-1 block">Tüm Kesintiler Sonrası</span>
+        </div>
+
+        <div className="bg-white p-4 sm:p-5 rounded-3xl border border-border shadow-xs">
+          <span className="text-[11px] font-bold text-muted-foreground uppercase tracking-wide block">Ortalama Kâr Marjı</span>
+          <div className="text-2xl font-black text-dark tabular-nums mt-1">%{parseFloat(summary.averageMarginPercent || 0).toFixed(1)}</div>
+          <span className="text-[11px] text-primary font-bold mt-1 block">Net Kâr / Ciro</span>
+        </div>
+      </div>
+
+      {/* Search & Filter Bar */}
+      <div className="bg-white p-4 rounded-2xl sm:rounded-3xl border border-border shadow-xs flex flex-col sm:flex-row items-center justify-between gap-3">
+        <form onSubmit={handleSearchSubmit} className="relative w-full sm:w-80">
+          <Search className="w-4 h-4 text-muted-foreground absolute left-3 top-2.5" />
+          <input
+            type="text"
+            placeholder="Sipariş No, Paket No, Müşteri veya Şehir..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="w-full pl-9 pr-3 py-2 rounded-xl border border-border text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-primary"
+          />
+        </form>
+
+        <div className="flex items-center gap-2 w-full sm:w-auto">
+          <select
+            value={statusFilter}
+            onChange={(e) => setStatusFilter(e.target.value)}
+            className="px-3 py-2 rounded-xl border border-border text-xs font-bold text-dark bg-white"
+          >
+            <option value="all">Tüm Durumlar</option>
+            <option value="Teslim Edildi">Teslim Edildi</option>
+            <option value="Kargoda">Kargoda</option>
+            <option value="İptal">İptal Edildi</option>
+          </select>
+
+          <select
+            value={carrierFilter}
+            onChange={(e) => setCarrierFilter(e.target.value)}
+            className="px-3 py-2 rounded-xl border border-border text-xs font-bold text-dark bg-white"
+          >
+            <option value="all">Tüm Kargolar</option>
+            <option value="Trendyol Express">Trendyol Express</option>
+            <option value="Aras">Aras Kargo</option>
+            <option value="MNG">MNG Kargo</option>
+            <option value="Yurtiçi">Yurtiçi Kargo</option>
+            <option value="Sürat">Sürat Kargo</option>
+            <option value="PTT">PTT Kargo</option>
+          </select>
+        </div>
+      </div>
+
+      {/* Orders Table */}
+      <div className="bg-white rounded-3xl border border-border shadow-xs overflow-hidden">
+        <div className="overflow-x-auto">
+          <table className="w-full text-left text-xs border-collapse min-w-[900px]">
             <thead>
-              <tr className="border-b border-border text-muted-foreground font-semibold">
-                <th className="pb-3 px-3 table-sticky-first-col">Barkod / Ürün</th>
-                <th className="pb-3 px-3 text-center">Sipariş</th>
-                <th className="pb-3 px-3">Satış Fiyatı</th>
-                <th className="pb-3 px-3">Ürün Maliyeti (₺)</th>
-                <th className="pb-3 px-3">Komisyon</th>
-                <th className="pb-3 px-3">Net Kâr (₺)</th>
-                <th className="pb-3 px-3">Kâr Marjı</th>
-                <th className="pb-3 px-3 text-right">İşlem</th>
+              <tr className="bg-canvas border-b border-border text-muted-foreground font-semibold text-[11px]">
+                <th className="py-3 px-4 table-sticky-first-col bg-canvas">Sipariş & Paket No</th>
+                <th className="py-3 px-4">Tarih</th>
+                <th className="py-3 px-4">Müşteri & Şehir</th>
+                <th className="py-3 px-4">Kargo & Desi</th>
+                <th className="py-3 px-4 text-primary font-bold">Tutar (₺)</th>
+                <th className="py-3 px-4">Maliyet (₺)</th>
+                <th className="py-3 px-4">Komisyon + Kargo</th>
+                <th className="py-3 px-4 text-emerald-700 font-bold">Net Kâr (₺)</th>
+                <th className="py-3 px-4">Marj</th>
+                <th className="py-3 px-4 text-right">İşlem</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-border/60">
-              {rows.map((r) => (
-                <tr key={r.id} className="hover:bg-canvas/60 transition-colors">
-                  <td className="py-2.5 sm:py-3 px-3 table-sticky-first-col max-w-[200px] sm:max-w-[260px]">
-                    <div className="font-mono font-bold text-dark text-[11px] sm:text-xs">{r.barcode}</div>
-                    <div className="text-[11px] text-gray-700 font-medium truncate" title={r.title}>{r.title}</div>
-                  </td>
-                  <td className="py-2.5 sm:py-3 px-3 text-center font-extrabold text-primary tabular-nums">
-                    {r.ordersCount} Adet
-                  </td>
-                  <td className="py-2.5 sm:py-3 px-3 font-bold text-dark tabular-nums">
-                    {formatCurrency(r.salePrice)}
-                  </td>
-                  <td className="py-2.5 sm:py-3 px-3">
-                    <div className="flex items-center gap-1">
-                      <input
-                        type="number"
-                        value={r.costPrice || ""}
-                        placeholder="Maliyet..."
-                        onChange={(e) => handleCostChange(r.id, parseFloat(e.target.value) || 0)}
-                        className={`w-20 sm:w-24 px-2 py-1 rounded-lg border font-bold text-xs tabular-nums focus:outline-none focus:ring-2 focus:ring-primary ${
-                          r.costPrice === 0 ? "border-red-400 bg-red-50 text-red-700" : "border-border bg-white text-dark"
-                        }`}
-                      />
-                      <span className="text-[10px] text-gray-500">₺</span>
-                    </div>
-                  </td>
-                  <td className="py-2.5 sm:py-3 px-3 font-semibold text-gray-700 tabular-nums">
-                    %{r.commissionRate}
-                  </td>
-                  <td className="py-2.5 sm:py-3 px-3 font-extrabold tabular-nums">
-                    <span className={r.netProfit < 0 ? "text-status-danger-text" : "text-emerald-600"}>
-                      {formatCurrency(r.netProfit)}
-                    </span>
-                  </td>
-                  <td className="py-2.5 sm:py-3 px-3">
-                    <Badge
-                      variant={
-                        r.marginPercent < 5
-                          ? "danger"
-                          : r.marginPercent < 15
-                          ? "warning"
-                          : r.marginPercent < 30
-                          ? "success"
-                          : "excellent"
-                      }
-                    >
-                      {formatPercentage(r.marginPercent)}
-                    </Badge>
-                  </td>
-                  <td className="py-2.5 sm:py-3 px-3 text-right">
-                    <Button
-                      size="sm"
-                      variant={r.isSaved ? "outline" : "default"}
-                      className="h-7 text-[11px] gap-1 px-2"
-                      onClick={() => handleSaveRow(r.id, r.costPrice)}
-                    >
-                      {r.isSaved ? <CheckCircle2 className="w-3 h-3 text-emerald-600" /> : <Save className="w-3 h-3" />}
-                      <span>{r.isSaved ? "Kayıtlı" : "Kaydet"}</span>
-                    </Button>
-                  </td>
-                </tr>
-              ))}
+              {orders.map((o) => {
+                const isProfitable = parseFloat(o.netProfit) >= 0;
+                return (
+                  <tr 
+                    key={o.id} 
+                    onClick={() => setSelectedOrderId(o.id)}
+                    className="hover:bg-primary-tint-50/30 cursor-pointer transition-colors"
+                  >
+                    <td className="py-3 px-4 table-sticky-first-col font-bold text-dark">
+                      <div className="flex items-center gap-1.5">
+                        <span className="font-mono">{o.orderNumber}</span>
+                        {o.isCorporate && <span className="text-[9px] bg-amber-100 text-amber-800 font-bold px-1 rounded">Kurumsal</span>}
+                      </div>
+                      <span className="text-[10px] text-gray-400 font-mono block">Paket: {o.packageNumber}</span>
+                    </td>
+
+                    <td className="py-3 px-4 text-gray-500 tabular-nums text-[11px]">
+                      {o.orderDate}
+                    </td>
+
+                    <td className="py-3 px-4">
+                      <span className="font-bold text-dark block truncate max-w-[140px]">{o.customerName}</span>
+                      <span className="text-[10px] text-gray-500">{o.city} {o.district ? `(${o.district})` : ''}</span>
+                    </td>
+
+                    <td className="py-3 px-4">
+                      <span className="font-semibold text-dark block truncate max-w-[130px]">{o.carrierName}</span>
+                      <span className="text-[10px] text-primary font-mono">{o.billedDesi} Desi</span>
+                    </td>
+
+                    <td className="py-3 px-4 font-black text-primary tabular-nums">
+                      ₺{parseFloat(o.paidAmount || 0).toFixed(2)}
+                    </td>
+
+                    <td className="py-3 px-4 font-bold text-red-700 tabular-nums">
+                      ₺{parseFloat(o.cogs || 0).toFixed(2)}
+                    </td>
+
+                    <td className="py-3 px-4 text-gray-600 tabular-nums text-[11px]">
+                      ₺{(parseFloat(o.commission || 0) + parseFloat(o.shippingCost || 0)).toFixed(2)}
+                    </td>
+
+                    <td className={`py-3 px-4 font-black tabular-nums ${isProfitable ? 'text-emerald-700' : 'text-red-600'}`}>
+                      ₺{parseFloat(o.netProfit || 0).toFixed(2)}
+                    </td>
+
+                    <td className="py-3 px-4 font-bold tabular-nums">
+                      <Badge variant={isProfitable ? 'excellent' : 'secondary'} className="text-[10px]">
+                        %{parseFloat(o.marginPercent || 0).toFixed(1)}
+                      </Badge>
+                    </td>
+
+                    <td className="py-3 px-4 text-right">
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setSelectedOrderId(o.id);
+                        }}
+                        className="h-7 text-[11px] font-bold px-2 text-primary hover:bg-primary-tint-100"
+                      >
+                        <Eye className="w-3.5 h-3.5 mr-1" />
+                        <span>İncele</span>
+                      </Button>
+                    </td>
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
         </div>
       </div>
+
+      {/* Order Detail Modal */}
+      <OrderDetailModal
+        orderId={selectedOrderId}
+        onClose={() => setSelectedOrderId(null)}
+        onUpdated={fetchOrders}
+      />
     </div>
   );
 }
