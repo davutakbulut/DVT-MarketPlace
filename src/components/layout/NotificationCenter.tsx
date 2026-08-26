@@ -2,7 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import { 
   Bell, AlertTriangle, AlertCircle, Info, Check, Sparkles, 
-  ExternalLink, CheckCircle2, ShieldAlert, Package, RefreshCw, Send
+  ExternalLink, CheckCircle2, ShieldAlert, Package, RefreshCw, Send, X
 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
@@ -43,7 +43,6 @@ export function NotificationCenter() {
 
   useEffect(() => {
     fetchNotifications();
-    // Poll every 30 seconds for live notification updates
     const interval = setInterval(fetchNotifications, 30000);
     return () => clearInterval(interval);
   }, []);
@@ -125,12 +124,13 @@ export function NotificationCenter() {
     <div className="relative">
       <button
         onClick={() => setOpen(!open)}
-        className="relative p-2 rounded-xl text-dark hover:bg-canvas transition-colors cursor-pointer"
+        className="relative p-1.5 sm:p-2 rounded-xl text-dark hover:bg-canvas transition-colors cursor-pointer shrink-0"
         title="Bildirim Merkezi"
+        aria-label="Bildirimler"
       >
         <Bell className="w-5 h-5 text-dark" />
         {unreadCount > 0 && (
-          <span className="absolute top-1 right-1 flex items-center justify-center min-w-[18px] h-[18px] px-1 bg-primary text-white text-[10px] font-black rounded-full ring-2 ring-white animate-pulse">
+          <span className="absolute top-0.5 right-0.5 flex items-center justify-center min-w-[17px] h-[17px] px-1 bg-primary text-white text-[9px] font-black rounded-full ring-2 ring-white animate-pulse">
             {unreadCount > 9 ? '9+' : unreadCount}
           </span>
         )}
@@ -138,28 +138,36 @@ export function NotificationCenter() {
 
       {open && (
         <>
-          <div className="fixed inset-0 z-50" onClick={() => setOpen(false)} />
-          <div className="absolute right-0 mt-2 w-80 sm:w-96 bg-white rounded-3xl shadow-2xl border border-border z-60 overflow-hidden animate-in fade-in zoom-in-95 flex flex-col max-h-[550px]">
+          {/* Backdrop for outside dismiss */}
+          <div className="fixed inset-0 z-50 bg-black/20 sm:bg-transparent backdrop-blur-[1px] sm:backdrop-blur-none" onClick={() => setOpen(false)} />
+          
+          {/* Responsive Dropdown Sheet */}
+          <div className="fixed inset-x-2.5 sm:inset-auto sm:absolute sm:right-0 top-14 sm:top-12 w-auto sm:w-[380px] bg-white rounded-3xl shadow-2xl border border-border z-60 overflow-hidden animate-in fade-in zoom-in-95 flex flex-col max-h-[82vh] sm:max-h-[550px]">
             
-            {/* Header */}
-            <div className="p-4 border-b border-border bg-white flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <h4 className="text-xs font-black text-dark flex items-center gap-1.5">
-                  <Sparkles className="w-3.5 h-3.5 text-primary" />
-                  <span>Akıllı Bildirim Merkezi</span>
-                </h4>
-                {unreadCount > 0 && (
-                  <span className="bg-primary-tint-100 text-primary text-[10px] font-black px-2 py-0.5 rounded-full">
-                    {unreadCount} Okunmamış
-                  </span>
-                )}
+            {/* 1. Header with clean typography & unread pill */}
+            <div className="p-3.5 sm:p-4 border-b border-border bg-white flex items-center justify-between gap-2">
+              <div className="flex items-center gap-2 min-w-0">
+                <div className="w-8 h-8 rounded-xl bg-primary/10 text-primary flex items-center justify-center shrink-0">
+                  <Sparkles className="w-4 h-4" />
+                </div>
+                <div className="min-w-0">
+                  <div className="flex items-center gap-1.5">
+                    <h4 className="text-xs sm:text-sm font-black text-dark truncate">Bildirim Merkezi</h4>
+                    {unreadCount > 0 && (
+                      <span className="bg-[#FFEDE7] text-primary text-[10px] font-black px-1.5 py-0.5 rounded-full border border-primary/20 shrink-0 leading-none">
+                        {unreadCount} yeni
+                      </span>
+                    )}
+                  </div>
+                  <p className="text-[10px] text-gray-500 truncate">Canlı mağaza & kârlılık alarmları</p>
+                </div>
               </div>
 
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-1 shrink-0">
                 {unreadCount > 0 && (
                   <button
                     onClick={handleMarkAllRead}
-                    className="text-[11px] font-bold text-primary hover:underline cursor-pointer"
+                    className="text-[11px] font-bold text-primary hover:underline px-2 py-1 rounded-lg hover:bg-primary/5 transition-colors cursor-pointer"
                   >
                     Tümünü Oku
                   </button>
@@ -167,56 +175,63 @@ export function NotificationCenter() {
                 <button
                   onClick={fetchNotifications}
                   title="Yenile"
-                  className="text-gray-400 hover:text-dark p-1"
+                  className="text-gray-400 hover:text-dark p-1.5 rounded-xl hover:bg-canvas transition-colors cursor-pointer"
                 >
                   <RefreshCw className="w-3.5 h-3.5" />
+                </button>
+                <button
+                  onClick={() => setOpen(false)}
+                  title="Kapat"
+                  className="sm:hidden text-gray-400 hover:text-dark p-1.5 rounded-xl hover:bg-canvas transition-colors cursor-pointer"
+                >
+                  <X className="w-4 h-4" />
                 </button>
               </div>
             </div>
 
-            {/* Filter Tabs */}
-            <div className="flex items-center gap-1 p-2 bg-canvas border-b border-border text-[11px] overflow-x-auto">
+            {/* 2. Horizontal Filter Tabs */}
+            <div className="flex items-center gap-1.5 px-3 py-2 bg-canvas/70 border-b border-border text-[11px] overflow-x-auto no-scrollbar">
               <button
                 onClick={() => setActiveTab('all')}
-                className={`px-2.5 py-1 rounded-xl font-bold transition-all ${
-                  activeTab === 'all' ? 'bg-primary text-white' : 'text-gray-600 hover:bg-gray-200'
+                className={`px-2.5 py-1 rounded-xl font-bold transition-all shrink-0 cursor-pointer ${
+                  activeTab === 'all' ? 'bg-primary text-white shadow-2xs' : 'text-gray-600 hover:bg-white hover:text-dark'
                 }`}
               >
                 Tümü ({notifications.length})
               </button>
               <button
                 onClick={() => setActiveTab('critical')}
-                className={`px-2.5 py-1 rounded-xl font-bold transition-all ${
-                  activeTab === 'critical' ? 'bg-red-600 text-white' : 'text-gray-600 hover:bg-gray-200'
+                className={`px-2.5 py-1 rounded-xl font-bold transition-all shrink-0 cursor-pointer ${
+                  activeTab === 'critical' ? 'bg-red-600 text-white shadow-2xs' : 'text-gray-600 hover:bg-white hover:text-dark'
                 }`}
               >
                 Kritik ({notifications.filter(n => n.type === 'danger').length})
               </button>
               <button
                 onClick={() => setActiveTab('shipping')}
-                className={`px-2.5 py-1 rounded-xl font-bold transition-all ${
-                  activeTab === 'shipping' ? 'bg-amber-600 text-white' : 'text-gray-600 hover:bg-gray-200'
+                className={`px-2.5 py-1 rounded-xl font-bold transition-all shrink-0 cursor-pointer ${
+                  activeTab === 'shipping' ? 'bg-amber-600 text-white shadow-2xs' : 'text-gray-600 hover:bg-white hover:text-dark'
                 }`}
               >
                 Kargo ({notifications.filter(n => n.category === 'shipping').length})
               </button>
               <button
                 onClick={() => setActiveTab('system')}
-                className={`px-2.5 py-1 rounded-xl font-bold transition-all ${
-                  activeTab === 'system' ? 'bg-dark text-white' : 'text-gray-600 hover:bg-gray-200'
+                className={`px-2.5 py-1 rounded-xl font-bold transition-all shrink-0 cursor-pointer ${
+                  activeTab === 'system' ? 'bg-dark text-white shadow-2xs' : 'text-gray-600 hover:bg-white hover:text-dark'
                 }`}
               >
                 Sistem ({notifications.filter(n => n.category === 'system' || n.category === 'inventory').length})
               </button>
             </div>
 
-            {/* Notification List */}
-            <div className="divide-y divide-border/60 overflow-y-auto flex-1 p-1">
+            {/* 3. Notification Items List */}
+            <div className="divide-y divide-border/50 overflow-y-auto flex-1 p-2 space-y-1">
               {filteredNotifications.length === 0 ? (
-                <div className="py-12 text-center text-xs text-muted-foreground space-y-1">
+                <div className="py-12 text-center text-xs text-muted-foreground space-y-1.5">
                   <CheckCircle2 className="w-8 h-8 text-emerald-500 mx-auto" />
-                  <p className="font-bold text-dark">Her Şey Yolunda!</p>
-                  <p className="text-[11px]">Şu anda aktif bir uyarı veya okunmamış bildirim bulunmuyor.</p>
+                  <p className="font-bold text-dark text-xs">Her Şey Yolunda!</p>
+                  <p className="text-[11px] text-gray-500">Şu anda aktif bir uyarı veya okunmamış bildirim bulunmuyor.</p>
                 </div>
               ) : (
                 filteredNotifications.map((item) => {
@@ -224,8 +239,8 @@ export function NotificationCenter() {
                     <div
                       key={item.id}
                       onClick={() => handleClickItem(item)}
-                      className={`p-3 rounded-2xl transition-all cursor-pointer flex gap-3 items-start my-1 ${
-                        !item.isRead ? 'bg-primary-tint-50/40 hover:bg-primary-tint-50/70 border border-primary-tint-200/50' : 'hover:bg-canvas'
+                      className={`p-3 rounded-2xl transition-all cursor-pointer flex gap-3 items-start ${
+                        !item.isRead ? 'bg-primary-tint-50/50 hover:bg-primary-tint-50/80 border border-primary-tint-200/60 shadow-2xs' : 'hover:bg-canvas border border-transparent'
                       }`}
                     >
                       {item.type === 'danger' && (
@@ -250,13 +265,13 @@ export function NotificationCenter() {
                       )}
 
                       <div className="flex-1 min-w-0">
-                        <div className="flex items-center justify-between gap-1">
+                        <div className="flex items-center justify-between gap-2 mb-0.5">
                           <span className={`text-xs truncate ${!item.isRead ? 'font-black text-dark' : 'font-semibold text-gray-700'}`}>
                             {item.title}
                           </span>
                           <span className="text-[10px] text-gray-400 shrink-0 font-medium">{item.timeAgo}</span>
                         </div>
-                        <p className="text-[11px] text-gray-600 mt-0.5 leading-relaxed line-clamp-2">
+                        <p className="text-[11px] text-gray-600 leading-relaxed line-clamp-2">
                           {item.desc}
                         </p>
                         {item.actionUrl && (
@@ -272,20 +287,20 @@ export function NotificationCenter() {
               )}
             </div>
 
-            {/* Footer */}
-            <div className="p-3 bg-canvas border-t border-border flex items-center justify-between text-xs">
+            {/* 4. Action Footer */}
+            <div className="p-3 bg-canvas/80 border-t border-border flex items-center justify-between text-xs gap-2">
               <button
                 onClick={handleSendTestNotification}
                 disabled={sendingTest}
-                className="text-[11px] font-bold text-gray-600 hover:text-primary flex items-center gap-1"
+                className="text-[11px] font-bold text-gray-600 hover:text-primary flex items-center gap-1.5 cursor-pointer py-1 px-2 rounded-xl hover:bg-white transition-colors"
               >
-                <Send className="w-3 h-3" />
-                <span>Test Alarmı Tetikle</span>
+                <Send className="w-3.5 h-3.5 text-primary" />
+                <span>{sendingTest ? 'Tetikleniyor...' : 'Test Alarmı'}</span>
               </button>
 
               <button
                 onClick={() => { setOpen(false); router.push('/alerts'); }}
-                className="text-[11px] font-black text-primary hover:underline flex items-center gap-1"
+                className="text-[11px] font-black text-primary hover:underline flex items-center gap-1 cursor-pointer py-1 px-2 rounded-xl hover:bg-white transition-colors"
               >
                 <span>Tüm Uyarılar Sayfası ➔</span>
               </button>
