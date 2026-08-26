@@ -5,13 +5,16 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 import { TablePagination } from "@/components/common/TablePagination";
+import { useDateStore } from "@/store/useDateStore";
+import { useTenantStore } from "@/stores/useTenantStore";
 import { 
   Megaphone, Plus, Calendar, RefreshCw, Trash2, Edit3, 
   TrendingDown, ShoppingCart, Percent, FileText, ArrowUpDown, CheckCircle2 
 } from "lucide-react";
 
 export default function AdsPage() {
-  const [selectedPeriod, setSelectedPeriod] = useState("2026-08");
+  const { period, startDate, endDate, label } = useDateStore();
+  const { activeStoreId } = useTenantStore();
   const [invoices, setInvoices] = useState<any[]>([]);
   const [summary, setSummary] = useState<any>({
     totalAdSpend: 0,
@@ -37,7 +40,11 @@ export default function AdsPage() {
   const fetchInvoices = async () => {
     setLoading(true);
     try {
-      const res = await fetch(`/api/marketing/ad-invoices?periodMonth=${selectedPeriod}`);
+      let url = `/api/marketing/ad-invoices?period=${period}&storeId=${activeStoreId}`;
+      if (startDate && endDate) {
+        url += `&startDate=${startDate}&endDate=${endDate}`;
+      }
+      const res = await fetch(url);
       const data = await res.json();
       setInvoices(data.invoices || []);
       setSummary(data.summary || {});
@@ -50,7 +57,7 @@ export default function AdsPage() {
 
   useEffect(() => {
     fetchInvoices();
-  }, [selectedPeriod]);
+  }, [period, startDate, endDate, activeStoreId]);
 
   const handleOpenAdd = () => {
     setEditingInvoice(null);
@@ -113,12 +120,7 @@ export default function AdsPage() {
     }
   };
 
-  const months = [
-    { value: "2026-08", label: "Ağustos 2026 (Güncel)" },
-    { value: "2026-07", label: "Temmuz 2026" },
-    { value: "2026-06", label: "Haziran 2026" },
-    { value: "2026-05", label: "Mayıs 2026" },
-  ];
+
 
   return (
     <div className="space-y-4 sm:space-y-6 max-w-6xl">
@@ -135,18 +137,10 @@ export default function AdsPage() {
         </div>
 
         <div className="flex items-center gap-2 flex-wrap">
-          {/* Month Selector */}
-          <div className="flex items-center gap-1.5 bg-canvas px-3 py-1.5 rounded-xl border border-border">
+          {/* Global Header Date Range Indicator */}
+          <div className="flex items-center gap-1.5 bg-canvas px-3 py-1.5 rounded-xl border border-border text-xs font-bold text-dark">
             <Calendar className="w-3.5 h-3.5 text-primary" />
-            <select
-              value={selectedPeriod}
-              onChange={(e) => setSelectedPeriod(e.target.value)}
-              className="bg-transparent text-xs font-bold text-dark focus:outline-none cursor-pointer"
-            >
-              {months.map((m) => (
-                <option key={m.value} value={m.value}>{m.label}</option>
-              ))}
-            </select>
+            <span>Dönem: {label}</span>
           </div>
 
           <Button size="sm" onClick={handleOpenAdd} className="text-xs h-8 sm:h-9 gap-1.5 font-bold shadow-xs">

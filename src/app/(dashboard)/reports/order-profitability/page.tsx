@@ -11,6 +11,7 @@ import {
 , Calendar } from "lucide-react";
 import { OrderDetailModal } from "@/components/orders/OrderDetailModal";
 import { useDateStore } from "@/store/useDateStore";
+import { useTenantStore } from "@/stores/useTenantStore";
 
 export default function OrderProfitabilityReportPage() {
   const [reportType, setReportType] = useState<'order' | 'product' | 'category' | 'returns' | 'shipping'>('order');
@@ -23,13 +24,14 @@ export default function OrderProfitabilityReportPage() {
   });
   const [search, setSearch] = useState("");
   const { period, startDate, endDate, label } = useDateStore();
+  const { activeStoreId } = useTenantStore();
   const [loading, setLoading] = useState(true);
   const [selectedOrderId, setSelectedOrderId] = useState<string | null>(null);
 
   const fetchReport = async () => {
     setLoading(true);
     try {
-      let url = `/api/reports?type=${reportType}&page=${pagination.page}&pageSize=${pagination.pageSize}&search=${encodeURIComponent(search)}&period=${period}`;
+      let url = `/api/reports?type=${reportType}&page=${pagination.page}&pageSize=${pagination.pageSize}&search=${encodeURIComponent(search)}&period=${period}&storeId=${activeStoreId}`;
       if (startDate && endDate) {
         url += `&startDate=${startDate}&endDate=${endDate}`;
       }
@@ -48,7 +50,7 @@ export default function OrderProfitabilityReportPage() {
 
   useEffect(() => {
     fetchReport();
-  }, [reportType, pagination.page, pagination.pageSize, period, startDate, endDate]);
+  }, [reportType, pagination.page, pagination.pageSize, period, startDate, endDate, activeStoreId]);
 
   const handleSearchSubmit = (e: React.FormEvent) => {
     e.preventDefault();

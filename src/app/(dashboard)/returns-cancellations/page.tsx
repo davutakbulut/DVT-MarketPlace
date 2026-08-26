@@ -4,6 +4,8 @@ import { formatCurrency } from "@/lib/formatters";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
+import { useDateStore } from "@/store/useDateStore";
+import { useTenantStore } from "@/stores/useTenantStore";
 import { 
   Undo2, AlertTriangle, RefreshCw, Search, Filter, 
   Package, Truck, Calendar, DollarSign, User, ShieldAlert,
@@ -25,6 +27,8 @@ export default function ReturnsCancellationsPage() {
   });
   const [reasonsDistribution, setReasonsDistribution] = useState<any[]>([]);
   const [pagination, setPagination] = useState({ page: 1, pageSize: 25, totalPages: 1 });
+  const { period, startDate, endDate, label } = useDateStore();
+  const { activeStoreId } = useTenantStore();
 
   // Filters
   const [activeTab, setActiveTab] = useState<'all' | 'return' | 'cancellation'>('all');
@@ -35,13 +39,20 @@ export default function ReturnsCancellationsPage() {
   const fetchReturnsAndCancellations = async () => {
     setLoading(true);
     try {
-      const params = new URLSearchParams({
+      const paramsObj: Record<string, string> = {
         type: activeTab,
         reason: selectedReason,
         search: search,
         page: pagination.page.toString(),
         pageSize: pagination.pageSize.toString(),
-      });
+        period: period || 'all',
+        storeId: activeStoreId || 'all',
+      };
+      if (startDate && endDate) {
+        paramsObj.startDate = startDate;
+        paramsObj.endDate = endDate;
+      }
+      const params = new URLSearchParams(paramsObj);
 
       const res = await fetch(`/api/orders/returns-cancellations?${params.toString()}`);
       const data = await res.json();
@@ -67,7 +78,7 @@ export default function ReturnsCancellationsPage() {
 
   useEffect(() => {
     fetchReturnsAndCancellations();
-  }, [activeTab, selectedReason, search, pagination.page]);
+  }, [activeTab, selectedReason, search, pagination.page, period, startDate, endDate, activeStoreId]);
 
   const handleSearchSubmit = (e: React.FormEvent) => {
     e.preventDefault();

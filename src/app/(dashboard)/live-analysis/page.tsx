@@ -12,6 +12,7 @@ import {
 , Calendar } from "lucide-react";
 import { OrderDetailModal } from "@/components/orders/OrderDetailModal";
 import { useDateStore } from "@/store/useDateStore";
+import { useTenantStore } from "@/stores/useTenantStore";
 import {
   ResponsiveContainer, AreaChart, Area, BarChart, Bar,
   PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend
@@ -27,6 +28,7 @@ export default function LiveAnalysisPage() {
   const [statusFilter, setStatusFilter] = useState("all");
   const [carrierFilter, setCarrierFilter] = useState("all");
   const { period, startDate, endDate, label } = useDateStore();
+  const { activeStoreId } = useTenantStore();
   const [showCharts, setShowCharts] = useState(true);
   const [mounted, setMounted] = useState(false);
 
@@ -46,7 +48,7 @@ export default function LiveAnalysisPage() {
   const fetchOrders = async () => {
     setLoading(true);
     try {
-      let url = `/api/orders?search=${encodeURIComponent(search)}&status=${statusFilter}&carrier=${carrierFilter}&period=${period}&limit=100`;
+      let url = `/api/orders?search=${encodeURIComponent(search)}&status=${statusFilter}&carrier=${carrierFilter}&period=${period}&storeId=${activeStoreId}&limit=100`;
       if (startDate && endDate) {
         url += `&startDate=${startDate}&endDate=${endDate}`;
       }
@@ -63,7 +65,7 @@ export default function LiveAnalysisPage() {
 
   useEffect(() => {
     fetchOrders();
-  }, [statusFilter, carrierFilter, period, startDate, endDate]);
+  }, [statusFilter, carrierFilter, period, startDate, endDate, activeStoreId]);
 
   const handleSearchSubmit = (e: React.FormEvent) => {
     e.preventDefault();

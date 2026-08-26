@@ -10,6 +10,7 @@ import {
   ChevronRight, ChevronsLeft, ChevronsRight, Award, AlertTriangle
 , Calendar } from "lucide-react";
 import { useDateStore } from "@/store/useDateStore";
+import { useTenantStore } from "@/stores/useTenantStore";
 
 export default function ProductProfitabilityPage() {
   const [items, setItems] = useState<any[]>([]);
@@ -17,6 +18,7 @@ export default function ProductProfitabilityPage() {
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const { period, startDate, endDate, label } = useDateStore();
+  const { activeStoreId } = useTenantStore();
   const [pagination, setPagination] = useState({
     page: 1,
     pageSize: 50,
@@ -27,7 +29,7 @@ export default function ProductProfitabilityPage() {
   const fetchProfitability = async () => {
     setLoading(true);
     try {
-      let url = `/api/products/profitability?page=${pagination.page}&pageSize=${pagination.pageSize}&search=${encodeURIComponent(search)}&period=${period}`;
+      let url = `/api/products/profitability?page=${pagination.page}&pageSize=${pagination.pageSize}&search=${encodeURIComponent(search)}&period=${period}&storeId=${activeStoreId}`;
       if (startDate && endDate) {
         url += `&startDate=${startDate}&endDate=${endDate}`;
       }
@@ -45,7 +47,7 @@ export default function ProductProfitabilityPage() {
 
   useEffect(() => {
     fetchProfitability();
-  }, [pagination.page, pagination.pageSize, period, startDate, endDate]);
+  }, [pagination.page, pagination.pageSize, period, startDate, endDate, activeStoreId]);
 
   const handleSearchSubmit = (e: React.FormEvent) => {
     e.preventDefault();

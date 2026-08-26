@@ -13,6 +13,7 @@ import {
 import Link from "next/link";
 import { OrderDetailModal } from "@/components/orders/OrderDetailModal";
 import { useDateStore } from "@/store/useDateStore";
+import { useTenantStore } from "@/stores/useTenantStore";
 import {
   ResponsiveContainer, AreaChart, Area, BarChart, Bar,
   PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend
@@ -22,7 +23,7 @@ export default function DashboardPage() {
   const [data, setData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const { period, startDate, endDate, label } = useDateStore();
-  const [selectedStore, setSelectedStore] = useState("all");
+  const { activeStoreId } = useTenantStore();
   const [selectedOrderId, setSelectedOrderId] = useState<string | null>(null);
   const [mounted, setMounted] = useState(false);
 
@@ -33,7 +34,7 @@ export default function DashboardPage() {
   const fetchDashboard = async () => {
     setLoading(true);
     try {
-      let url = `/api/dashboard?period=${period}&storeId=${selectedStore}`;
+      let url = `/api/dashboard?period=${period}&storeId=${activeStoreId}`;
       if (startDate && endDate) {
         url += `&startDate=${startDate}&endDate=${endDate}`;
       }
@@ -49,7 +50,7 @@ export default function DashboardPage() {
 
   useEffect(() => {
     fetchDashboard();
-  }, [period, startDate, endDate, selectedStore]);
+  }, [period, startDate, endDate, activeStoreId]);
 
   const d = data || {};
   const monthlyTrends = d.monthlyTrends || [];
