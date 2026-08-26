@@ -434,379 +434,9 @@ export default function ProductPricingPage() {
           </div>
         ) : (
           <div className="text-center py-4 text-xs text-gray-500">
-            Henüz ürün seçilmedi. Lütfen ürün seçin.
+            Henüz ürün seçilmedi. Lütfen katalogdan bir ürün seçin.
           </div>
         )}
-      </div>
-
-      {/* ========================================================================= */}
-      {/* 🚀 TRENDYOL MINIMUM SIPARIS ADEDI (MOQ) BAREM KARTLARI (KULLANICI GÖRSELİ) */}
-      {/* ========================================================================= */}
-      <div className="bg-white p-5 sm:p-6 rounded-3xl border border-border shadow-xs space-y-4">
-        <div className="space-y-1">
-          <div className="flex items-center justify-between flex-wrap gap-2">
-            <h4 className="text-sm sm:text-base font-black text-dark flex items-center gap-2">
-              <ShoppingBag className="w-4 h-4 text-primary" />
-              <span>Minimum Sipariş Adedi & Sepet Kârlılığı</span>
-            </h4>
-            <div className="flex items-center gap-2 text-xs font-bold">
-              <span className="text-gray-500">Aktif Minimum Sipariş Kuralı:</span>
-              <span className="px-2.5 py-0.5 rounded-lg bg-primary-tint-100 text-primary border border-primary/30 font-black">
-                {currentSim.q} Adet / Sepet
-              </span>
-            </div>
-          </div>
-          <p className="text-xs text-gray-600 leading-relaxed">
-            Minimum Sipariş Adedi, bir ürünün müşteri tarafından alınması gereken minimum sayıyı belirtir. Müşteri ürünü sipariş içerisinde bu adetten daha az sayıda alamaz. <strong>Ürün stoğu Minimum Sipariş Adedi değerinden düşük ise ürünün stoğu tükendi olarak değerlendirilecektir.</strong>
-          </p>
-        </div>
-
-        {/* 4 + 1 BAREM TIERS GRID */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-5 gap-2.5 sm:gap-3">
-          {/* Tier 1: 0 - 25 TL */}
-          <div className={`p-3.5 rounded-2xl border text-center transition-all ${
-            activeSalePrice <= 25.00
-              ? 'border-primary bg-primary-tint-50/70 ring-2 ring-primary/30 shadow-xs'
-              : 'border-border bg-slate-50/70 text-gray-600'
-          }`}>
-            <span className="text-xs sm:text-sm font-black text-dark block">0₺ - 25₺</span>
-            <span className="text-[10px] text-gray-500 font-semibold block mt-0.5">Minimum Satış Adedi</span>
-            <span className={`text-xl sm:text-2xl font-black block mt-1 ${activeSalePrice <= 25.00 ? 'text-primary' : 'text-gray-700'}`}>
-              6
-            </span>
-            {activeSalePrice <= 25.00 && (
-              <span className="text-[9px] font-black uppercase text-primary bg-white px-2 py-0.5 rounded-full border border-primary/20 inline-block mt-1">
-                ✓ Aktif Kural
-              </span>
-            )}
-          </div>
-
-          {/* Tier 2: 25 - 35 TL */}
-          <div className={`p-3.5 rounded-2xl border text-center transition-all ${
-            activeSalePrice > 25.00 && activeSalePrice <= 35.00
-              ? 'border-primary bg-primary-tint-50/70 ring-2 ring-primary/30 shadow-xs'
-              : 'border-border bg-slate-50/70 text-gray-600'
-          }`}>
-            <span className="text-xs sm:text-sm font-black text-dark block">25₺ - 35₺</span>
-            <span className="text-[10px] text-gray-500 font-semibold block mt-0.5">Minimum Satış Adedi</span>
-            <span className={`text-xl sm:text-2xl font-black block mt-1 ${activeSalePrice > 25.00 && activeSalePrice <= 35.00 ? 'text-primary' : 'text-gray-700'}`}>
-              4
-            </span>
-            {activeSalePrice > 25.00 && activeSalePrice <= 35.00 && (
-              <span className="text-[9px] font-black uppercase text-primary bg-white px-2 py-0.5 rounded-full border border-primary/20 inline-block mt-1">
-                ✓ Aktif Kural
-              </span>
-            )}
-          </div>
-
-          {/* Tier 3: 35 - 50 TL */}
-          <div className={`p-3.5 rounded-2xl border text-center transition-all ${
-            activeSalePrice > 35.00 && activeSalePrice <= 50.00
-              ? 'border-primary bg-primary-tint-50/70 ring-2 ring-primary/30 shadow-xs'
-              : 'border-border bg-slate-50/70 text-gray-600'
-          }`}>
-            <span className="text-xs sm:text-sm font-black text-dark block">35₺ - 50₺</span>
-            <span className="text-[10px] text-gray-500 font-semibold block mt-0.5">Minimum Satış Adedi</span>
-            <span className={`text-xl sm:text-2xl font-black block mt-1 ${activeSalePrice > 35.00 && activeSalePrice <= 50.00 ? 'text-primary' : 'text-gray-700'}`}>
-              3
-            </span>
-            {activeSalePrice > 35.00 && activeSalePrice <= 50.00 && (
-              <span className="text-[9px] font-black uppercase text-primary bg-white px-2 py-0.5 rounded-full border border-primary/20 inline-block mt-1">
-                ✓ Aktif Kural
-              </span>
-            )}
-          </div>
-
-          {/* Tier 4: 50 - 75 TL */}
-          <div className={`p-3.5 rounded-2xl border text-center transition-all ${
-            activeSalePrice > 50.00 && activeSalePrice <= 75.00
-              ? 'border-primary bg-primary-tint-50/70 ring-2 ring-primary/30 shadow-xs'
-              : 'border-border bg-slate-50/70 text-gray-600'
-          }`}>
-            <span className="text-xs sm:text-sm font-black text-dark block">50₺ - 75₺</span>
-            <span className="text-[10px] text-gray-500 font-semibold block mt-0.5">Minimum Satış Adedi</span>
-            <span className={`text-xl sm:text-2xl font-black block mt-1 ${activeSalePrice > 50.00 && activeSalePrice <= 75.00 ? 'text-primary' : 'text-gray-700'}`}>
-              2
-            </span>
-            {activeSalePrice > 50.00 && activeSalePrice <= 75.00 && (
-              <span className="text-[9px] font-black uppercase text-primary bg-white px-2 py-0.5 rounded-full border border-primary/20 inline-block mt-1">
-                ✓ Aktif Kural
-              </span>
-            )}
-          </div>
-
-          {/* Tier 5: 75 TL ve Üzeri */}
-          <div className={`p-3.5 rounded-2xl border text-center transition-all col-span-2 sm:col-span-4 lg:col-span-1 ${
-            activeSalePrice > 75.00
-              ? 'border-emerald-500 bg-emerald-50/70 ring-2 ring-emerald-500/30 shadow-xs'
-              : 'border-border bg-slate-50/70 text-gray-600'
-          }`}>
-            <span className="text-xs sm:text-sm font-black text-dark block">75₺ ve Üzeri</span>
-            <span className="text-[10px] text-gray-500 font-semibold block mt-0.5">Minimum Satış Adedi</span>
-            <span className={`text-xl sm:text-2xl font-black block mt-1 ${activeSalePrice > 75.00 ? 'text-emerald-700' : 'text-gray-700'}`}>
-              1
-            </span>
-            {activeSalePrice > 75.00 && (
-              <span className="text-[9px] font-black uppercase text-emerald-800 bg-white px-2 py-0.5 rounded-full border border-emerald-300 inline-block mt-1">
-                ✓ Tekli Satış
-              </span>
-            )}
-          </div>
-        </div>
-
-        {/* 🌟 USER REQUEST: MINIMUM SIPARIS TOPLAM SATIŞ & TOPLAM KÂR HIGHLIGHT KARTLARI */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-3 pt-2">
-          {/* Paket / Sepet Toplamı */}
-          <div className="p-4 rounded-2xl bg-gradient-to-r from-primary-tint-50/80 via-white to-primary-tint-50/40 border border-primary/30 flex items-center justify-between gap-3 shadow-xs">
-            <div className="space-y-1 min-w-0">
-              <span className="text-[11px] font-black text-primary uppercase tracking-wide flex items-center gap-1.5">
-                <ShoppingBag className="w-4 h-4" />
-                <span>Minimum Sipariş Sepet Paketi ({currentSim.q} Adet)</span>
-              </span>
-              <div className="flex items-baseline gap-2">
-                <span className="text-2xl font-black text-dark tabular-nums">
-                  {formatCurrency(currentSim.basketGross)}
-                </span>
-                <span className="text-xs font-bold text-gray-500">Toplam Satış Tutarı</span>
-              </div>
-            </div>
-
-            <div className="text-right shrink-0">
-              <span className="text-[11px] font-bold text-emerald-800 uppercase tracking-wide block">Toplam Oluşacak Kâr</span>
-              <div className={`text-xl font-black tabular-nums ${currentSim.basketProfit >= 0 ? 'text-emerald-700' : 'text-red-600'}`}>
-                {formatCurrency(currentSim.basketProfit)}
-              </div>
-              <span className="text-[10px] font-bold text-emerald-700 block">%{currentSim.marginPercent.toFixed(1)} Marj</span>
-            </div>
-          </div>
-
-          {/* Tekil Birim Başına Değerler */}
-          <div className="p-4 rounded-2xl bg-slate-50 border border-border flex items-center justify-between gap-3 shadow-xs">
-            <div className="space-y-1 min-w-0">
-              <span className="text-[11px] font-black text-gray-600 uppercase tracking-wide flex items-center gap-1.5">
-                <Package className="w-4 h-4 text-gray-500" />
-                <span>Tekil Birim Başına Değerler (1 Adet)</span>
-              </span>
-              <div className="flex items-baseline gap-2">
-                <span className="text-2xl font-black text-dark tabular-nums">
-                  {formatCurrency(currentSim.unitPrice)}
-                </span>
-                <span className="text-xs font-bold text-gray-500">Birim Satış Fiyatı</span>
-              </div>
-            </div>
-
-            <div className="text-right shrink-0">
-              <span className="text-[11px] font-bold text-gray-500 uppercase tracking-wide block">Birim Net Kâr</span>
-              <div className={`text-xl font-black tabular-nums ${currentSim.unitProfit >= 0 ? 'text-emerald-700' : 'text-red-600'}`}>
-                {formatCurrency(currentSim.unitProfit)}
-              </div>
-              <span className="text-[10px] font-bold text-gray-500 block">Maliyet: {formatCurrency(costPrice)}</span>
-            </div>
-          </div>
-        </div>
-
-        {/* ========================================================================= */}
-        {/* 📦 TRENDYOL KARGO BAREM DESTEK TABLOSU & RESMİ KURALLARI (GÖRSEL 1, 2, 3) */}
-        {/* ========================================================================= */}
-        <div className="pt-2 border-t border-border">
-          <button
-            type="button"
-            onClick={() => setShowBaremDetails(!showBaremDetails)}
-            className="w-full p-3 rounded-2xl bg-canvas hover:bg-slate-100/80 border border-border flex items-center justify-between text-xs font-black text-dark transition-all cursor-pointer shadow-xs"
-          >
-            <div className="flex items-center gap-2 flex-wrap">
-              <Truck className="w-4 h-4 text-primary" />
-              <span>Trendyol Kargo Barem Destek Tablosu & Resmi Kuralları</span>
-              <span className={`px-2 py-0.5 rounded-lg text-[10px] border font-black ${
-                currentSim.basketGross < 200 
-                  ? 'bg-emerald-50 text-emerald-800 border-emerald-300' 
-                  : (currentSim.basketGross < 350 ? 'bg-blue-50 text-blue-800 border-blue-300' : 'bg-purple-50 text-purple-800 border-purple-300')
-              }`}>
-                {currentSim.basketGross < 200 
-                  ? `✓ 0 - 199,99 TL Baremi (Sepet: ₺${currentSim.basketGross.toFixed(2)})` 
-                  : (currentSim.basketGross < 350 ? `✓ 200 - 349,99 TL Baremi (Sepet: ₺${currentSim.basketGross.toFixed(2)})` : `350 TL ve Üzeri Desi Bazlı (Sepet: ₺${currentSim.basketGross.toFixed(2)})`)}
-              </span>
-            </div>
-            <div className="flex items-center gap-1.5 text-primary text-[11px]">
-              <span>{showBaremDetails ? 'Gizle' : 'Tabloyu & Kuralları İncele'}</span>
-              {showBaremDetails ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
-            </div>
-          </button>
-
-          {showBaremDetails && (
-            <div className="mt-3 p-4 sm:p-5 rounded-2xl bg-white border border-border space-y-4 animate-in fade-in zoom-in-95 text-xs">
-              
-              {/* Açıklayıcı Bilgilendirme Notu */}
-              <div className="p-3 rounded-xl bg-blue-50/70 border border-blue-200 text-blue-950 space-y-1">
-                <strong className="font-bold flex items-center gap-1.5 text-xs text-blue-900">
-                  <Info className="w-4 h-4 text-blue-600" />
-                  <span>Resmi Barem Altı Destek Kuralı:</span>
-                </strong>
-                <p className="text-[11px] leading-relaxed text-blue-900">
-                  Mağazanızdan sipariş edilen ürün sayısına bakılmaksızın <strong>toplam sipariş / sepet tutarı</strong> barem altı uygulamasına dahil edilir. Termin süresini <strong>1 gün</strong> yaparak ve/veya <strong>Bugün Kargoda / Hızlı Teslimat</strong> etiketiyle aynı gün kargoya veren satıcılara Avantajlı İndirimli Barem uygulanır.
-                </p>
-              </div>
-
-              {/* İKİ BAREM KATEGORİSİ TABLOLARI (GÖRSEL 1 & GÖRSEL 2) */}
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-                
-                {/* 1. Barem: 0 TL - 199,99 TL */}
-                <div className={`p-3.5 rounded-2xl border ${
-                  currentSim.basketGross < 200 ? 'border-primary ring-2 ring-primary/20 bg-primary-tint-50/20' : 'border-border bg-canvas'
-                }`}>
-                  <div className="flex items-center justify-between pb-2 border-b border-border mb-2">
-                    <h5 className="font-black text-dark text-xs flex items-center gap-1.5">
-                      <span className="w-2 h-2 rounded-full bg-emerald-500"></span>
-                      <span>0 TL - 199,99 TL Arası Gönderiler</span>
-                    </h5>
-                    {currentSim.basketGross < 200 && (
-                      <Badge className="text-[10px] bg-primary text-white">Sepetiniz Bu Baremde</Badge>
-                    )}
-                  </div>
-
-                  <div className="overflow-x-auto">
-                    <table className="w-full text-left text-[11px]">
-                      <thead>
-                        <tr className="text-gray-500 border-b border-border">
-                          <th className="pb-1.5 font-bold">Kargo Firması</th>
-                          <th className="pb-1.5 font-bold text-emerald-700">1 Gün Termin (Hızlı)</th>
-                          <th className="pb-1.5 font-bold text-amber-800">Standart (+1 Gün)</th>
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y divide-border/60">
-                        <tr className={carrier === 'TEX' ? 'bg-primary-tint-100/50 font-bold' : ''}>
-                          <td className="py-1">TEX (Trendyol Express)</td>
-                          <td className="py-1 font-black text-emerald-700">38.74 TL + KDV (₺46.49)</td>
-                          <td className="py-1 text-gray-700">73.33 TL + KDV (₺88.00)</td>
-                        </tr>
-                        <tr className={carrier === 'PTT' ? 'bg-primary-tint-100/50 font-bold' : ''}>
-                          <td className="py-1">PTT Kargo</td>
-                          <td className="py-1 font-black text-emerald-700">38.74 TL + KDV (₺46.49)</td>
-                          <td className="py-1 text-gray-700">73.33 TL + KDV (₺88.00)</td>
-                        </tr>
-                        <tr className={carrier === 'ARAS' ? 'bg-primary-tint-100/50 font-bold' : ''}>
-                          <td className="py-1">Aras Kargo</td>
-                          <td className="py-1 font-black text-emerald-700">48.33 TL + KDV (₺58.00)</td>
-                          <td className="py-1 text-gray-700">80.83 TL + KDV (₺97.00)</td>
-                        </tr>
-                        <tr className={carrier === 'SURAT' ? 'bg-primary-tint-100/50 font-bold' : ''}>
-                          <td className="py-1">Sürat Kargo</td>
-                          <td className="py-1 font-black text-emerald-700">54.58 TL + KDV (₺65.50)</td>
-                          <td className="py-1 text-gray-700">87.08 TL + KDV (₺104.50)</td>
-                        </tr>
-                        <tr className={carrier === 'KOLAY_GELSIN' ? 'bg-primary-tint-100/50 font-bold' : ''}>
-                          <td className="py-1">Kolay Gelsin</td>
-                          <td className="py-1 font-black text-emerald-700">55.83 TL + KDV (₺67.00)</td>
-                          <td className="py-1 text-gray-700">88.33 TL + KDV (₺106.00)</td>
-                        </tr>
-                        <tr className={carrier === 'DHL' ? 'bg-primary-tint-100/50 font-bold' : ''}>
-                          <td className="py-1">DHL eCommerce</td>
-                          <td className="py-1 font-black text-emerald-700">57.08 TL + KDV (₺68.50)</td>
-                          <td className="py-1 text-gray-700">89.58 TL + KDV (₺107.50)</td>
-                        </tr>
-                        <tr className={carrier === 'YK' ? 'bg-primary-tint-100/50 font-bold' : ''}>
-                          <td className="py-1">Yurtiçi Kargo (YK)</td>
-                          <td className="py-1 font-black text-emerald-700">83.33 TL + KDV (₺100.00)</td>
-                          <td className="py-1 text-gray-700">114.16 TL + KDV (₺137.00)</td>
-                        </tr>
-                      </tbody>
-                    </table>
-                  </div>
-                </div>
-
-                {/* 2. Barem: 200 TL - 349,99 TL */}
-                <div className={`p-3.5 rounded-2xl border ${
-                  currentSim.basketGross >= 200 && currentSim.basketGross < 350 ? 'border-primary ring-2 ring-primary/20 bg-primary-tint-50/20' : 'border-border bg-canvas'
-                }`}>
-                  <div className="flex items-center justify-between pb-2 border-b border-border mb-2">
-                    <h5 className="font-black text-dark text-xs flex items-center gap-1.5">
-                      <span className="w-2 h-2 rounded-full bg-blue-500"></span>
-                      <span>200 TL - 349,99 TL Arası Gönderiler</span>
-                    </h5>
-                    {currentSim.basketGross >= 200 && currentSim.basketGross < 350 && (
-                      <Badge className="text-[10px] bg-blue-600 text-white">Sepetiniz Bu Baremde</Badge>
-                    )}
-                  </div>
-
-                  <div className="overflow-x-auto">
-                    <table className="w-full text-left text-[11px]">
-                      <thead>
-                        <tr className="text-gray-500 border-b border-border">
-                          <th className="pb-1.5 font-bold">Kargo Firması</th>
-                          <th className="pb-1.5 font-bold text-emerald-700">1 Gün Termin (Hızlı)</th>
-                          <th className="pb-1.5 font-bold text-amber-800">Standart (+1 Gün)</th>
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y divide-border/60">
-                        <tr className={carrier === 'TEX' ? 'bg-primary-tint-100/50 font-bold' : ''}>
-                          <td className="py-1">TEX (Trendyol Express)</td>
-                          <td className="py-1 font-black text-emerald-700">70.41 TL + KDV (₺84.49)</td>
-                          <td className="py-1 text-gray-700">78.74 TL + KDV (₺94.49)</td>
-                        </tr>
-                        <tr className={carrier === 'PTT' ? 'bg-primary-tint-100/50 font-bold' : ''}>
-                          <td className="py-1">PTT Kargo</td>
-                          <td className="py-1 font-black text-emerald-700">70.41 TL + KDV (₺84.49)</td>
-                          <td className="py-1 text-gray-700">78.74 TL + KDV (₺94.49)</td>
-                        </tr>
-                        <tr className={carrier === 'ARAS' ? 'bg-primary-tint-100/50 font-bold' : ''}>
-                          <td className="py-1">Aras Kargo</td>
-                          <td className="py-1 font-black text-emerald-700">79.16 TL + KDV (₺94.99)</td>
-                          <td className="py-1 text-gray-700">86.24 TL + KDV (₺103.49)</td>
-                        </tr>
-                        <tr className={carrier === 'SURAT' ? 'bg-primary-tint-100/50 font-bold' : ''}>
-                          <td className="py-1">Sürat Kargo</td>
-                          <td className="py-1 font-black text-emerald-700">85.41 TL + KDV (₺102.49)</td>
-                          <td className="py-1 text-gray-700">92.49 TL + KDV (₺110.99)</td>
-                        </tr>
-                        <tr className={carrier === 'KOLAY_GELSIN' ? 'bg-primary-tint-100/50 font-bold' : ''}>
-                          <td className="py-1">Kolay Gelsin</td>
-                          <td className="py-1 font-black text-emerald-700">86.66 TL + KDV (₺103.99)</td>
-                          <td className="py-1 text-gray-700">93.74 TL + KDV (₺112.49)</td>
-                        </tr>
-                        <tr className={carrier === 'DHL' ? 'bg-primary-tint-100/50 font-bold' : ''}>
-                          <td className="py-1">DHL eCommerce</td>
-                          <td className="py-1 font-black text-emerald-700">87.91 TL + KDV (₺105.49)</td>
-                          <td className="py-1 text-gray-700">94.99 TL + KDV (₺113.99)</td>
-                        </tr>
-                        <tr className={carrier === 'YK' ? 'bg-primary-tint-100/50 font-bold' : ''}>
-                          <td className="py-1">Yurtiçi Kargo (YK)</td>
-                          <td className="py-1 font-black text-emerald-700">113.33 TL + KDV (₺136.00)</td>
-                          <td className="py-1 text-gray-700">119.16 TL + KDV (₺143.00)</td>
-                        </tr>
-                      </tbody>
-                    </table>
-                  </div>
-                </div>
-
-              </div>
-
-              {/* 3. RESMİ PAKET BÖLME KURALLARI (GÖRSEL 3) */}
-              <div className="p-3.5 rounded-2xl bg-teal-950 text-white space-y-2">
-                <div className="flex items-center gap-1.5 text-teal-300 font-black text-xs">
-                  <Layers className="w-4 h-4 text-teal-400" />
-                  <span>Resmi Trendyol Paket Bölme (Split Package) Kuralları</span>
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-[11px] pt-1">
-                  <div className="p-2.5 rounded-xl bg-white/10 border border-white/10 space-y-1">
-                    <strong className="text-amber-300 block font-bold">Örnek 1: Barem Üstü Siparişler (≥ 350 TL)</strong>
-                    <p className="text-gray-200 leading-relaxed">
-                      Toplam sipariş tutarı <strong>350 TL ve üzeri</strong> ise paket bölme yapılması durumunda (ör: Paket A = 200 TL/4 Desi, Paket B = 150 TL/7 Desi), <strong>her iki paket de desi bazlı faturalandırılır.</strong>
-                    </p>
-                  </div>
-
-                  <div className="p-2.5 rounded-xl bg-white/10 border border-white/10 space-y-1">
-                    <strong className="text-emerald-300 block font-bold">Örnek 2: Barem Altı Siparişler (&lt; 350 TL)</strong>
-                    <p className="text-gray-200 leading-relaxed">
-                      Toplam sipariş tutarı <strong>70 TL</strong> ise paket bölme yapılması durumunda: <strong>Sadece desisi en düşük 1 paket (Paket A = 50 TL/3 Desi) barem altı faturalandırılır</strong>; diğer tüm paketler (Paket B = 20 TL/5 Desi) desi bazlı faturalandırılır.
-                    </p>
-                  </div>
-                </div>
-              </div>
-
-            </div>
-          )}
-        </div>
       </div>
 
       {/* MODE TOGGLE BUTTONS - ULTRA-COMPACT HORIZONTAL ROW LAYOUT */}
@@ -1548,6 +1178,389 @@ export default function ProductPricingPage() {
 
         </div>
 
+      </div>
+
+      {/* ========================================================================= */}
+      {/* 🚀 EN ALTTA: TRENDYOL MINIMUM SIPARIS ADEDI (MOQ) & BAREM TABLOSU (KULLANICI TALEBİ) */}
+      {/* ========================================================================= */}
+      <div className="bg-white p-5 sm:p-6 rounded-3xl border border-border shadow-xs space-y-4">
+        <div className="space-y-1">
+          <div className="flex items-center justify-between flex-wrap gap-2">
+            <h4 className="text-sm sm:text-base font-black text-dark flex items-center gap-2">
+              <ShoppingBag className="w-4 h-4 text-primary" />
+              <span>Minimum Sipariş Adedi & Sepet Kârlılığı</span>
+            </h4>
+            <div className="flex items-center gap-2 text-xs font-bold">
+              <span className="text-gray-500">Aktif Minimum Sipariş Kuralı:</span>
+              <span className="px-2.5 py-0.5 rounded-lg bg-primary-tint-100 text-primary border border-primary/30 font-black">
+                {currentSim.q} Adet / Sepet
+              </span>
+            </div>
+          </div>
+          <p className="text-xs text-gray-600 leading-relaxed">
+            Minimum Sipariş Adedi, bir ürünün müşteri tarafından alınması gereken minimum sayıyı belirtir. Müşteri ürünü sipariş içerisinde bu adetten daha az sayıda alamaz. <strong>Ürün stoğu Minimum Sipariş Adedi değerinden düşük ise ürünün stoğu tükendi olarak değerlendirilecektir.</strong>
+          </p>
+        </div>
+
+        {/* 4 + 1 BAREM TIERS GRID */}
+        <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-5 gap-2.5 sm:gap-3">
+          {/* Tier 1: 0 - 25 TL */}
+          <div className={`p-3.5 rounded-2xl border text-center transition-all ${
+            activeSalePrice <= 25.00
+              ? 'border-primary bg-primary-tint-50/70 ring-2 ring-primary/30 shadow-xs'
+              : 'border-border bg-slate-50/70 text-gray-600'
+          }`}>
+            <span className="text-xs sm:text-sm font-black text-dark block">0₺ - 25₺</span>
+            <span className="text-[10px] text-gray-500 font-semibold block mt-0.5">Minimum Satış Adedi</span>
+            <span className={`text-xl sm:text-2xl font-black block mt-1 ${activeSalePrice <= 25.00 ? 'text-primary' : 'text-gray-700'}`}>
+              6
+            </span>
+            {activeSalePrice <= 25.00 && (
+              <span className="text-[9px] font-black uppercase text-primary bg-white px-2 py-0.5 rounded-full border border-primary/20 inline-block mt-1">
+                ✓ Aktif Kural
+              </span>
+            )}
+          </div>
+
+          {/* Tier 2: 25 - 35 TL */}
+          <div className={`p-3.5 rounded-2xl border text-center transition-all ${
+            activeSalePrice > 25.00 && activeSalePrice <= 35.00
+              ? 'border-primary bg-primary-tint-50/70 ring-2 ring-primary/30 shadow-xs'
+              : 'border-border bg-slate-50/70 text-gray-600'
+          }`}>
+            <span className="text-xs sm:text-sm font-black text-dark block">25₺ - 35₺</span>
+            <span className="text-[10px] text-gray-500 font-semibold block mt-0.5">Minimum Satış Adedi</span>
+            <span className={`text-xl sm:text-2xl font-black block mt-1 ${activeSalePrice > 25.00 && activeSalePrice <= 35.00 ? 'text-primary' : 'text-gray-700'}`}>
+              4
+            </span>
+            {activeSalePrice > 25.00 && activeSalePrice <= 35.00 && (
+              <span className="text-[9px] font-black uppercase text-primary bg-white px-2 py-0.5 rounded-full border border-primary/20 inline-block mt-1">
+                ✓ Aktif Kural
+              </span>
+            )}
+          </div>
+
+          {/* Tier 3: 35 - 50 TL */}
+          <div className={`p-3.5 rounded-2xl border text-center transition-all ${
+            activeSalePrice > 35.00 && activeSalePrice <= 50.00
+              ? 'border-primary bg-primary-tint-50/70 ring-2 ring-primary/30 shadow-xs'
+              : 'border-border bg-slate-50/70 text-gray-600'
+          }`}>
+            <span className="text-xs sm:text-sm font-black text-dark block">35₺ - 50₺</span>
+            <span className="text-[10px] text-gray-500 font-semibold block mt-0.5">Minimum Satış Adedi</span>
+            <span className={`text-xl sm:text-2xl font-black block mt-1 ${activeSalePrice > 35.00 && activeSalePrice <= 50.00 ? 'text-primary' : 'text-gray-700'}`}>
+              3
+            </span>
+            {activeSalePrice > 35.00 && activeSalePrice <= 50.00 && (
+              <span className="text-[9px] font-black uppercase text-primary bg-white px-2 py-0.5 rounded-full border border-primary/20 inline-block mt-1">
+                ✓ Aktif Kural
+              </span>
+            )}
+          </div>
+
+          {/* Tier 4: 50 - 75 TL */}
+          <div className={`p-3.5 rounded-2xl border text-center transition-all ${
+            activeSalePrice > 50.00 && activeSalePrice <= 75.00
+              ? 'border-primary bg-primary-tint-50/70 ring-2 ring-primary/30 shadow-xs'
+              : 'border-border bg-slate-50/70 text-gray-600'
+          }`}>
+            <span className="text-xs sm:text-sm font-black text-dark block">50₺ - 75₺</span>
+            <span className="text-[10px] text-gray-500 font-semibold block mt-0.5">Minimum Satış Adedi</span>
+            <span className={`text-xl sm:text-2xl font-black block mt-1 ${activeSalePrice > 50.00 && activeSalePrice <= 75.00 ? 'text-primary' : 'text-gray-700'}`}>
+              2
+            </span>
+            {activeSalePrice > 50.00 && activeSalePrice <= 75.00 && (
+              <span className="text-[9px] font-black uppercase text-primary bg-white px-2 py-0.5 rounded-full border border-primary/20 inline-block mt-1">
+                ✓ Aktif Kural
+              </span>
+            )}
+          </div>
+
+          {/* Tier 5: 75 TL ve Üzeri */}
+          <div className={`p-3.5 rounded-2xl border text-center transition-all col-span-2 sm:col-span-4 lg:col-span-1 ${
+            activeSalePrice > 75.00
+              ? 'border-emerald-500 bg-emerald-50/70 ring-2 ring-emerald-500/30 shadow-xs'
+              : 'border-border bg-slate-50/70 text-gray-600'
+          }`}>
+            <span className="text-xs sm:text-sm font-black text-dark block">75₺ ve Üzeri</span>
+            <span className="text-[10px] text-gray-500 font-semibold block mt-0.5">Minimum Satış Adedi</span>
+            <span className={`text-xl sm:text-2xl font-black block mt-1 ${activeSalePrice > 75.00 ? 'text-emerald-700' : 'text-gray-700'}`}>
+              1
+            </span>
+            {activeSalePrice > 75.00 && (
+              <span className="text-[9px] font-black uppercase text-emerald-800 bg-white px-2 py-0.5 rounded-full border border-emerald-300 inline-block mt-1">
+                ✓ Tekli Satış
+              </span>
+            )}
+          </div>
+        </div>
+
+        {/* 🌟 MINIMUM SIPARIS TOPLAM SATIŞ & TOPLAM KÂR HIGHLIGHT KARTLARI */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-3 pt-2">
+          {/* Paket / Sepet Toplamı */}
+          <div className="p-4 rounded-2xl bg-gradient-to-r from-primary-tint-50/80 via-white to-primary-tint-50/40 border border-primary/30 flex items-center justify-between gap-3 shadow-xs">
+            <div className="space-y-1 min-w-0">
+              <span className="text-[11px] font-black text-primary uppercase tracking-wide flex items-center gap-1.5">
+                <ShoppingBag className="w-4 h-4" />
+                <span>Minimum Sipariş Sepet Paketi ({currentSim.q} Adet)</span>
+              </span>
+              <div className="flex items-baseline gap-2">
+                <span className="text-2xl font-black text-dark tabular-nums">
+                  {formatCurrency(currentSim.basketGross)}
+                </span>
+                <span className="text-xs font-bold text-gray-500">Toplam Satış Tutarı</span>
+              </div>
+            </div>
+
+            <div className="text-right shrink-0">
+              <span className="text-[11px] font-bold text-emerald-800 uppercase tracking-wide block">Toplam Oluşacak Kâr</span>
+              <div className={`text-xl font-black tabular-nums ${currentSim.basketProfit >= 0 ? 'text-emerald-700' : 'text-red-600'}`}>
+                {formatCurrency(currentSim.basketProfit)}
+              </div>
+              <span className="text-[10px] font-bold text-emerald-700 block">%{currentSim.marginPercent.toFixed(1)} Marj</span>
+            </div>
+          </div>
+
+          {/* Tekil Birim Başına Değerler */}
+          <div className="p-4 rounded-2xl bg-slate-50 border border-border flex items-center justify-between gap-3 shadow-xs">
+            <div className="space-y-1 min-w-0">
+              <span className="text-[11px] font-black text-gray-600 uppercase tracking-wide flex items-center gap-1.5">
+                <Package className="w-4 h-4 text-gray-500" />
+                <span>Tekil Birim Başına Değerler (1 Adet)</span>
+              </span>
+              <div className="flex items-baseline gap-2">
+                <span className="text-2xl font-black text-dark tabular-nums">
+                  {formatCurrency(currentSim.unitPrice)}
+                </span>
+                <span className="text-xs font-bold text-gray-500">Birim Satış Fiyatı</span>
+              </div>
+            </div>
+
+            <div className="text-right shrink-0">
+              <span className="text-[11px] font-bold text-gray-500 uppercase tracking-wide block">Birim Net Kâr</span>
+              <div className={`text-xl font-black tabular-nums ${currentSim.unitProfit >= 0 ? 'text-emerald-700' : 'text-red-600'}`}>
+                {formatCurrency(currentSim.unitProfit)}
+              </div>
+              <span className="text-[10px] font-bold text-gray-500 block">Maliyet: {formatCurrency(costPrice)}</span>
+            </div>
+          </div>
+        </div>
+
+        {/* INSUFFICIENT STOCK WARNING BANNER IF APPLICABLE */}
+        {isStockInsufficientForMOQ && (
+          <div className="p-3.5 rounded-2xl bg-amber-50 border border-amber-300 flex items-start gap-2.5 text-xs text-amber-900 animate-in fade-in duration-200">
+            <AlertTriangle className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
+            <div>
+              <strong className="block font-bold">⚠️ Trendyol Yetersiz Stok Uyarısı:</strong>
+              <span>
+                Ürününüzün mevcut stoğu (<strong>{stockCount} Adet</strong>), belirlenen fiyat için zorunlu minimum sipariş adedinden (<strong>{currentSim.q} Adet</strong>) az olduğu için Trendyol bu ürünü otomatik olarak <strong>"TÜKENDİ"</strong> sayacak ve satışa kapatacaktır. Lütfen stok miktarınızı en az {currentSim.q} adede yükseltin.
+              </span>
+            </div>
+          </div>
+        )}
+
+        {/* ========================================================================= */}
+        {/* 📦 TRENDYOL KARGO BAREM DESTEK TABLOSU & RESMİ KURALLARI (GÖRSEL 1, 2, 3) */}
+        {/* ========================================================================= */}
+        <div className="pt-2 border-t border-border">
+          <button
+            type="button"
+            onClick={() => setShowBaremDetails(!showBaremDetails)}
+            className="w-full p-3 rounded-2xl bg-canvas hover:bg-slate-100/80 border border-border flex items-center justify-between text-xs font-black text-dark transition-all cursor-pointer shadow-xs"
+          >
+            <div className="flex items-center gap-2 flex-wrap">
+              <Truck className="w-4 h-4 text-primary" />
+              <span>Trendyol Kargo Barem Destek Tablosu & Resmi Kuralları</span>
+              <span className={`px-2 py-0.5 rounded-lg text-[10px] border font-black ${
+                currentSim.basketGross < 200 
+                  ? 'bg-emerald-50 text-emerald-800 border-emerald-300' 
+                  : (currentSim.basketGross < 350 ? 'bg-blue-50 text-blue-800 border-blue-300' : 'bg-purple-50 text-purple-800 border-purple-300')
+              }`}>
+                {currentSim.basketGross < 200 
+                  ? `✓ 0 - 199,99 TL Baremi (Sepet: ₺${currentSim.basketGross.toFixed(2)})` 
+                  : (currentSim.basketGross < 350 ? `✓ 200 - 349,99 TL Baremi (Sepet: ₺${currentSim.basketGross.toFixed(2)})` : `350 TL ve Üzeri Desi Bazlı (Sepet: ₺${currentSim.basketGross.toFixed(2)})`)}
+              </span>
+            </div>
+            <div className="flex items-center gap-1.5 text-primary text-[11px]">
+              <span>{showBaremDetails ? 'Gizle' : 'Tabloyu & Kuralları İncele'}</span>
+              {showBaremDetails ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+            </div>
+          </button>
+
+          {showBaremDetails && (
+            <div className="mt-3 p-4 sm:p-5 rounded-2xl bg-white border border-border space-y-4 animate-in fade-in zoom-in-95 text-xs">
+              
+              {/* Açıklayıcı Bilgilendirme Notu */}
+              <div className="p-3 rounded-xl bg-blue-50/70 border border-blue-200 text-blue-950 space-y-1">
+                <strong className="font-bold flex items-center gap-1.5 text-xs text-blue-900">
+                  <Info className="w-4 h-4 text-blue-600" />
+                  <span>Resmi Barem Altı Destek Kuralı:</span>
+                </strong>
+                <p className="text-[11px] leading-relaxed text-blue-900">
+                  Mağazanızdan sipariş edilen ürün sayısına bakılmaksızın <strong>toplam sipariş / sepet tutarı</strong> barem altı uygulamasına dahil edilir. Termin süresini <strong>1 gün</strong> yaparak ve/veya <strong>Bugün Kargoda / Hızlı Teslimat</strong> etiketiyle aynı gün kargoya veren satıcılara Avantajlı İndirimli Barem uygulanır.
+                </p>
+              </div>
+
+              {/* İKİ BAREM KATEGORİSİ TABLOLARI (GÖRSEL 1 & GÖRSEL 2) */}
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                
+                {/* 1. Barem: 0 TL - 199,99 TL */}
+                <div className={`p-3.5 rounded-2xl border ${
+                  currentSim.basketGross < 200 ? 'border-primary ring-2 ring-primary/20 bg-primary-tint-50/20' : 'border-border bg-canvas'
+                }`}>
+                  <div className="flex items-center justify-between pb-2 border-b border-border mb-2">
+                    <h5 className="font-black text-dark text-xs flex items-center gap-1.5">
+                      <span className="w-2 h-2 rounded-full bg-emerald-500"></span>
+                      <span>0 TL - 199,99 TL Arası Gönderiler</span>
+                    </h5>
+                    {currentSim.basketGross < 200 && (
+                      <Badge className="text-[10px] bg-primary text-white">Sepetiniz Bu Baremde</Badge>
+                    )}
+                  </div>
+
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-left text-[11px]">
+                      <thead>
+                        <tr className="text-gray-500 border-b border-border">
+                          <th className="pb-1.5 font-bold">Kargo Firması</th>
+                          <th className="pb-1.5 font-bold text-emerald-700">1 Gün Termin (Hızlı)</th>
+                          <th className="pb-1.5 font-bold text-amber-800">Standart (+1 Gün)</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-border/60">
+                        <tr className={carrier === 'TEX' ? 'bg-primary-tint-100/50 font-bold' : ''}>
+                          <td className="py-1">TEX (Trendyol Express)</td>
+                          <td className="py-1 font-black text-emerald-700">38.74 TL + KDV (₺46.49)</td>
+                          <td className="py-1 text-gray-700">73.33 TL + KDV (₺88.00)</td>
+                        </tr>
+                        <tr className={carrier === 'PTT' ? 'bg-primary-tint-100/50 font-bold' : ''}>
+                          <td className="py-1">PTT Kargo</td>
+                          <td className="py-1 font-black text-emerald-700">38.74 TL + KDV (₺46.49)</td>
+                          <td className="py-1 text-gray-700">73.33 TL + KDV (₺88.00)</td>
+                        </tr>
+                        <tr className={carrier === 'ARAS' ? 'bg-primary-tint-100/50 font-bold' : ''}>
+                          <td className="py-1">Aras Kargo</td>
+                          <td className="py-1 font-black text-emerald-700">48.33 TL + KDV (₺58.00)</td>
+                          <td className="py-1 text-gray-700">80.83 TL + KDV (₺97.00)</td>
+                        </tr>
+                        <tr className={carrier === 'SURAT' ? 'bg-primary-tint-100/50 font-bold' : ''}>
+                          <td className="py-1">Sürat Kargo</td>
+                          <td className="py-1 font-black text-emerald-700">54.58 TL + KDV (₺65.50)</td>
+                          <td className="py-1 text-gray-700">87.08 TL + KDV (₺104.50)</td>
+                        </tr>
+                        <tr className={carrier === 'KOLAY_GELSIN' ? 'bg-primary-tint-100/50 font-bold' : ''}>
+                          <td className="py-1">Kolay Gelsin</td>
+                          <td className="py-1 font-black text-emerald-700">55.83 TL + KDV (₺67.00)</td>
+                          <td className="py-1 text-gray-700">88.33 TL + KDV (₺106.00)</td>
+                        </tr>
+                        <tr className={carrier === 'DHL' ? 'bg-primary-tint-100/50 font-bold' : ''}>
+                          <td className="py-1">DHL eCommerce</td>
+                          <td className="py-1 font-black text-emerald-700">57.08 TL + KDV (₺68.50)</td>
+                          <td className="py-1 text-gray-700">89.58 TL + KDV (₺107.50)</td>
+                        </tr>
+                        <tr className={carrier === 'YK' ? 'bg-primary-tint-100/50 font-bold' : ''}>
+                          <td className="py-1">Yurtiçi Kargo (YK)</td>
+                          <td className="py-1 font-black text-emerald-700">83.33 TL + KDV (₺100.00)</td>
+                          <td className="py-1 text-gray-700">114.16 TL + KDV (₺137.00)</td>
+                        </tr>
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+
+                {/* 2. Barem: 200 TL - 349,99 TL */}
+                <div className={`p-3.5 rounded-2xl border ${
+                  currentSim.basketGross >= 200 && currentSim.basketGross < 350 ? 'border-primary ring-2 ring-primary/20 bg-primary-tint-50/20' : 'border-border bg-canvas'
+                }`}>
+                  <div className="flex items-center justify-between pb-2 border-b border-border mb-2">
+                    <h5 className="font-black text-dark text-xs flex items-center gap-1.5">
+                      <span className="w-2 h-2 rounded-full bg-blue-500"></span>
+                      <span>200 TL - 349,99 TL Arası Gönderiler</span>
+                    </h5>
+                    {currentSim.basketGross >= 200 && currentSim.basketGross < 350 && (
+                      <Badge className="text-[10px] bg-blue-600 text-white">Sepetiniz Bu Baremde</Badge>
+                    )}
+                  </div>
+
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-left text-[11px]">
+                      <thead>
+                        <tr className="text-gray-500 border-b border-border">
+                          <th className="pb-1.5 font-bold">Kargo Firması</th>
+                          <th className="pb-1.5 font-bold text-emerald-700">1 Gün Termin (Hızlı)</th>
+                          <th className="pb-1.5 font-bold text-amber-800">Standart (+1 Gün)</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-border/60">
+                        <tr className={carrier === 'TEX' ? 'bg-primary-tint-100/50 font-bold' : ''}>
+                          <td className="py-1">TEX (Trendyol Express)</td>
+                          <td className="py-1 font-black text-emerald-700">70.41 TL + KDV (₺84.49)</td>
+                          <td className="py-1 text-gray-700">78.74 TL + KDV (₺94.49)</td>
+                        </tr>
+                        <tr className={carrier === 'PTT' ? 'bg-primary-tint-100/50 font-bold' : ''}>
+                          <td className="py-1">PTT Kargo</td>
+                          <td className="py-1 font-black text-emerald-700">70.41 TL + KDV (₺84.49)</td>
+                          <td className="py-1 text-gray-700">78.74 TL + KDV (₺94.49)</td>
+                        </tr>
+                        <tr className={carrier === 'ARAS' ? 'bg-primary-tint-100/50 font-bold' : ''}>
+                          <td className="py-1">Aras Kargo</td>
+                          <td className="py-1 font-black text-emerald-700">79.16 TL + KDV (₺94.99)</td>
+                          <td className="py-1 text-gray-700">86.24 TL + KDV (₺103.49)</td>
+                        </tr>
+                        <tr className={carrier === 'SURAT' ? 'bg-primary-tint-100/50 font-bold' : ''}>
+                          <td className="py-1">Sürat Kargo</td>
+                          <td className="py-1 font-black text-emerald-700">85.41 TL + KDV (₺102.49)</td>
+                          <td className="py-1 text-gray-700">92.49 TL + KDV (₺110.99)</td>
+                        </tr>
+                        <tr className={carrier === 'KOLAY_GELSIN' ? 'bg-primary-tint-100/50 font-bold' : ''}>
+                          <td className="py-1">Kolay Gelsin</td>
+                          <td className="py-1 font-black text-emerald-700">86.66 TL + KDV (₺103.99)</td>
+                          <td className="py-1 text-gray-700">93.74 TL + KDV (₺112.49)</td>
+                        </tr>
+                        <tr className={carrier === 'DHL' ? 'bg-primary-tint-100/50 font-bold' : ''}>
+                          <td className="py-1">DHL eCommerce</td>
+                          <td className="py-1 font-black text-emerald-700">87.91 TL + KDV (₺105.49)</td>
+                          <td className="py-1 text-gray-700">94.99 TL + KDV (₺113.99)</td>
+                        </tr>
+                        <tr className={carrier === 'YK' ? 'bg-primary-tint-100/50 font-bold' : ''}>
+                          <td className="py-1">Yurtiçi Kargo (YK)</td>
+                          <td className="py-1 font-black text-emerald-700">113.33 TL + KDV (₺136.00)</td>
+                          <td className="py-1 text-gray-700">119.16 TL + KDV (₺143.00)</td>
+                        </tr>
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+
+              </div>
+
+              {/* 3. RESMİ PAKET BÖLME KURALLARI (GÖRSEL 3) */}
+              <div className="p-3.5 rounded-2xl bg-teal-950 text-white space-y-2">
+                <div className="flex items-center gap-1.5 text-teal-300 font-black text-xs">
+                  <Layers className="w-4 h-4 text-teal-400" />
+                  <span>Resmi Trendyol Paket Bölme (Split Package) Kuralları</span>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-[11px] pt-1">
+                  <div className="p-2.5 rounded-xl bg-white/10 border border-white/10 space-y-1">
+                    <strong className="text-amber-300 block font-bold">Örnek 1: Barem Üstü Siparişler (≥ 350 TL)</strong>
+                    <p className="text-gray-200 leading-relaxed">
+                      Toplam sipariş tutarı <strong>350 TL ve üzeri</strong> ise paket bölme yapılması durumunda (ör: Paket A = 200 TL/4 Desi, Paket B = 150 TL/7 Desi), <strong>her iki paket de desi bazlı faturalandırılır.</strong>
+                    </p>
+                  </div>
+
+                  <div className="p-2.5 rounded-xl bg-white/10 border border-white/10 space-y-1">
+                    <strong className="text-emerald-300 block font-bold">Örnek 2: Barem Altı Siparişler (&lt; 350 TL)</strong>
+                    <p className="text-gray-200 leading-relaxed">
+                      Toplam sipariş tutarı <strong>70 TL</strong> ise paket bölme yapılması durumunda: <strong>Sadece desisi en düşük 1 paket (Paket A = 50 TL/3 Desi) barem altı faturalandırılır</strong>; diğer tüm paketler (Paket B = 20 TL/5 Desi) desi bazlı faturalandırılır.
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+            </div>
+          )}
+        </div>
       </div>
 
       {/* PRODUCT PICKER MODAL DIALOG */}
