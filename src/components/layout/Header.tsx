@@ -5,16 +5,18 @@ import { CountrySelector } from './CountrySelector';
 import { DateRangePicker } from './DateRangePicker';
 import { NotificationCenter } from './NotificationCenter';
 import { InteractiveSpotlightGuide } from './InteractiveSpotlightGuide';
-import { Menu, Compass, User, LogOut, ShieldCheck } from 'lucide-react';
+import { Menu, Compass, User, LogOut, ShieldCheck, Crown } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
+import { useAuth } from '@/lib/auth-context';
 import { BrandLogo } from '@/components/common/BrandLogo';
 
 export function Header({ onMobileMenuToggle }: { onMobileMenuToggle: () => void }) {
   const router = useRouter();
+  const { user } = useAuth();
   const [guideOpen, setGuideOpen] = useState(false);
   const [userDropdown, setUserDropdown] = useState(false);
 
@@ -75,6 +77,20 @@ export function Header({ onMobileMenuToggle }: { onMobileMenuToggle: () => void 
             <Compass className="w-3.5 h-3.5 text-primary" />
             <span>Rehber</span>
           </Button>
+
+          {/* 👑 Direct Super Admin Quick Button (Shown for Super Admins) */}
+          {user?.isSuperAdmin && (
+            <Link href="/super-admin" className="shrink-0">
+              <Button
+                size="sm"
+                className="flex items-center gap-1.5 h-8 text-[11px] rounded-xl font-black px-2.5 sm:px-3 bg-gradient-to-r from-slate-950 via-[#101626] to-slate-950 text-amber-300 border border-indigo-500/50 hover:border-indigo-400 shadow-sm transition-all"
+                title="Tüm platform verilerini görmek için Süper Admin Moduna geç"
+              >
+                <Crown className="w-3.5 h-3.5 text-amber-300 animate-bounce" />
+                <span className="hidden sm:inline">Süper Admin</span>
+              </Button>
+            </Link>
+          )}
 
           {/* Notifications Center */}
           <div className="shrink-0">

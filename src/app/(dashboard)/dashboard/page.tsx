@@ -9,9 +9,11 @@ import {
   Percent, RefreshCw, ArrowUpRight, CheckCircle2, ShieldCheck, 
   Layers, Package, Calendar, Award, ExternalLink, Users, Eye,
   Clock, Store, Filter, PieChart as PieIcon, BarChart3, Activity,
-  ChevronDown, ChevronUp, Receipt, Info, ShoppingBag, Zap, CalendarDays
+  ChevronDown, ChevronUp, Receipt, Info, ShoppingBag, Zap, CalendarDays,
+  Crown, ArrowRight
 } from "lucide-react";
 import Link from "next/link";
+import { useAuth } from "@/lib/auth-context";
 import { OrderDetailModal } from "@/components/orders/OrderDetailModal";
 import { useDateStore } from "@/store/useDateStore";
 import { useTenantStore } from "@/stores/useTenantStore";
@@ -29,6 +31,7 @@ export default function DashboardPage() {
   const [velocityTab, setVelocityTab] = useState<"weekly" | "monthly">("weekly");
   const { period, startDate, endDate, label } = useDateStore();
   const { activeStoreId } = useTenantStore();
+  const { user } = useAuth();
   const [selectedOrderId, setSelectedOrderId] = useState<string | null>(null);
 
   useEffect(() => {
@@ -125,6 +128,35 @@ export default function DashboardPage() {
 
   return (
     <div className="space-y-4 sm:space-y-6 max-w-7xl">
+      {/* 👑 Super Admin Switch Banner (Shown when user is a super admin) */}
+      {user?.isSuperAdmin && (
+        <div className="p-4 sm:p-5 rounded-3xl bg-gradient-to-r from-slate-950 via-[#101828] to-slate-950 text-white border border-indigo-500/40 shadow-xl flex flex-col sm:flex-row sm:items-center justify-between gap-4 animate-in fade-in duration-300">
+          <div className="flex items-center gap-3.5">
+            <div className="w-10 h-10 rounded-2xl bg-indigo-600 flex items-center justify-center text-white shrink-0 shadow-md shadow-indigo-600/30">
+              <Crown className="w-5 h-5 text-amber-300" />
+            </div>
+            <div>
+              <div className="flex items-center gap-2">
+                <h4 className="text-sm font-black text-white">Süper Admin Yetkisi Aktif</h4>
+                <Badge className="bg-indigo-500/20 text-indigo-300 border-indigo-500/30 text-[10px]">
+                  Master Komuta
+                </Badge>
+              </div>
+              <p className="text-xs text-slate-300 mt-0.5">
+                Tüm şirketlerin ortak kârlılığını, kullanıcı rollerini ve sistem telemetrisini tek merkezden yönetin.
+              </p>
+            </div>
+          </div>
+
+          <Link href="/super-admin" className="self-start sm:self-auto shrink-0">
+            <Button className="h-10 px-5 rounded-xl text-xs font-black bg-indigo-600 hover:bg-indigo-500 text-white shadow-lg shadow-indigo-600/30 gap-2">
+              <span>Süper Admin Paneline Git</span>
+              <ArrowRight className="w-4 h-4" />
+            </Button>
+          </Link>
+        </div>
+      )}
+
       {/* Top Banner */}
       <div className="flex items-start sm:items-center justify-between gap-3 bg-white p-4 sm:p-6 rounded-3xl border border-border shadow-xs">
         <div className="space-y-1">
