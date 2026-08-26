@@ -25,6 +25,12 @@ import {
   Users,
   ShieldAlert,
   X,
+  Scale,
+  Coins,
+  BadgePercent,
+  PlusCircle,
+  Tag,
+  Boxes
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { BrandLogo } from '@/components/common/BrandLogo';
@@ -42,17 +48,17 @@ const navItems = [
     label: 'Kargo Yönetimi',
     icon: Truck,
     children: [
-      { href: '/tariffs/desi', label: 'Kargo Desi Fiyatları (0-500)' },
-      { href: '/tariffs/cargo-barem', label: 'Kargo Barem Destek' },
+      { href: '/tariffs/desi', label: 'Kargo Desi Fiyatları (0-500)', icon: Boxes },
+      { href: '/tariffs/cargo-barem', label: 'Kargo Barem Destek', icon: Coins },
     ],
   },
   {
     label: 'Pazaryeri Tarifeleri',
     icon: Layers,
     children: [
-      { href: '/tariffs/commission', label: 'Ürün Komisyon Tarifesi' },
-      { href: '/tariffs/plus', label: 'Plus Komisyon Tarifesi' },
-      { href: '/tariffs/badges', label: 'Avantajlı Ürün Etiketi' },
+      { href: '/tariffs/commission', label: 'Ürün Komisyon Tarifesi', icon: BadgePercent },
+      { href: '/tariffs/plus', label: 'Plus Komisyon Tarifesi', icon: Sparkles },
+      { href: '/tariffs/badges', label: 'Avantajlı Ürün Etiketi', icon: Award },
     ],
   },
   { href: '/settlement-desi-audit', label: 'Hakediş & Desi Kontrol', icon: FileCheck2 },
@@ -131,15 +137,20 @@ export function Sidebar({ mobileOpen, onMobileClose }: { mobileOpen: boolean; on
         <div className="flex-1 overflow-y-auto px-3 py-4 space-y-1.5 custom-scrollbar">
           {navItems.map((item, idx) => {
             if (item.children) {
+              const GroupIcon = item.icon;
               return (
-                <div key={idx} className="space-y-1 pt-1">
-                  {(!collapsed || mobileOpen) && (
-                    <span className="px-3 text-[10px] font-bold text-muted-foreground uppercase tracking-wider block">
-                      {item.label}
-                    </span>
+                <div key={idx} className="space-y-1 pt-1.5 pb-1">
+                  {(!collapsed || mobileOpen) ? (
+                    <div className="flex items-center gap-1.5 px-3 py-1 text-[10px] font-bold text-muted-foreground uppercase tracking-wider">
+                      <GroupIcon className="w-3 h-3 text-primary/70" />
+                      <span>{item.label}</span>
+                    </div>
+                  ) : (
+                    <div className="w-full h-px bg-border/80 my-1" />
                   )}
                   {item.children.map((child) => {
                     const isActive = pathname === child.href;
+                    const ChildIcon = child.icon;
                     return (
                       <Link
                         key={child.href}
@@ -153,7 +164,7 @@ export function Sidebar({ mobileOpen, onMobileClose }: { mobileOpen: boolean; on
                         )}
                         title={collapsed && !mobileOpen ? child.label : undefined}
                       >
-                        <span className="w-1.5 h-1.5 rounded-full bg-current opacity-60" />
+                        <ChildIcon className={cn('w-4 h-4 shrink-0', isActive ? 'text-white' : 'text-gray-500')} />
                         {(!collapsed || mobileOpen) && <span>{child.label}</span>}
                       </Link>
                     );
