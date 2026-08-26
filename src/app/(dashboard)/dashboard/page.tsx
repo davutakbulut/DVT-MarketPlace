@@ -136,9 +136,9 @@ export default function DashboardPage() {
 
         {/* Action Group: Global Period Indicator on Large Screens & Unified Refresh Button */}
         <div className="flex items-center gap-2 shrink-0">
-          <div className="hidden lg:flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-canvas border border-border text-xs font-bold text-dark">
+          <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-canvas border border-border text-xs font-bold text-dark">
             <Calendar className="w-3.5 h-3.5 text-primary" />
-            <span>Dönem: {label}</span>
+            <span suppressHydrationWarning>Dönem: {label}</span>
           </div>
 
           <Button

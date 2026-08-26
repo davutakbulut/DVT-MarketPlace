@@ -180,6 +180,7 @@ export function DateRangePicker({ isMobileRow = false }: { isMobileRow?: boolean
       {/* 1. Quick Preset Dropdown Pill (Visible on xl+ or on dedicated Mobile row) */}
       <div className={`relative ${isMobileRow ? 'w-1/2' : 'hidden xl:block'}`}>
         <select
+          suppressHydrationWarning
           value={period === 'custom' ? 'custom' : period}
           onChange={(e) => {
             const val = e.target.value;
@@ -206,17 +207,18 @@ export function DateRangePicker({ isMobileRow = false }: { isMobileRow?: boolean
 
       {/* 2. Interactive Date Range Button */}
       <button
+        suppressHydrationWarning
         onClick={() => setIsOpen(!isOpen)}
         className={`h-8 sm:h-9 px-2.5 sm:px-3 rounded-2xl bg-dark hover:bg-dark/90 text-white font-bold text-xs flex items-center justify-center gap-1.5 sm:gap-2 shadow-xs transition-colors cursor-pointer shrink-0 ${isMobileRow ? 'w-1/2' : ''}`}
         title="Tarih Aralığı Seç"
       >
         <CalendarIcon className="w-3.5 h-3.5 text-primary shrink-0" />
         {isMobileRow ? (
-          <span className="tabular-nums font-semibold text-[11px] sm:text-xs">{formatShortDisplayRange(startDate, endDate)}</span>
+          <span suppressHydrationWarning className="tabular-nums font-semibold text-[11px] sm:text-xs">{formatShortDisplayRange(startDate, endDate)}</span>
         ) : (
           <>
-            <span className="hidden xl:inline tabular-nums font-semibold text-xs">{formatDisplayRange(startDate, endDate)}</span>
-            <span className="xl:hidden tabular-nums font-semibold text-[11px]">{formatShortDisplayRange(startDate, endDate)}</span>
+            <span suppressHydrationWarning className="hidden xl:inline tabular-nums font-semibold text-xs">{formatDisplayRange(startDate, endDate)}</span>
+            <span suppressHydrationWarning className="xl:hidden tabular-nums font-semibold text-[11px]">{formatShortDisplayRange(startDate, endDate)}</span>
           </>
         )}
       </button>

@@ -138,7 +138,7 @@ export default function AdsPage() {
           {/* Global Header Date Range Indicator */}
           <div className="flex items-center gap-1.5 bg-canvas px-3 py-1.5 rounded-xl border border-border text-xs font-bold text-dark">
             <Calendar className="w-3.5 h-3.5 text-primary" />
-            <span>Dönem: {label}</span>
+            <span suppressHydrationWarning>Dönem: {label}</span>
           </div>
 
           <Button size="sm" onClick={handleOpenAdd} className="text-xs h-8 sm:h-9 gap-1.5 font-bold shadow-xs bg-primary hover:bg-primary-hover text-white">

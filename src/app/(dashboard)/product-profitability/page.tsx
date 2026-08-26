@@ -144,10 +144,10 @@ export default function ProductProfitabilityPage() {
         </form>
 
         <div className="flex items-center gap-2.5 flex-wrap sm:flex-nowrap w-full sm:w-auto justify-between sm:justify-end">
-          {/* Global Active Period Indicator */}
-          <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-canvas border border-border text-xs font-bold text-dark">
+          {/* Global Header Date Range Indicator */}
+          <div className="flex items-center gap-1.5 bg-canvas px-3 py-1.5 rounded-xl border border-border text-xs font-bold text-dark">
             <Calendar className="w-3.5 h-3.5 text-primary" />
-            <span>Dönem: {label}</span>
+            <span suppressHydrationWarning>Dönem: {label}</span>
           </div>
 
           <select

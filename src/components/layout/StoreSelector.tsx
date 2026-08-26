@@ -12,21 +12,13 @@ export function StoreSelector() {
     loadStoresFromAPI();
   }, [loadStoresFromAPI]);
 
-  if (!mounted) {
-    return (
-      <div className="flex items-center gap-1 bg-canvas px-2.5 py-1.5 rounded-xl border border-border">
-        <Store className="w-3.5 h-3.5 text-primary shrink-0" />
-        <span className="text-[11px] font-semibold text-dark">Mağazalar...</span>
-      </div>
-    );
-  }
-
   return (
-    <div className="relative inline-block text-left shrink-0">
+    <div className="relative inline-block text-left shrink-0" suppressHydrationWarning>
       <div className="flex items-center gap-1.5 bg-canvas hover:bg-border/60 px-2.5 sm:px-3 py-1.5 rounded-xl border border-border transition-colors cursor-pointer group">
         <Store className="w-3.5 h-3.5 text-primary shrink-0" />
         <select
-          value={activeStoreId || activeStore?.id || 'all'}
+          suppressHydrationWarning
+          value={mounted ? (activeStoreId || activeStore?.id || 'all') : 'all'}
           onChange={(e) => setActiveStoreId(e.target.value)}
           className="bg-transparent text-[11px] sm:text-xs font-bold text-dark focus:outline-none cursor-pointer pr-4 appearance-none truncate max-w-[130px] sm:max-w-[180px] lg:max-w-[220px]"
         >

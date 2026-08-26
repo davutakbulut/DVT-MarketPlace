@@ -343,7 +343,7 @@ export default function LiveAnalysisPage() {
           {/* Global Active Period Indicator */}
           <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-canvas border border-border text-xs font-bold text-dark">
             <Calendar className="w-3.5 h-3.5 text-primary" />
-            <span>Dönem: {label}</span>
+            <span suppressHydrationWarning>Dönem: {label}</span>
           </div>
 
           <select
