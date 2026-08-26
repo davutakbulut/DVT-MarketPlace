@@ -24,13 +24,13 @@ export async function GET(request: Request) {
     let pIdx = 1;
 
     if (search) {
-      conditions.push(`(oi.title ILIKE $${pIdx} OR oi.barcode ILIKE $${pIdx} OR oi.brand ILIKE $${pIdx})`);
+      conditions.push(`(oi.title ILIKE $${pIdx} OR oi.barcode ILIKE $${pIdx} OR oi.brand ILIKE $${pIdx} OR p.title ILIKE $${pIdx} OR p.barcode ILIKE $${pIdx})`);
       params.push(`%${search}%`);
       pIdx++;
     }
 
     if (brand && brand !== 'all') {
-      conditions.push(`oi.brand ILIKE $${pIdx}`);
+      conditions.push(`(COALESCE(p.brand, oi.brand, 'Genel') ILIKE $${pIdx})`);
       params.push(`%${brand}%`);
       pIdx++;
     }
@@ -60,23 +60,24 @@ export async function GET(request: Request) {
       SELECT 
         COUNT(DISTINCT oi.barcode) as "totalUniqueProducts",
         COALESCE(SUM(oi.quantity), 0) as "totalUnitsSold",
-        COALESCE(SUM(oi.invoiced_amount), 0) as "totalRevenue",
+        COALESCE(SUM(COALESCE(oi.invoiced_amount, oi.unit_sale_price * oi.quantity, 0)), 0) as "totalRevenue",
         COALESCE(SUM(COALESCE(oi.unit_cost_price, 0) * oi.quantity), 0) as "totalCogs",
         COALESCE(SUM(oi.commission_amount), 0) as "totalCommission",
         COALESCE(SUM(COALESCE(oi.shipping_amount, 0)), 0) as "totalShipping",
         COALESCE(SUM(COALESCE(oi.service_fee_share, 0)), 0) as "totalServiceFee",
-        COALESCE(SUM(oi.invoiced_amount * $${extraParamIdx}), 0) as "totalExtraOp",
+        COALESCE(SUM(COALESCE(oi.invoiced_amount, oi.unit_sale_price * oi.quantity, 0) * $${extraParamIdx}), 0) as "totalExtraOp",
         COALESCE(SUM(
-          oi.invoiced_amount - (
+          COALESCE(oi.invoiced_amount, oi.unit_sale_price * oi.quantity, 0) - (
             (COALESCE(oi.unit_cost_price, 0) * oi.quantity) + 
             COALESCE(oi.commission_amount, 0) + 
             COALESCE(oi.shipping_amount, 0) + 
             COALESCE(oi.service_fee_share, 0) + 
-            (oi.invoiced_amount * $${extraParamIdx})
+            (COALESCE(oi.invoiced_amount, oi.unit_sale_price * oi.quantity, 0) * $${extraParamIdx})
           )
         ), 0) as "totalNetProfit"
       FROM order_items oi
       JOIN orders o ON o.id = oi.order_id
+      LEFT JOIN products p ON p.barcode = oi.barcode
       WHERE ${whereClause}
     `, allParams);
 
@@ -90,6 +91,7 @@ export async function GET(request: Request) {
       SELECT COUNT(DISTINCT oi.barcode) as total 
       FROM order_items oi
       JOIN orders o ON o.id = oi.order_id
+      LEFT JOIN products p ON p.barcode = oi.barcode
       WHERE ${whereClause}
     `, params);
     const totalCount = parseInt(countRes[0]?.total || '0');
@@ -103,51 +105,51 @@ export async function GET(request: Request) {
     const items = await query(`
       SELECT 
         oi.barcode,
-        oi.title,
-        COALESCE(oi.brand, 'Genel') as "brand",
-        p.image_url as "imageUrl",
-        p.marketplace_product_url as "marketplaceUrl",
-        COALESCE(p.current_sale_price, AVG(oi.unit_sale_price)) as "currentSalePrice",
-        COALESCE(p.current_cost, AVG(COALESCE(oi.unit_cost_price, 0))) as "unitCost",
+        COALESCE(MAX(p.title), MAX(oi.title)) as "title",
+        COALESCE(MAX(p.brand), MAX(oi.brand), 'Genel') as "brand",
+        MAX(p.image_url) as "imageUrl",
+        MAX(p.marketplace_product_url) as "marketplaceUrl",
+        COALESCE(MAX(p.current_sale_price), AVG(oi.unit_sale_price)) as "currentSalePrice",
+        COALESCE(MAX(p.current_cost), AVG(COALESCE(oi.unit_cost_price, 0))) as "unitCost",
         SUM(oi.quantity) as "unitsSold",
-        SUM(oi.invoiced_amount) as "totalRevenue",
+        SUM(COALESCE(oi.invoiced_amount, oi.unit_sale_price * oi.quantity, 0)) as "totalRevenue",
         SUM(COALESCE(oi.unit_cost_price, 0) * oi.quantity) as "totalCogs",
         SUM(COALESCE(oi.commission_amount, 0)) as "totalCommission",
         SUM(COALESCE(oi.shipping_amount, 0)) as "totalShipping",
         SUM(COALESCE(oi.service_fee_share, 0)) as "totalServiceFee",
-        ROUND((SUM(oi.invoiced_amount * $${extraParamIdx}))::numeric, 2) as "extraOperationCost",
+        ROUND((SUM(COALESCE(oi.invoiced_amount, oi.unit_sale_price * oi.quantity, 0) * $${extraParamIdx}))::numeric, 2) as "extraOperationCost",
         ROUND((SUM(
-          oi.invoiced_amount - (
+          COALESCE(oi.invoiced_amount, oi.unit_sale_price * oi.quantity, 0) - (
             (COALESCE(oi.unit_cost_price, 0) * oi.quantity) + 
             COALESCE(oi.commission_amount, 0) + 
             COALESCE(oi.shipping_amount, 0) + 
             COALESCE(oi.service_fee_share, 0) + 
-            (oi.invoiced_amount * $${extraParamIdx})
+            (COALESCE(oi.invoiced_amount, oi.unit_sale_price * oi.quantity, 0) * $${extraParamIdx})
           )
         ))::numeric, 2) as "totalNetProfit",
         ROUND((
           SUM(
-            oi.invoiced_amount - (
+            COALESCE(oi.invoiced_amount, oi.unit_sale_price * oi.quantity, 0) - (
               (COALESCE(oi.unit_cost_price, 0) * oi.quantity) + 
               COALESCE(oi.commission_amount, 0) + 
               COALESCE(oi.shipping_amount, 0) + 
               COALESCE(oi.service_fee_share, 0) + 
-              (oi.invoiced_amount * $${extraParamIdx})
+              (COALESCE(oi.invoiced_amount, oi.unit_sale_price * oi.quantity, 0) * $${extraParamIdx})
             )
-          ) / NULLIF(SUM(oi.invoiced_amount), 0) * 100
+          ) / NULLIF(SUM(COALESCE(oi.invoiced_amount, oi.unit_sale_price * oi.quantity, 0)), 0) * 100
         )::numeric, 1) as "marginPercent"
       FROM order_items oi
       JOIN orders o ON o.id = oi.order_id
       LEFT JOIN products p ON p.barcode = oi.barcode
       WHERE ${whereClause}
-      GROUP BY oi.barcode, oi.title, oi.brand, p.image_url, p.marketplace_product_url, p.current_sale_price, p.current_cost
+      GROUP BY oi.barcode
       ORDER BY SUM(
-        oi.invoiced_amount - (
+        COALESCE(oi.invoiced_amount, oi.unit_sale_price * oi.quantity, 0) - (
           (COALESCE(oi.unit_cost_price, 0) * oi.quantity) + 
           COALESCE(oi.commission_amount, 0) + 
           COALESCE(oi.shipping_amount, 0) + 
           COALESCE(oi.service_fee_share, 0) + 
-          (oi.invoiced_amount * $${extraParamIdx})
+          (COALESCE(oi.invoiced_amount, oi.unit_sale_price * oi.quantity, 0) * $${extraParamIdx})
         )
       ) DESC
       LIMIT $${limitIdx} OFFSET $${offsetIdx}
