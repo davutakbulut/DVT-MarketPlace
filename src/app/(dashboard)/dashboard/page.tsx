@@ -176,18 +176,32 @@ export default function DashboardPage() {
         </div>
 
         {/* Net Cash Profit */}
-        <div className="bg-white p-4 sm:p-5 rounded-3xl border border-emerald-200 bg-emerald-50/20 shadow-xs hover:border-emerald-400 transition-all">
+        <div className={`bg-white p-4 sm:p-5 rounded-3xl border shadow-xs transition-all ${
+          parseFloat(d.netProfit || 0) < 0 
+            ? 'border-red-200 bg-red-50/20 hover:border-red-400' 
+            : 'border-emerald-200 bg-emerald-50/20 hover:border-emerald-400'
+        }`}>
           <div className="flex items-center justify-between">
-            <span className="text-[11px] font-bold text-emerald-800 uppercase tracking-wide">Net Nakit Kâr</span>
-            <div className="p-2 rounded-2xl bg-emerald-100 text-emerald-700">
-              <TrendingUp className="w-4 h-4" />
+            <span className={`text-[11px] font-bold uppercase tracking-wide ${
+              parseFloat(d.netProfit || 0) < 0 ? 'text-red-800' : 'text-emerald-800'
+            }`}>
+              {parseFloat(d.netProfit || 0) < 0 ? 'Net Nakit Zarar' : 'Net Nakit Kâr'}
+            </span>
+            <div className={`p-2 rounded-2xl ${
+              parseFloat(d.netProfit || 0) < 0 ? 'bg-red-100 text-red-700' : 'bg-emerald-100 text-emerald-700'
+            }`}>
+              {parseFloat(d.netProfit || 0) < 0 ? <TrendingDown className="w-4 h-4" /> : <TrendingUp className="w-4 h-4" />}
             </div>
           </div>
-          <div className="text-lg xs:text-xl sm:text-2xl lg:text-3xl font-black text-emerald-700 tabular-nums mt-1.5 truncate">
+          <div className={`text-lg xs:text-xl sm:text-2xl lg:text-3xl font-black tabular-nums mt-1.5 truncate ${
+            parseFloat(d.netProfit || 0) < 0 ? 'text-red-600' : 'text-emerald-700'
+          }`}>
             {formatCurrencyNoCents(d.netProfit || 0)}
           </div>
-          <span className="text-[11px] text-emerald-800 font-bold mt-1 block">
-            Net Marj: %{d.netProfitMargin || 0}
+          <span className={`text-[11px] font-bold mt-1 block ${
+            parseFloat(d.netProfit || 0) < 0 ? 'text-red-800' : 'text-emerald-800'
+          }`}>
+            {parseFloat(d.netProfit || 0) < 0 ? 'Net Zarar Marjı' : 'Net Marj'}: %{d.netProfitMargin || 0}
           </span>
         </div>
 
