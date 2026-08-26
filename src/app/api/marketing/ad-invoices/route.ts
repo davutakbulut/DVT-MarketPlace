@@ -29,21 +29,34 @@ export async function GET(request: Request) {
 
     const adWhereClause = adConditions.length > 0 ? adConditions.join(' AND ') : '1=1';
 
-    // Query ad invoices
-    const invoices = await query(`
+    // Query ad invoices with normalized aliases
+    const rawInvoices = await query(`
       SELECT 
         id, 
         invoice_number as "invoiceNumber", 
-        invoice_type as "invoiceType",
-        country, 
+        COALESCE(invoice_type, 'Reklam Bedeli') as "invoiceType",
+        COALESCE(country, 'Türkiye') as country, 
         TO_CHAR(invoice_date, 'YYYY-MM-DD') as "invoiceDate",
         amount_inc_vat as "amountIncVat", 
-        vat_rate as "vatRate",
+        COALESCE(vat_rate, 20.00) as "vatRate",
         period_month as "periodMonth"
       FROM ad_invoices
       WHERE ${adWhereClause}
       ORDER BY invoice_date DESC, created_at DESC
     `, adParams);
+
+    const invoices = rawInvoices.map((inv: any) => {
+      const amt = parseFloat(inv.amountIncVat || 0);
+      const vRate = parseFloat(inv.vatRate || 20);
+      const vatAmt = Math.round((amt * (vRate / (100 + vRate))) * 100) / 100;
+      return {
+        ...inv,
+        amount: amt,
+        amountIncVat: amt,
+        campaignType: inv.invoiceType,
+        vatAmount: vatAmt,
+      };
+    });
 
     // Query total ad spend & count
     const sumRes = await query(`
