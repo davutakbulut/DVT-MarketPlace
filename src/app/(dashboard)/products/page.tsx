@@ -748,10 +748,10 @@ export default function ProductsCatalogPage() {
                         )}
                       </td>
                       <td className="py-3 px-4 font-black tabular-nums">
-                        {p.calculatedNetProfit > 0 ? (
-                          <span className="text-emerald-700 font-bold">₺{p.calculatedNetProfit.toFixed(2)}</span>
-                        ) : p.calculatedNetProfit < 0 ? (
-                          <span className="text-red-600 font-bold">₺{p.calculatedNetProfit.toFixed(2)}</span>
+                        {parseFloat(p.calculatedNetProfit || 0) > 0 ? (
+                          <span className="text-emerald-700 font-bold">₺{parseFloat(p.calculatedNetProfit || 0).toFixed(2)}</span>
+                        ) : parseFloat(p.calculatedNetProfit || 0) < 0 ? (
+                          <span className="text-red-600 font-bold">₺{parseFloat(p.calculatedNetProfit || 0).toFixed(2)}</span>
                         ) : (
                           <span className="text-gray-400 font-semibold">-</span>
                         )}
