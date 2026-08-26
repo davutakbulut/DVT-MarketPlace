@@ -10,8 +10,10 @@ import {
   TrendingUp, Truck, Layers, DollarSign, Award, AlertCircle
 } from "lucide-react";
 import Image from "next/image";
+import { useTenantStore } from "@/stores/useTenantStore";
 
 export default function ProductsCatalogPage() {
+  const { activeStoreId } = useTenantStore();
   const [products, setProducts] = useState<any[]>([]);
   const [brands, setBrands] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
@@ -35,7 +37,7 @@ export default function ProductsCatalogPage() {
   const fetchProducts = async () => {
     setLoading(true);
     try {
-      const url = `/api/products?page=${pagination.page}&pageSize=${pagination.pageSize}&search=${encodeURIComponent(search)}&brand=${selectedBrand}&stockStatus=${stockStatus}`;
+      const url = `/api/products?page=${pagination.page}&pageSize=${pagination.pageSize}&search=${encodeURIComponent(search)}&brand=${selectedBrand}&stockStatus=${stockStatus}&storeId=${activeStoreId}`;
       const res = await fetch(url);
       const data = await res.json();
       setProducts(data.products || []);
@@ -50,7 +52,7 @@ export default function ProductsCatalogPage() {
 
   useEffect(() => {
     fetchProducts();
-  }, [pagination.page, pagination.pageSize, selectedBrand, stockStatus]);
+  }, [pagination.page, pagination.pageSize, selectedBrand, stockStatus, activeStoreId]);
 
   const handleSearchSubmit = (e: React.FormEvent) => {
     e.preventDefault();

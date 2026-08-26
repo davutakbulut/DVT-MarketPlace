@@ -6,7 +6,10 @@ import { formatCurrency, formatPercentage } from "@/lib/formatters";
 import { Layers, Upload, Download, RefreshCw, Sparkles, ArrowRight } from "lucide-react";
 import { BulkIngestionModal } from "@/components/common/BulkIngestionModal";
 
+import { useTenantStore } from "@/stores/useTenantStore";
+
 export default function CommissionTariffPage() {
+  const { activeStoreId } = useTenantStore();
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(15);
   const [products, setProducts] = useState<any[]>([]);
@@ -16,7 +19,7 @@ export default function CommissionTariffPage() {
   const fetchProducts = async () => {
     setLoading(true);
     try {
-      const res = await fetch('/api/products');
+      const res = await fetch(`/api/products?storeId=${activeStoreId}`);
       const data = await res.json();
       const list = Array.isArray(data) ? data : (data.products || []);
       setProducts(list);
@@ -29,7 +32,7 @@ export default function CommissionTariffPage() {
 
   useEffect(() => {
     fetchProducts();
-  }, []);
+  }, [activeStoreId]);
 
   return (
     <div className="space-y-4 sm:space-y-6 max-w-7xl">

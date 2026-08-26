@@ -12,8 +12,10 @@ import {
   TrendingDown, Search, Filter, X, ZoomIn, ExternalLink
 } from "lucide-react";
 import { calculateTrendyolShipping, BaremTier, DesiRate } from "@/lib/shippingCalculator";
+import { useTenantStore } from "@/stores/useTenantStore";
 
 export default function ProductPricingPage() {
+  const { activeStoreId } = useTenantStore();
   // DB Products & Tariffs
   const [dbProducts, setDbProducts] = useState<any[]>([]);
   const [baremTiers, setBaremTiers] = useState<BaremTier[]>([]);
@@ -50,7 +52,7 @@ export default function ProductPricingPage() {
     setLoading(true);
     try {
       // 1. Products
-      const pRes = await fetch('/api/products');
+      const pRes = await fetch(`/api/products?storeId=${activeStoreId}`);
       const pData = await pRes.json();
       const pList = Array.isArray(pData) ? pData : (pData.products || []);
       setDbProducts(pList);
@@ -86,7 +88,7 @@ export default function ProductPricingPage() {
 
   useEffect(() => {
     fetchAllData();
-  }, []);
+  }, [activeStoreId]);
 
   const handleSelectProduct = (p: any) => {
     setSelectedProductId(p.id);

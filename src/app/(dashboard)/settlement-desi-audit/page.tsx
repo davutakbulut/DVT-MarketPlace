@@ -11,7 +11,10 @@ import {
 } from "lucide-react";
 import { OrderDetailModal } from "@/components/orders/OrderDetailModal";
 
+import { useTenantStore } from "@/stores/useTenantStore";
+
 export default function SettlementDesiAuditPage() {
+  const { activeStoreId } = useTenantStore();
   const [activeTab, setActiveTab] = useState<'audits' | 'settlements'>('audits');
   const [audits, setAudits] = useState<any[]>([]);
   const [settlements, setSettlements] = useState<any[]>([]);
@@ -26,7 +29,7 @@ export default function SettlementDesiAuditPage() {
   const fetchAuditData = async () => {
     setLoading(true);
     try {
-      const res = await fetch('/api/settlement-desi-audit');
+      const res = await fetch(`/api/settlement-desi-audit?storeId=${activeStoreId}`);
       const data = await res.json();
       setAudits(data.audits || []);
       setSettlements(data.settlements || []);
@@ -40,7 +43,7 @@ export default function SettlementDesiAuditPage() {
 
   useEffect(() => {
     fetchAuditData();
-  }, []);
+  }, [activeStoreId]);
 
   const handleExportDisputeExcel = () => {
     const disputeItems = audits.filter(a => parseFloat(a.overchargeAmount) > 0);

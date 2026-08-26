@@ -11,6 +11,7 @@ import {
   Award, PackageCheck, Truck, ChevronRight, X
 } from "lucide-react";
 import { OrderDetailModal } from "@/components/orders/OrderDetailModal";
+import { useTenantStore } from "@/stores/useTenantStore";
 
 interface Customer {
   name: string;
@@ -28,8 +29,13 @@ interface Customer {
 }
 
 export default function CustomersPage() {
+  const { activeStoreId } = useTenantStore();
   const [customers, setCustomers] = useState<Customer[]>([]);
-  const [summary, setSummary] = useState<any>({});
+  const [summary, setSummary] = useState<any>({
+    totalCustomersCount: 0,
+    totalLTV: 0,
+    avgOrderValue: 0
+  });
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
@@ -45,7 +51,7 @@ export default function CustomersPage() {
   const fetchCustomers = async () => {
     setLoading(true);
     try {
-      const res = await fetch('/api/customers');
+      const res = await fetch(`/api/customers?storeId=${activeStoreId}`);
       const data = await res.json();
       setCustomers(data.customers || []);
       setSummary(data.summary || {});
@@ -58,7 +64,7 @@ export default function CustomersPage() {
 
   useEffect(() => {
     fetchCustomers();
-  }, []);
+  }, [activeStoreId]);
 
   const handleOpenCustomerOrders = async (cust: Customer) => {
     setSelectedCustomer(cust);

@@ -9,7 +9,8 @@ export async function GET(request: Request) {
     const { searchParams } = new URL(request.url);
     const search = searchParams.get('search') || '';
     const brand = searchParams.get('brand') || 'all';
-    const storeId = searchParams.get('storeId');
+    const storeId = searchParams.get('storeId') || 'all';
+    const marketplace = searchParams.get('marketplace') || 'all';
     const page = Math.max(1, parseInt(searchParams.get('page') || '1'));
     const pageSize = Math.min(250, Math.max(10, parseInt(searchParams.get('pageSize') || '50')));
     const offset = (page - 1) * pageSize;
@@ -36,8 +37,14 @@ export async function GET(request: Request) {
     }
 
     if (storeId && storeId !== 'all') {
-      conditions.push(`o.store_id::text = $${pIdx}`);
+      conditions.push(`(o.store_id::text = $${pIdx} OR p.store_id::text = $${pIdx})`);
       params.push(storeId);
+      pIdx++;
+    }
+
+    if (marketplace && marketplace !== 'all') {
+      conditions.push(`COALESCE(o.marketplace, p.marketplace) = $${pIdx}`);
+      params.push(marketplace);
       pIdx++;
     }
 
@@ -107,6 +114,7 @@ export async function GET(request: Request) {
         oi.barcode,
         COALESCE(MAX(p.title), MAX(oi.title)) as "title",
         COALESCE(MAX(p.brand), MAX(oi.brand), 'Genel') as "brand",
+        COALESCE(MAX(p.marketplace), MAX(o.marketplace), 'trendyol') as "marketplace",
         MAX(p.image_url) as "imageUrl",
         MAX(p.marketplace_product_url) as "marketplaceUrl",
         COALESCE(MAX(p.current_sale_price), AVG(oi.unit_sale_price)) as "currentSalePrice",

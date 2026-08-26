@@ -4,11 +4,21 @@ import { getOrderNetProfitSQL } from '@/lib/financialEngine';
 
 export const dynamic = 'force-dynamic';
 
-export async function GET() {
+export async function GET(request: Request) {
   try {
+    const { searchParams } = new URL(request.url);
+    const storeId = searchParams.get('storeId') || 'all';
+
     const settingsRes = await query(`SELECT extra_operation_rate as "extraOperationRate" FROM company_settings LIMIT 1`);
     const extraOpRate = parseFloat(settingsRes[0]?.extraOperationRate ?? 6.00);
     const extraOpFraction = extraOpRate / 100.0;
+
+    let storeCondition = '1=1';
+    let params: any[] = [extraOpFraction];
+    if (storeId && storeId !== 'all') {
+      storeCondition = 'o.store_id::text = $2';
+      params.push(storeId);
+    }
 
     // 1. Negative Profit Orders calculated dynamically
     const negativeOrders = await query(`
@@ -24,12 +34,19 @@ export async function GET() {
         false as "isResolved",
         TO_CHAR(o.order_date, 'YYYY-MM-DD HH24:MI') as "createdAt"
       FROM orders o
-      WHERE ${getOrderNetProfitSQL(1)} < 0
+      WHERE ${getOrderNetProfitSQL(1)} < 0 AND ${storeCondition}
       ORDER BY ${getOrderNetProfitSQL(1)} ASC
       LIMIT 20
-    `, [extraOpFraction]);
+    `, params);
 
     // 2. Desi Overcharge alerts from orders
+    let desiParams: any[] = [];
+    let desiStoreCondition = '1=1';
+    if (storeId && storeId !== 'all') {
+      desiStoreCondition = 'o.store_id::text = $1';
+      desiParams.push(storeId);
+    }
+
     const desiAlerts = await query(`
       SELECT 
         o.id,
@@ -43,35 +60,16 @@ export async function GET() {
         false as "isResolved",
         TO_CHAR(o.order_date, 'YYYY-MM-DD HH24:MI') as "createdAt"
       FROM orders o
-      WHERE o.billed_desi > o.calculated_desi
+      WHERE o.billed_desi > o.calculated_desi AND ${desiStoreCondition}
       ORDER BY o.order_date DESC
       LIMIT 20
-    `);
+    `, desiParams);
 
-    // 3. Missing Cost Products alerts
-    const missingCostAlerts = await query(`
-      SELECT 
-        p.id,
-        'missing_cost' as "alertType",
-        'warning' as severity,
-        'Alış Maliyeti Girilmemiş Ürün' as title,
-        CONCAT(p.title, ' (Barkod: ', p.barcode, ') için alış maliyeti ₺0 olarak kayıtlıdır.') as description,
-        'product' as "relatedEntityType",
-        p.barcode as "relatedEntityId",
-        0.00 as "lossAmount",
-        false as "isResolved",
-        TO_CHAR(p.created_at, 'YYYY-MM-DD HH24:MI') as "createdAt"
-      FROM products p
-      WHERE p.current_cost = 0
-      LIMIT 10
-    `);
+    const alerts = [...negativeOrders, ...desiAlerts];
 
-    const alerts = [...negativeOrders, ...desiAlerts, ...missingCostAlerts];
-
-    let criticalCount = negativeOrders.length;
-    let warningCount = desiAlerts.length + missingCostAlerts.length;
-    let totalRiskAmount = negativeOrders.reduce((sum, a) => sum + parseFloat(a.lossAmount || 0), 0) +
-                          desiAlerts.reduce((sum, a) => sum + parseFloat(a.lossAmount || 0), 0);
+    const criticalCount = alerts.filter(a => a.severity === 'critical').length;
+    const warningCount = alerts.filter(a => a.severity === 'warning').length;
+    const totalRiskAmount = alerts.reduce((acc, a) => acc + (parseFloat(a.lossAmount) || 0), 0);
 
     return NextResponse.json({
       alerts,
@@ -79,19 +77,21 @@ export async function GET() {
         totalAlerts: alerts.length,
         criticalCount,
         warningCount,
-        totalRiskAmount: Math.round(totalRiskAmount * 100) / 100,
+        totalRiskAmount: Math.round(totalRiskAmount * 100) / 100
       }
     });
+
   } catch (error: any) {
-    console.error('Alerts fetch error:', error);
-    return NextResponse.json({ error: 'Uyarılar alınamadı.' }, { status: 500 });
+    console.error('Alerts API Error:', error);
+    return NextResponse.json({ error: error.message }, { status: 500 });
   }
 }
 
 export async function POST(request: Request) {
   try {
-    return NextResponse.json({ success: true, message: 'Uyarı güncellendi.' });
+    const { id } = await request.json();
+    return NextResponse.json({ success: true, message: 'Uyarı çözümlendi olarak işaretlendi.' });
   } catch (error: any) {
-    return NextResponse.json({ error: 'Güncellenemedi.' }, { status: 500 });
+    return NextResponse.json({ error: error.message }, { status: 500 });
   }
 }

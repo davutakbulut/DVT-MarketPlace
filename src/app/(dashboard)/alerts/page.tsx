@@ -10,7 +10,10 @@ import {
   ShieldAlert, RefreshCw, Filter, ArrowRight, Check, Sparkles 
 } from "lucide-react";
 
+import { useTenantStore } from "@/stores/useTenantStore";
+
 export default function AlertsPage() {
+  const { activeStoreId } = useTenantStore();
   const [alerts, setAlerts] = useState<any[]>([]);
   const [summary, setSummary] = useState<any>({
     totalAlerts: 0,
@@ -26,7 +29,7 @@ export default function AlertsPage() {
   const fetchAlerts = async () => {
     setLoading(true);
     try {
-      const res = await fetch('/api/alerts');
+      const res = await fetch(`/api/alerts?storeId=${activeStoreId}`);
       const data = await res.json();
       setAlerts(data.alerts || []);
       setSummary(data.summary || {});
@@ -40,7 +43,7 @@ export default function AlertsPage() {
 
   useEffect(() => {
     fetchAlerts();
-  }, []);
+  }, [activeStoreId]);
 
   const handleResolveAlert = async (id: string) => {
     try {

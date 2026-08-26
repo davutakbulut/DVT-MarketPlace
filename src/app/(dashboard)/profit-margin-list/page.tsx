@@ -6,8 +6,10 @@ import { Badge } from "@/components/ui/badge";
 import { Search, Save, CheckCircle2, RefreshCw } from "lucide-react";
 import { toast } from "sonner";
 import { TablePagination } from "@/components/common/TablePagination";
+import { useTenantStore } from "@/stores/useTenantStore";
 
 export default function ProfitMarginListPage() {
+  const { activeStoreId } = useTenantStore();
   const [products, setProducts] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [savingId, setSavingId] = useState<string | null>(null);
@@ -18,7 +20,7 @@ export default function ProfitMarginListPage() {
   const fetchProducts = async () => {
     setLoading(true);
     try {
-      const res = await fetch('/api/products');
+      const res = await fetch(`/api/products?storeId=${activeStoreId}`);
       const data = await res.json();
       setProducts(Array.isArray(data) ? data : (data.products || []));
     } catch (e) {
@@ -30,7 +32,7 @@ export default function ProfitMarginListPage() {
 
   useEffect(() => {
     fetchProducts();
-  }, []);
+  }, [activeStoreId]);
 
   const handleCostChange = (id: string, newCost: number) => {
     setProducts((prev) =>

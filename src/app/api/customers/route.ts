@@ -5,8 +5,23 @@ export async function GET(request: Request) {
   try {
     const { searchParams } = new URL(request.url);
     const customerName = searchParams.get('name');
+    const storeId = searchParams.get('storeId') || 'all';
+
+    let storeCondition = '1=1';
+    let storeParams: any[] = [];
+    if (storeId && storeId !== 'all') {
+      storeCondition = `o.store_id::text = $1`;
+      storeParams = [storeId];
+    }
 
     if (customerName) {
+      let params = [`%${customerName}%`];
+      let cond = `o.customer_name ILIKE $1`;
+      if (storeId && storeId !== 'all') {
+        cond += ` AND o.store_id::text = $2`;
+        params.push(storeId);
+      }
+
       // Return specific customer order details
       const customerOrders = await query(`
         SELECT 
@@ -27,12 +42,12 @@ export async function GET(request: Request) {
           o.net_profit as "netProfit",
           o.profit_margin_percent as "marginPercent",
           s.store_name as "storeName",
-          s.marketplace as "marketplace"
+          COALESCE(o.marketplace, s.marketplace, 'trendyol') as "marketplace"
         FROM orders o
         LEFT JOIN stores s ON s.id = o.store_id
-        WHERE o.customer_name ILIKE $1
+        WHERE ${cond}
         ORDER BY o.order_date DESC
-      `, [`%${customerName}%`]);
+      `, params);
 
       return NextResponse.json({ orders: customerOrders });
     }
@@ -48,31 +63,35 @@ export async function GET(request: Request) {
         COUNT(o.id) as "totalOrdersCount",
         SUM(COALESCE(o.paid_amount, o.gross_amount)) as "totalSpendAmount",
         SUM(COALESCE(o.net_profit, 0)) as "totalNetProfit",
-        ROUND(AVG(COALESCE(o.paid_amount, o.gross_amount)), 2) as "averageOrderValue",
-        TO_CHAR(MIN(o.order_date), 'YYYY-MM-DD') as "firstOrderDate",
-        TO_CHAR(MAX(o.order_date), 'YYYY-MM-DD HH24:MI') as "lastOrderDate",
-        CASE 
-          WHEN COUNT(o.id) >= 3 THEN 'VIP Sadık Müşteri'
-          WHEN COUNT(o.id) = 2 THEN 'Tekrarlayan Müşteri'
-          ELSE 'Yeni Müşteri'
-        END as "customerTier"
+        MAX(TO_CHAR(o.order_date, 'YYYY-MM-DD HH24:MI')) as "lastOrderDate"
       FROM orders o
-      WHERE o.customer_name IS NOT NULL AND o.customer_name != ''
+      WHERE ${storeCondition}
       GROUP BY o.customer_name, o.customer_city, o.customer_district, o.customer_email, o.customer_phone
       ORDER BY SUM(COALESCE(o.paid_amount, o.gross_amount)) DESC
-    `);
+      LIMIT 100
+    `, storeParams);
 
-    const summary = {
-      totalCustomers: customers.length,
-      totalOrders: customers.reduce((sum: number, c: any) => sum + parseInt(c.totalOrdersCount || 0), 0),
-      totalRevenue: customers.reduce((sum: number, c: any) => sum + parseFloat(c.totalSpendAmount || 0), 0),
-      totalProfit: customers.reduce((sum: number, c: any) => sum + parseFloat(c.totalNetProfit || 0), 0),
-      vipCustomersCount: customers.filter((c: any) => c.customerTier !== 'Yeni Müşteri').length,
+    const summaryRes = await query(`
+      SELECT 
+        COUNT(DISTINCT o.customer_name) as "totalCustomersCount",
+        COALESCE(SUM(o.paid_amount), 0) as "totalLTV",
+        ROUND(COALESCE(AVG(o.paid_amount), 0)::numeric, 2) as "avgOrderValue"
+      FROM orders o
+      WHERE ${storeCondition}
+    `, storeParams);
+
+    const summary = summaryRes[0] || {
+      totalCustomersCount: 0,
+      totalLTV: 0,
+      avgOrderValue: 0
     };
 
-    return NextResponse.json({ summary, customers });
+    return NextResponse.json({
+      customers,
+      summary
+    });
   } catch (error: any) {
     console.error('Customers API error:', error);
-    return NextResponse.json({ error: 'Müşteri verileri alınamadı: ' + error.message }, { status: 500 });
+    return NextResponse.json({ error: error.message }, { status: 500 });
   }
 }

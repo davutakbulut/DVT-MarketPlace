@@ -6,6 +6,8 @@ export async function GET(request: Request) {
     const { searchParams } = new URL(request.url);
     const search = searchParams.get('search') || '';
     const brand = searchParams.get('brand') || 'all';
+    const storeId = searchParams.get('storeId') || 'all';
+    const marketplace = searchParams.get('marketplace') || 'all';
     const stockStatus = searchParams.get('stockStatus') || 'all';
     const hasPagination = searchParams.has('page') || searchParams.has('pageSize');
     const page = Math.max(1, parseInt(searchParams.get('page') || '1'));
@@ -25,6 +27,18 @@ export async function GET(request: Request) {
     if (brand && brand !== 'all') {
       conditions.push(`p.brand ILIKE $${pIdx}`);
       params.push(`%${brand}%`);
+      pIdx++;
+    }
+
+    if (storeId && storeId !== 'all') {
+      conditions.push(`p.store_id::text = $${pIdx}`);
+      params.push(storeId);
+      pIdx++;
+    }
+
+    if (marketplace && marketplace !== 'all') {
+      conditions.push(`p.marketplace = $${pIdx}`);
+      params.push(marketplace);
       pIdx++;
     }
 
@@ -50,6 +64,8 @@ export async function GET(request: Request) {
     const products = await query(`
       SELECT 
         p.id, 
+        p.store_id as "storeId",
+        p.marketplace,
         p.barcode, 
         p.sku, 
         p.model_code as "modelCode", 
@@ -58,71 +74,84 @@ export async function GET(request: Request) {
         p.image_url as "imageUrl",
         p.marketplace_product_url as "marketplaceUrl",
         p.current_sale_price as "salePrice", 
-        p.current_cost as "costPrice",
+        p.current_cost as "currentCost", 
         p.vat_rate as "vatRate", 
-        p.shipment_desi as desi,
         p.commission_rate as "commissionRate", 
+        p.shipment_desi as "shipmentDesi", 
+        p.measured_desi as "measuredDesi",
         p.stock_quantity as "stockQuantity",
+        p.extra_cost as "extraCost",
+        p.target_profit_margin_percent as "targetMarginPercent",
+        p.target_profit_amount as "targetProfitAmount",
         p.delivery_type as "deliveryType",
-        p.target_profit_margin_percent as "targetMargin",
-        TO_CHAR(p.created_at, 'YYYY-MM-DD') as "createdAt"
+        p.selected_tariff_tier as "selectedTariffTier",
+        p.is_active as "isActive",
+        ROUND((p.current_sale_price - (
+          COALESCE(p.current_cost, 0) + 
+          (p.current_sale_price * (COALESCE(p.commission_rate, 15) / 100)) + 
+          46.50 + 
+          (p.current_sale_price * 0.06)
+        ))::numeric, 2) as "calculatedNetProfit",
+        ROUND((
+          (p.current_sale_price - (
+            COALESCE(p.current_cost, 0) + 
+            (p.current_sale_price * (COALESCE(p.commission_rate, 15) / 100)) + 
+            46.50 + 
+            (p.current_sale_price * 0.06)
+          )) / NULLIF(p.current_sale_price, 0) * 100
+        )::numeric, 1) as "calculatedMarginPercent"
       FROM products p
       WHERE ${whereClause}
-      ORDER BY p.stock_quantity DESC, p.created_at DESC
+      ORDER BY p.created_at DESC
       ${limitClause}
     `, params);
-
-    if (!hasPagination && searchParams.get('format') !== 'object') {
-      return NextResponse.json(products);
-    }
 
     return NextResponse.json({
       products,
       brands,
-      pagination: {
+      pagination: hasPagination ? {
         page,
         pageSize,
         totalCount,
         totalPages
-      }
+      } : undefined
     });
-  } catch (e: any) {
-    return NextResponse.json({ error: e.message }, { status: 500 });
+  } catch (error: any) {
+    console.error('Products API error:', error);
+    return NextResponse.json({ error: error.message }, { status: 500 });
   }
 }
 
 export async function POST(request: Request) {
   try {
-    const { productId, barcode, costPrice, salePrice, stockQuantity } = await request.json();
+    const body = await request.json();
+    const { barcode, currentCost } = body;
 
-    if (productId) {
-      await query(`
-        UPDATE products 
-        SET current_cost = COALESCE($1, current_cost),
-            current_sale_price = COALESCE($2, current_sale_price),
-            stock_quantity = COALESCE($3, stock_quantity),
-            updated_at = now()
-        WHERE id::text = $4
-      `, [costPrice, salePrice, stockQuantity, productId]);
-
-      return NextResponse.json({ success: true });
+    if (!barcode || currentCost === undefined) {
+      return NextResponse.json({ error: 'Barkod ve maliyet zorunludur' }, { status: 400 });
     }
 
-    if (barcode) {
-      await query(`
-        UPDATE products 
-        SET current_cost = COALESCE($1, current_cost),
-            current_sale_price = COALESCE($2, current_sale_price),
-            stock_quantity = COALESCE($3, stock_quantity),
-            updated_at = now()
-        WHERE barcode = $4
-      `, [costPrice, salePrice, stockQuantity, barcode]);
+    const updatedProduct = await query(`
+      UPDATE products 
+      SET current_cost = $1, updated_at = NOW() 
+      WHERE barcode = $2 
+      RETURNING *
+    `, [currentCost, barcode]);
 
-      return NextResponse.json({ success: true });
+    if (updatedProduct.length === 0) {
+      return NextResponse.json({ error: 'Ürün bulunamadı' }, { status: 404 });
     }
 
-    return NextResponse.json({ error: 'Eksik parametre.' }, { status: 400 });
-  } catch (e: any) {
-    return NextResponse.json({ error: e.message }, { status: 500 });
+    // Also update order_items with this cost for live consistency
+    await query(`
+      UPDATE order_items 
+      SET unit_cost_price = $1, updated_at = NOW() 
+      WHERE barcode = $2
+    `, [currentCost, barcode]);
+
+    return NextResponse.json({ success: true, product: updatedProduct[0] });
+  } catch (error: any) {
+    console.error('Update Product Cost error:', error);
+    return NextResponse.json({ error: error.message }, { status: 500 });
   }
 }
