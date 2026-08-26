@@ -71,19 +71,38 @@ export async function GET(request: Request) {
       LIMIT 100
     `, storeParams);
 
+    const subCondition = storeId && storeId !== 'all' ? `store_id::text = '${storeId}'` : '1=1';
+
     const summaryRes = await query(`
       SELECT 
+        COUNT(DISTINCT o.customer_name) as "totalCustomers",
         COUNT(DISTINCT o.customer_name) as "totalCustomersCount",
+        COUNT(o.id) as "totalOrders",
+        COALESCE(SUM(o.paid_amount), 0) as "totalRevenue",
         COALESCE(SUM(o.paid_amount), 0) as "totalLTV",
-        ROUND(COALESCE(AVG(o.paid_amount), 0)::numeric, 2) as "avgOrderValue"
+        COALESCE(SUM(o.net_profit), 0) as "totalProfit",
+        ROUND(COALESCE(AVG(o.paid_amount), 0)::numeric, 2) as "avgOrderValue",
+        (
+          SELECT COUNT(*) FROM (
+            SELECT customer_name FROM orders 
+            WHERE ${subCondition}
+            GROUP BY customer_name 
+            HAVING COUNT(id) > 1
+          ) sub
+        ) as "vipCustomersCount"
       FROM orders o
       WHERE ${storeCondition}
     `, storeParams);
 
     const summary = summaryRes[0] || {
+      totalCustomers: 0,
       totalCustomersCount: 0,
+      totalOrders: 0,
+      totalRevenue: 0,
       totalLTV: 0,
-      avgOrderValue: 0
+      totalProfit: 0,
+      avgOrderValue: 0,
+      vipCustomersCount: 0,
     };
 
     return NextResponse.json({

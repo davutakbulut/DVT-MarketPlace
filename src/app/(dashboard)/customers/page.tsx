@@ -102,7 +102,7 @@ export default function CustomersPage() {
         <div>
           <div className="flex items-center gap-2">
             <h3 className="text-base sm:text-lg font-black text-dark">Müşteri Listesi & Sipariş Geçmişi</h3>
-            <Badge variant="excellent">2.366 Canlı Sipariş Veritabanı</Badge>
+            <Badge variant="excellent">{summary.totalOrders ? `${summary.totalOrders} Canlı Sipariş` : 'Canlı Sipariş Veritabanı'}</Badge>
           </div>
           <p className="text-xs text-muted-foreground mt-0.5">
             Siparişlerinizdeki müşterilerin toplam harcamaları, bıraktıkları net kâr ve geçmiş sipariş dökümleri
@@ -119,8 +119,8 @@ export default function CustomersPage() {
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
         <div className="bg-white p-4 sm:p-5 rounded-3xl border border-border shadow-xs">
           <span className="text-[11px] font-bold text-muted-foreground uppercase tracking-wide block">Toplam Tekil Müşteri</span>
-          <div className="text-2xl font-black text-dark tabular-nums mt-1">{summary.totalCustomers || 0} Kişi</div>
-          <span className="text-[11px] text-emerald-600 font-semibold mt-1 block">4 Aylık Trendyol Verisi</span>
+          <div className="text-2xl font-black text-dark tabular-nums mt-1">{summary.totalCustomers || summary.totalCustomersCount || 0} Kişi</div>
+          <span className="text-[11px] text-emerald-600 font-semibold mt-1 block">Tüm Pazaryerleri Verisi</span>
         </div>
 
         <div className="bg-white p-4 sm:p-5 rounded-3xl border border-border shadow-xs">
