@@ -6,7 +6,8 @@ import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 import { 
   Activity, RefreshCw, Search, Eye, Filter, Truck, CheckCircle2, 
-  AlertTriangle, DollarSign, Package, Clock, ShieldCheck, ChevronRight, Layers
+  AlertTriangle, DollarSign, Package, Clock, ShieldCheck, ChevronRight, 
+  Layers, Edit3, Check, X
 } from "lucide-react";
 import { OrderDetailModal } from "@/components/orders/OrderDetailModal";
 
@@ -20,6 +21,12 @@ export default function LiveAnalysisPage() {
   
   // Selected Order for Detail Modal
   const [selectedOrderId, setSelectedOrderId] = useState<string | null>(null);
+
+  // Batch Cost Update Modal State
+  const [batchCostModal, setBatchCostModal] = useState(false);
+  const [batchBarcode, setBatchBarcode] = useState("");
+  const [batchNewCost, setBatchNewCost] = useState<number>(0);
+  const [savingBatch, setSavingBatch] = useState(false);
 
   const fetchOrders = async () => {
     setLoading(true);
@@ -45,6 +52,33 @@ export default function LiveAnalysisPage() {
     fetchOrders();
   };
 
+  const handleBatchCostUpdate = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!batchBarcode || batchNewCost <= 0) {
+      toast.error("Lütfen geçerli bir barkod ve maliyet tutarı girin.");
+      return;
+    }
+
+    setSavingBatch(true);
+    try {
+      // Update in products table
+      const res = await fetch('/api/products', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ barcode: batchBarcode, currentCost: batchNewCost }),
+      });
+      if (res.ok) {
+        toast.success(`Barkod ${batchBarcode} için birim maliyet ₺${batchNewCost} olarak güncellendi ve kârlar hesaplandı!`);
+        setBatchCostModal(false);
+        fetchOrders();
+      }
+    } catch (e) {
+      toast.error("Toplu maliyet güncellenemedi.");
+    } finally {
+      setSavingBatch(false);
+    }
+  };
+
   return (
     <div className="space-y-4 sm:space-y-6 max-w-7xl">
       {/* Top Banner */}
@@ -54,7 +88,7 @@ export default function LiveAnalysisPage() {
             <h3 className="text-base sm:text-lg font-black text-dark">Canlı Sipariş & Kâr Analiz Akışı</h3>
             <span className="flex items-center gap-1 bg-emerald-50 text-emerald-700 font-bold px-2 py-0.5 rounded-full text-xs border border-emerald-200">
               <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-              Canlı DB
+              2.366 Canlı Sipariş
             </span>
           </div>
           <p className="text-xs text-muted-foreground mt-0.5">
@@ -63,6 +97,15 @@ export default function LiveAnalysisPage() {
         </div>
 
         <div className="flex items-center gap-2">
+          <Button 
+            size="sm" 
+            onClick={() => setBatchCostModal(true)}
+            className="text-xs h-8 sm:h-9 gap-1.5 font-bold shadow-xs bg-primary hover:bg-primary-hover text-white"
+          >
+            <Edit3 className="w-3.5 h-3.5" />
+            <span>Toplu Maliyet Güncelle</span>
+          </Button>
+
           <Button size="sm" variant="outline" onClick={fetchOrders} className="h-8 sm:h-9 text-xs gap-1.5 font-bold">
             <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />
             <span>Yenile</span>
@@ -97,6 +140,28 @@ export default function LiveAnalysisPage() {
         </div>
       </div>
 
+      {/* Order Status Tabs (Tümü, Teslim Edildi, Kargoda, İptal/İade) */}
+      <div className="flex items-center bg-canvas p-1 rounded-2xl border border-border overflow-x-auto gap-1">
+        {[
+          { id: 'all', label: 'Tüm Siparişler (2.366)' },
+          { id: 'Teslim Edildi', label: '✓ Teslim Edildi' },
+          { id: 'Kargoda', label: '🚚 Kargoda / Taşımada' },
+          { id: 'İade', label: '↩️ İade / İptal' },
+        ].map((tab) => (
+          <button
+            key={tab.id}
+            onClick={() => setStatusFilter(tab.id)}
+            className={`px-3 py-2 rounded-xl text-xs font-bold transition-all whitespace-nowrap ${
+              statusFilter === tab.id
+                ? 'bg-primary text-white shadow-xs'
+                : 'text-dark hover:bg-white'
+            }`}
+          >
+            {tab.label}
+          </button>
+        ))}
+      </div>
+
       {/* Search & Filter Bar */}
       <div className="bg-white p-4 rounded-2xl sm:rounded-3xl border border-border shadow-xs flex flex-col sm:flex-row items-center justify-between gap-3">
         <form onSubmit={handleSearchSubmit} className="relative w-full sm:w-80">
@@ -111,17 +176,6 @@ export default function LiveAnalysisPage() {
         </form>
 
         <div className="flex items-center gap-2 w-full sm:w-auto">
-          <select
-            value={statusFilter}
-            onChange={(e) => setStatusFilter(e.target.value)}
-            className="px-3 py-2 rounded-xl border border-border text-xs font-bold text-dark bg-white"
-          >
-            <option value="all">Tüm Durumlar</option>
-            <option value="Teslim Edildi">Teslim Edildi</option>
-            <option value="Kargoda">Kargoda</option>
-            <option value="İptal">İptal Edildi</option>
-          </select>
-
           <select
             value={carrierFilter}
             onChange={(e) => setCarrierFilter(e.target.value)}
@@ -230,6 +284,58 @@ export default function LiveAnalysisPage() {
           </table>
         </div>
       </div>
+
+      {/* Batch Cost Update Modal */}
+      {batchCostModal && (
+        <div className="fixed inset-0 z-50 bg-dark/50 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in">
+          <div className="bg-white rounded-3xl p-6 max-w-md w-full border border-border shadow-2xl space-y-4 animate-in zoom-in-95">
+            <div className="flex items-center justify-between pb-3 border-b border-border">
+              <div className="flex items-center gap-2">
+                <Edit3 className="w-5 h-5 text-primary" />
+                <h4 className="text-sm font-black text-dark">Toplu Alış Maliyeti Güncelle</h4>
+              </div>
+              <button onClick={() => setBatchCostModal(false)} className="text-gray-400 hover:text-dark font-bold">✕</button>
+            </div>
+
+            <form onSubmit={handleBatchCostUpdate} className="space-y-3 text-xs">
+              <div>
+                <label className="font-bold text-dark block mb-1">Ürün Barkodu *</label>
+                <input
+                  type="text"
+                  required
+                  placeholder="Örn: 8699931759877"
+                  value={batchBarcode}
+                  onChange={(e) => setBatchBarcode(e.target.value)}
+                  className="w-full px-3 py-2 rounded-xl border border-border font-mono font-bold"
+                />
+              </div>
+
+              <div>
+                <label className="font-bold text-dark block mb-1">Yeni Birim Alış Maliyeti (₺ KDV Dahil) *</label>
+                <input
+                  type="number"
+                  step="0.5"
+                  required
+                  placeholder="Örn: 45.00"
+                  value={batchNewCost || ''}
+                  onChange={(e) => setBatchNewCost(parseFloat(e.target.value) || 0)}
+                  className="w-full px-3 py-2 rounded-xl border border-primary font-bold text-primary"
+                />
+              </div>
+
+              <div className="flex justify-end gap-2 pt-2">
+                <Button type="button" variant="outline" size="sm" onClick={() => setBatchCostModal(false)}>
+                  Vazgeç
+                </Button>
+                <Button type="submit" size="sm" disabled={savingBatch} className="text-xs font-bold gap-1 bg-primary hover:bg-primary-hover text-white">
+                  <Check className="w-3.5 h-3.5" />
+                  <span>{savingBatch ? 'Güncelleniyor...' : 'Maliyeti Güncelle'}</span>
+                </Button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
 
       {/* Order Detail Modal */}
       <OrderDetailModal

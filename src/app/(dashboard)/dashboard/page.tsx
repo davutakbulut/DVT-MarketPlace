@@ -7,7 +7,8 @@ import { toast } from "sonner";
 import { 
   TrendingUp, TrendingDown, DollarSign, ShoppingCart, Truck, 
   Percent, RefreshCw, ArrowUpRight, CheckCircle2, ShieldCheck, 
-  Layers, Package, Calendar, Award, ExternalLink, Users, Eye
+  Layers, Package, Calendar, Award, ExternalLink, Users, Eye,
+  Clock, Store, Filter
 } from "lucide-react";
 import Link from "next/link";
 import { OrderDetailModal } from "@/components/orders/OrderDetailModal";
@@ -15,12 +16,15 @@ import { OrderDetailModal } from "@/components/orders/OrderDetailModal";
 export default function DashboardPage() {
   const [data, setData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+  const [period, setPeriod] = useState("all");
+  const [selectedStore, setSelectedStore] = useState("all");
   const [selectedOrderId, setSelectedOrderId] = useState<string | null>(null);
 
   const fetchDashboard = async () => {
     setLoading(true);
     try {
-      const res = await fetch('/api/dashboard');
+      const url = `/api/dashboard?period=${period}&storeId=${selectedStore}`;
+      const res = await fetch(url);
       const json = await res.json();
       setData(json);
     } catch (e) {
@@ -32,32 +36,61 @@ export default function DashboardPage() {
 
   useEffect(() => {
     fetchDashboard();
-  }, []);
+  }, [period, selectedStore]);
 
   const d = data || {};
   const monthlyTrends = d.monthlyTrends || [];
   const topProducts = d.topProducts || [];
   const recentOrders = d.recentOrders || [];
   const carrierDistribution = d.carrierDistribution || [];
+  const hourlyDistribution = d.hourlyDistribution || [];
+  const stores = d.stores || [];
 
   return (
     <div className="space-y-4 sm:space-y-6 max-w-7xl">
-      {/* Top Banner */}
+      {/* Top Banner with Period & Store Filter */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-white p-4 sm:p-6 rounded-3xl border border-border shadow-xs">
         <div>
           <div className="flex items-center gap-2">
-            <h3 className="text-base sm:text-lg font-black text-dark">Trendyol Ana Mağaza Finansal Genel Bakış</h3>
-            <Badge variant="excellent">4 Aylık Canlı Veri</Badge>
+            <h3 className="text-base sm:text-lg font-black text-dark">Trendyol Finansal Kontrol Paneli</h3>
+            <Badge variant="excellent">Canlı Veritabanı</Badge>
           </div>
           <p className="text-xs text-muted-foreground mt-0.5">
-            2.366 sipariş, kargo baremi, komisyon kesintileri ve net nakit kârlılık göstergeleri
+            4 aylık siparişler, kargo baremi, komisyon kesintileri ve saatlik kârlılık dökümleri
           </p>
         </div>
 
-        <div className="flex items-center gap-2">
+        {/* Filters */}
+        <div className="flex items-center gap-2 flex-wrap sm:flex-nowrap">
+          {/* Period Selector */}
+          <select
+            value={period}
+            onChange={(e) => setPeriod(e.target.value)}
+            className="px-3 py-1.5 rounded-xl border border-border text-xs font-bold text-dark bg-white focus:ring-2 focus:ring-primary"
+          >
+            <option value="all">📅 Tüm Dönem (4 Ay - 2026)</option>
+            <option value="2026-08">Ağustos 2026</option>
+            <option value="2026-07">Temmuz 2026</option>
+            <option value="2026-06">Haziran 2026</option>
+            <option value="2026-05">Mayıs 2026</option>
+            <option value="last30">Son 30 Gün</option>
+            <option value="thisWeek">Son 7 Gün</option>
+          </select>
+
+          {/* Store Selector */}
+          <select
+            value={selectedStore}
+            onChange={(e) => setSelectedStore(e.target.value)}
+            className="px-3 py-1.5 rounded-xl border border-border text-xs font-bold text-dark bg-white focus:ring-2 focus:ring-primary"
+          >
+            <option value="all">🏪 Tüm Mağazalar</option>
+            {stores.map((s: any) => (
+              <option key={s.id} value={s.id}>{s.storeName}</option>
+            ))}
+          </select>
+
           <Button size="sm" variant="outline" onClick={fetchDashboard} className="h-8 sm:h-9 text-xs gap-1.5 font-bold">
             <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />
-            <span>Yenile</span>
           </Button>
         </div>
       </div>
@@ -131,7 +164,52 @@ export default function DashboardPage() {
 
       </div>
 
-      {/* Monthly Performance & Breakdown Grid */}
+      {/* Hourly Heatmap & Sales Breakdown Grid */}
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 sm:gap-6">
+        
+        {/* Hourly Order Intensity Heatmap (0-23 Hours) */}
+        <div className="lg:col-span-12 bg-white p-4 sm:p-6 rounded-3xl border border-border shadow-xs space-y-3">
+          <div className="flex items-center justify-between pb-2 border-b border-border">
+            <div>
+              <h4 className="text-xs sm:text-sm font-bold text-dark flex items-center gap-2">
+                <Clock className="w-4 h-4 text-primary" />
+                24 Saatlik Sipariş Yoğunluğu & Kârlılık Isı Haritası (Heatmap)
+              </h4>
+              <p className="text-[11px] text-gray-500">Müşterilerinizin günün hangi saatlerinde sipariş verdiğini ve saatlik net kâr dağılımını gösterir</p>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-6 sm:grid-cols-12 md:grid-cols-24 gap-1.5 pt-2">
+            {Array.from({ length: 24 }).map((_, h) => {
+              const hData = hourlyDistribution.find((x: any) => x.hour === h) || { orderCount: 0, revenue: 0, profit: 0 };
+              const count = parseInt(hData.orderCount || 0);
+              const maxHour = Math.max(...hourlyDistribution.map((x: any) => parseInt(x.orderCount || 1)), 1);
+              const intensity = count > 0 ? Math.min(100, Math.max(20, Math.round((count / maxHour) * 100))) : 0;
+
+              return (
+                <div
+                  key={h}
+                  className={`p-2 rounded-xl border text-center transition-all ${
+                    count > 0 
+                      ? 'bg-primary-tint-100 border-primary-tint-200 text-dark hover:scale-105 shadow-xs' 
+                      : 'bg-canvas border-border text-gray-400'
+                  }`}
+                  title={`Saat ${h}:00 - ${h}:59
+${count} Sipariş
+Ciro: ₺${parseFloat(hData.revenue || 0).toFixed(2)}
+Net Kâr: ₺${parseFloat(hData.profit || 0).toFixed(2)}`}
+                >
+                  <span className="text-[10px] font-mono block text-gray-500">{String(h).padStart(2, '0')}:00</span>
+                  <span className="text-xs font-black text-primary block tabular-nums mt-0.5">{count}</span>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+
+      </div>
+
+      {/* Monthly Performance & Carrier Breakdown Grid */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 sm:gap-6">
         
         {/* Monthly Performance Bar Table */}

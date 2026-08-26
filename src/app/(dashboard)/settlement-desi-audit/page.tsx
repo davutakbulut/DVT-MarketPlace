@@ -6,7 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 import { 
   FileCheck2, AlertTriangle, ShieldCheck, RefreshCw, Eye, 
-  Layers, Truck, ArrowRight, DollarSign, Download
+  Layers, Truck, ArrowRight, DollarSign, Download, Check
 } from "lucide-react";
 import { OrderDetailModal } from "@/components/orders/OrderDetailModal";
 
@@ -37,6 +37,41 @@ export default function SettlementDesiAuditPage() {
     fetchAuditData();
   }, []);
 
+  const handleExportDisputeExcel = () => {
+    const disputeItems = audits.filter(a => parseFloat(a.overchargeAmount) > 0);
+    if (disputeItems.length === 0) {
+      toast.error("İtiraz edilecek desi aşımı bulunamadı.");
+      return;
+    }
+
+    const headers = ["Siparis Numarasi", "Paket Numarasi", "Kargo Firmasi", "Musteri", "Sehir", "Satici Desisi", "Kargodan Kesilen Desi", "Desi Farki", "Faturalanan Kargo Tutari", "Fazla Kesinti Tutari", "Itiraz Notu", "Tarih"];
+    const rows = disputeItems.map(d => [
+      `"${d.orderNumber}"`,
+      `"${d.packageNumber}"`,
+      `"${d.carrierName}"`,
+      `"${d.customerName}"`,
+      `"${d.city}"`,
+      d.declaredDesi,
+      d.billedDesi,
+      d.desiDiff,
+      d.billedCost,
+      d.overchargeAmount,
+      `"Desi asimi itirazi - Olculen ${d.declaredDesi} Desi"`,
+      d.invoiceDate
+    ].join(","));
+
+    const csvContent = "\uFEFF" + [headers.join(","), ...rows].join("\n");
+    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.setAttribute("href", url);
+    link.setAttribute("download", `Trendyol_Desi_Asim_Itiraz_Listesi_${new Date().toISOString().slice(0,10)}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    toast.success(`${disputeItems.length} sipariş için Trendyol Desi İtiraz Dosyası Excel formatında indirildi!`);
+  };
+
   return (
     <div className="space-y-4 sm:space-y-6 max-w-7xl">
       {/* Top Banner */}
@@ -47,11 +82,20 @@ export default function SettlementDesiAuditPage() {
             <Badge variant="excellent">2.366 Sipariş Denetimi</Badge>
           </div>
           <p className="text-xs text-muted-foreground mt-0.5">
-            Kargo faturalarından kesilen desi tutarları ile satıcı ölçümleri arasındaki farkları denetleyin ve itiraz edin
+            Kargo faturalarından kesilen desi tutarları ile satıcı ölçümleri arasındaki farkları denetleyin ve tek tıkla itiraz edin
           </p>
         </div>
 
         <div className="flex items-center gap-2">
+          <Button 
+            size="sm" 
+            onClick={handleExportDisputeExcel}
+            className="text-xs h-8 sm:h-9 gap-1.5 font-bold shadow-xs bg-primary hover:bg-primary-hover text-white"
+          >
+            <Download className="w-3.5 h-3.5" />
+            <span>Trendyol İtiraz Exceli İndir</span>
+          </Button>
+
           <Button size="sm" variant="outline" onClick={fetchAuditData} className="h-8 sm:h-9 text-xs gap-1.5 font-bold">
             <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />
             <span>Yenile</span>
