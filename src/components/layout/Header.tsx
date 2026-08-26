@@ -24,14 +24,15 @@ export function Header({ onMobileMenuToggle }: { onMobileMenuToggle: () => void 
   };
 
   return (
-    <header className="sticky top-0 z-40 bg-white/95 backdrop-blur-md border-b border-border transition-all">
+    <header className="sticky top-0 z-40 bg-white/95 backdrop-blur-md border-b border-border transition-all w-full">
       {/* 1. TOP ROW: Mobile Header & Desktop Main Header */}
-      <div className="h-14 sm:h-16 px-3 sm:px-6 flex items-center justify-between gap-2">
-        {/* Left: Mobile Toggle & Full Brand Logo */}
-        <div className="flex items-center gap-2 sm:gap-3 shrink-0">
+      <div className="h-14 sm:h-16 px-3 sm:px-4 lg:px-6 flex items-center justify-between gap-2 min-w-0 w-full">
+        
+        {/* Left: Mobile Toggle / Full Brand Logo / Desktop Store & Country Selectors */}
+        <div className="flex items-center gap-1.5 sm:gap-2.5 shrink-0 min-w-0">
           <button
             onClick={onMobileMenuToggle}
-            className="lg:hidden p-1.5 rounded-xl text-dark hover:bg-canvas transition-colors cursor-pointer"
+            className="lg:hidden p-1.5 rounded-xl text-dark hover:bg-canvas transition-colors cursor-pointer shrink-0"
             aria-label="Menüyü Aç"
           >
             <Menu className="w-5 h-5" />
@@ -43,41 +44,45 @@ export function Header({ onMobileMenuToggle }: { onMobileMenuToggle: () => void 
           </div>
 
           {/* Desktop Left Toolbar (Store & Country Selector) */}
-          <div className="hidden lg:flex items-center gap-2">
+          <div className="hidden lg:flex items-center gap-2 shrink-0">
             <StoreSelector />
             <CountrySelector />
           </div>
         </div>
 
-        {/* Right: Mobile (Store, Notification, Profile) | Desktop (Full Toolbar) */}
-        <div className="flex items-center gap-1.5 sm:gap-2.5 shrink-0">
+        {/* Right Toolbar: Adapts smoothly from Mobile to 4K Ultra Wide */}
+        <div className="flex items-center gap-1.5 sm:gap-2 lg:gap-2.5 shrink-0">
           {/* Store Selector on Mobile & Tablet (< lg) */}
-          <div className="lg:hidden">
+          <div className="lg:hidden shrink-0">
             <StoreSelector />
           </div>
 
-          {/* Desktop Only: Date Range Picker & Guide */}
-          <div className="hidden md:flex items-center">
+          {/* Desktop/Tablet Date Range Picker */}
+          <div className="hidden md:flex items-center shrink-0">
             <DateRangePicker />
           </div>
 
+          {/* Guide / Virtual Tour (Visible on xl+) */}
           <Button
             variant="secondary"
             size="sm"
             onClick={() => setTourOpen(true)}
-            className="hidden sm:flex items-center gap-1 h-8 text-[11px] rounded-xl font-semibold px-2.5"
+            className="hidden xl:flex items-center gap-1 h-8 text-[11px] rounded-xl font-semibold px-2.5 shrink-0"
           >
             <Compass className="w-3.5 h-3.5 text-primary" />
             <span>Rehber</span>
           </Button>
 
-          <NotificationCenter />
+          {/* Notifications Center */}
+          <div className="shrink-0">
+            <NotificationCenter />
+          </div>
 
           {/* User Profile & Logout Dropdown */}
-          <div className="relative">
+          <div className="relative shrink-0">
             <div
               onClick={() => setUserDropdown(!userDropdown)}
-              className="w-8 h-8 sm:w-9 sm:h-9 rounded-xl bg-canvas border border-border flex items-center justify-center cursor-pointer hover:bg-border/50 transition-colors"
+              className="w-8 h-8 sm:w-9 sm:h-9 rounded-xl bg-canvas border border-border flex items-center justify-center cursor-pointer hover:bg-border/50 transition-colors shrink-0"
               title="Profil & Oturum"
             >
               <User className="w-4 h-4 text-dark" />

@@ -172,8 +172,8 @@ export function DateRangePicker({ isMobileRow = false }: { isMobileRow?: boolean
 
   return (
     <div className={`relative ${isMobileRow ? 'w-full flex items-center gap-2' : 'flex items-center gap-1.5 sm:gap-2 shrink-0'}`} ref={containerRef}>
-      {/* 1. Quick Preset Dropdown Pill */}
-      <div className={`relative ${isMobileRow ? 'w-1/2' : 'hidden md:block'}`}>
+      {/* 1. Quick Preset Dropdown Pill (Visible on xl+ or on dedicated Mobile row) */}
+      <div className={`relative ${isMobileRow ? 'w-1/2' : 'hidden xl:block'}`}>
         <select
           value={period === 'custom' ? 'custom' : period}
           onChange={(e) => {
@@ -206,7 +206,14 @@ export function DateRangePicker({ isMobileRow = false }: { isMobileRow?: boolean
         title="Tarih Aralığı Seç"
       >
         <CalendarIcon className="w-3.5 h-3.5 text-primary shrink-0" />
-        <span className="tabular-nums font-semibold text-[11px] sm:text-xs">{isMobileRow ? formatShortDisplayRange(startDate, endDate) : formatDisplayRange(startDate, endDate)}</span>
+        {isMobileRow ? (
+          <span className="tabular-nums font-semibold text-[11px] sm:text-xs">{formatShortDisplayRange(startDate, endDate)}</span>
+        ) : (
+          <>
+            <span className="hidden xl:inline tabular-nums font-semibold text-xs">{formatDisplayRange(startDate, endDate)}</span>
+            <span className="xl:hidden tabular-nums font-semibold text-[11px]">{formatShortDisplayRange(startDate, endDate)}</span>
+          </>
+        )}
       </button>
 
       {/* 3. POPUP CALENDAR MODAL / DROPDOWN */}
