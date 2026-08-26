@@ -81,13 +81,8 @@ export async function syncTrendyolOrders(
     apiSecret,
   });
 
-  // Calculate Date Ranges: Default to last 30 days if not provided
-  const nowMs = Date.now();
-  const thirtyDaysAgoMs = nowMs - 30 * 24 * 60 * 60 * 1000;
-  const startDate = options.startDate || thirtyDaysAgoMs;
-  const endDate = options.endDate || nowMs;
   const pageSize = Math.min(100, Math.max(10, options.pageSize || 50));
-  const maxPages = options.maxPages || 10;
+  const maxPages = options.maxPages || 50;
 
   let page = 0;
   let hasMore = true;
@@ -99,13 +94,20 @@ export async function syncTrendyolOrders(
 
   while (hasMore && page < maxPages) {
     try {
-      const response = await client.getOrders({
-        startDate,
-        endDate,
-        status: options.status,
+      const queryParams: any = {
         page,
         size: pageSize,
-      });
+        status: options.status,
+      };
+
+      if (options.startDate) {
+        queryParams.startDate = options.startDate;
+      }
+      if (options.endDate) {
+        queryParams.endDate = options.endDate;
+      }
+
+      const response = await client.getOrders(queryParams);
 
       const packages: TrendyolOrderPackage[] = response?.content || [];
       if (packages.length === 0) {
@@ -199,6 +201,32 @@ export async function syncTrendyolOrders(
               vatRate = Number(prod.vat_rate) || 20;
               commRate = Number(line.commissionRate ?? prod.commission_rate) || 15.0;
               lineDesi = Math.max(0.5, Number(prod.shipment_desi) || 1.0);
+            } else if (barcode) {
+              // Auto-insert product into database products catalog
+              const newProd = await query(
+                `INSERT INTO products (
+                   store_id, company_id, barcode, sku, model_code, title,
+                   current_sale_price, current_cost, vat_rate, shipment_desi,
+                   measured_desi, commission_rate, stock_quantity, delivery_type,
+                   is_active, marketplace, created_at, updated_at
+                 ) VALUES ($1, $2, $3, $4, $5, $6, $7, 0, 20, 1.0, 1.0, $8, 10, 'standard', true, 'trendyol', NOW(), NOW())
+                 ON CONFLICT (store_id, barcode) DO UPDATE SET current_sale_price = EXCLUDED.current_sale_price
+                 RETURNING id`,
+                [
+                  store.id,
+                  companyId,
+                  barcode,
+                  line.sku || line.merchantSku || barcode,
+                  line.productCode ? String(line.productCode) : null,
+                  line.productName || 'Trendyol Ürünü',
+                  unitSalePrice,
+                  commRate,
+                ]
+              );
+              if (newProd.length > 0) {
+                productId = newProd[0].id;
+              }
+              orderHasMissingCost = true;
             } else {
               orderHasMissingCost = true;
             }

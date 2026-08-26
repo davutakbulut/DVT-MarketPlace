@@ -31,7 +31,11 @@ export class TrendyolClient {
     this.supplierId = config.supplierId.trim();
     this.apiKey = (config.apiKey || '').trim();
     this.apiSecret = (config.apiSecret || '').trim();
-    this.baseUrl = (config.baseUrl || 'https://apigw.trendyol.com').replace(/\/$/, '');
+    let targetBase = (config.baseUrl || 'https://api.trendyol.com/sapigw').trim().replace(/\/$/, '');
+    if (targetBase.includes('apigw.trendyol.com')) {
+      targetBase = 'https://api.trendyol.com/sapigw';
+    }
+    this.baseUrl = targetBase;
     this.timeoutMs = config.timeoutMs || 25000;
   }
 
@@ -176,13 +180,13 @@ export class TrendyolClient {
 
   /**
    * 1. Test Connection / Health Check
-   * Calls the product list API with limit 1 to verify credentials and response latency.
+   * Calls the Orders API with limit 1 to verify credentials and response latency.
    */
   public async testConnection(): Promise<TrendyolConnectionTestResult> {
     const startTime = Date.now();
     try {
-      // Calling GET /suppliers/{supplierId}/products?size=1
-      const res = await this.getProducts({ size: 1, page: 0 });
+      // Calling GET /suppliers/{supplierId}/orders?size=1
+      const res = await this.getOrders({ size: 1, page: 0 });
       const latencyMs = Date.now() - startTime;
 
       return {
