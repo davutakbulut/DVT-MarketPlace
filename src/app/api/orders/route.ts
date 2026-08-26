@@ -153,10 +153,13 @@ export async function GET(request: Request) {
     const totalInvoicedRev = parseFloat(summary.totalInvoicedRevenue || 1);
     const averageMarginPercent = totalInvoicedRev > 0 ? ((finalNetProfit / totalInvoicedRev) * 100) : 0;
 
+    const avgOrderValue = filteredOrdersCount > 0 ? (parseFloat(summary.totalInvoicedRevenue || 0) / filteredOrdersCount) : 0;
+
     summary.totalAdSpend = Math.round(allocatedAdSpend * 100) / 100;
     summary.adSpendPerOrder = Math.round(adSpendPerOrder * 100) / 100;
     summary.totalNetProfit = finalNetProfit;
     summary.averageMarginPercent = Math.round(averageMarginPercent * 10) / 10;
+    summary.avgOrderValue = Math.round(avgOrderValue * 100) / 100;
 
     // Orders List params: params + extraOpFraction + adSpendPerOrder + limit + offset
     const adSpendIdx = pIdx + 1;

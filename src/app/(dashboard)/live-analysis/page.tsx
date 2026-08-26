@@ -169,18 +169,26 @@ export default function LiveAnalysisPage() {
         </div>
       </div>
 
-      {/* Summary KPI Cards */}
-      <div data-tour="live-kpis" className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+      {/* Summary KPI Cards (5 Metrics with AOV) */}
+      <div data-tour="live-kpis" className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 sm:gap-4">
         <div className="bg-white p-4 sm:p-5 rounded-3xl border border-border shadow-xs">
           <span className="text-[11px] font-bold text-muted-foreground uppercase tracking-wide block">Filtrelenen Sipariş</span>
-          <div className="text-2xl font-black text-dark tabular-nums mt-1">{summary.totalOrders || 0} Adet</div>
+          <div className="text-xl sm:text-2xl font-black text-dark tabular-nums mt-1">{summary.totalOrders || 0} Adet</div>
           <span className="text-[11px] text-gray-500 font-semibold mt-1 block">Canlı Veri</span>
         </div>
 
         <div className="bg-white p-4 sm:p-5 rounded-3xl border border-border shadow-xs">
           <span className="text-[11px] font-bold text-muted-foreground uppercase tracking-wide block">Filtrelenen Ciro</span>
-          <div className="text-2xl font-black text-primary tabular-nums mt-1">{formatCurrencyNoCents(parseFloat(summary.totalInvoicedRevenue || 0))}</div>
+          <div className="text-xl sm:text-2xl font-black text-primary tabular-nums mt-1">{formatCurrencyNoCents(parseFloat(summary.totalInvoicedRevenue || 0))}</div>
           <span className="text-[11px] text-gray-500 font-semibold mt-1 block">Faturalanan Tutar</span>
+        </div>
+
+        <div className="bg-white p-4 sm:p-5 rounded-3xl border border-border shadow-xs">
+          <span className="text-[11px] font-bold text-muted-foreground uppercase tracking-wide block">Ortalama Sepet Tutarı</span>
+          <div className="text-xl sm:text-2xl font-black text-indigo-700 tabular-nums mt-1">
+            {formatCurrency(parseFloat(summary.avgOrderValue || (parseFloat(summary.totalInvoicedRevenue || 0) / (summary.totalOrders || 1))))}
+          </div>
+          <span className="text-[11px] text-indigo-600 font-bold mt-1 block">Sipariş Başına (AOV)</span>
         </div>
 
         <div className={`bg-white p-4 sm:p-5 rounded-3xl border shadow-xs transition-all ${
@@ -191,7 +199,7 @@ export default function LiveAnalysisPage() {
           }`}>
             {parseFloat(summary.totalNetProfit || 0) < 0 ? 'Filtrelenen Net Zarar' : 'Filtrelenen Net Kâr'}
           </span>
-          <div className={`text-2xl font-black tabular-nums mt-1 ${
+          <div className={`text-xl sm:text-2xl font-black tabular-nums mt-1 ${
             parseFloat(summary.totalNetProfit || 0) < 0 ? 'text-red-600' : 'text-emerald-700'
           }`}>
             {formatCurrencyNoCents(parseFloat(summary.totalNetProfit || 0))}
@@ -203,9 +211,9 @@ export default function LiveAnalysisPage() {
           </span>
         </div>
 
-        <div className="bg-white p-4 sm:p-5 rounded-3xl border border-border shadow-xs">
+        <div className="bg-white p-4 sm:p-5 rounded-3xl border border-border shadow-xs col-span-2 sm:col-span-1">
           <span className="text-[11px] font-bold text-muted-foreground uppercase tracking-wide block">Ortalama Kâr Marjı</span>
-          <div className="text-2xl font-black text-dark tabular-nums mt-1">%{parseFloat(summary.averageMarginPercent || 0).toFixed(1)}</div>
+          <div className="text-xl sm:text-2xl font-black text-dark tabular-nums mt-1">%{parseFloat(summary.averageMarginPercent || 0).toFixed(1)}</div>
           <span className="text-[11px] text-primary font-bold mt-1 block">Net Kâr / Ciro</span>
         </div>
       </div>
@@ -384,7 +392,7 @@ export default function LiveAnalysisPage() {
                     <th className="py-3 px-4 table-sticky-first-col bg-canvas">Sipariş No & Müşteri</th>
                     <th className="py-3 px-4">Tarih</th>
                     <th className="py-3 px-4">Kargo & Desi</th>
-                    <th className="py-3 px-4 text-primary font-bold">Ciro (₺)</th>
+                    <th className="py-3 px-4 text-primary font-bold">Sepet Tutarı (₺)</th>
                     <th className="py-3 px-4">Komisyon (₺)</th>
                     <th className="py-3 px-4">Kargo Gideri (₺)</th>
                     <th className="py-3 px-4">Ürün Maliyeti (₺)</th>
