@@ -1,12 +1,19 @@
 import { NextResponse } from 'next/server';
 import { query } from '@/lib/db';
 
+export const dynamic = 'force-dynamic';
+
 export async function GET(
   request: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const { id } = await params;
+
+    // Fetch extra operation rate from company_settings
+    const settingsRes = await query(`SELECT extra_operation_rate as "extraOperationRate" FROM company_settings LIMIT 1`);
+    const extraOpRate = parseFloat(settingsRes[0]?.extraOperationRate ?? 6.00);
+    const extraOpFraction = extraOpRate / 100.0;
 
     const orderRes = await query(`
       SELECT 
@@ -44,8 +51,6 @@ export async function GET(
         o.service_fee as "serviceFee",
         o.withholding_tax as "withholdingTax",
         o.net_vat as "netVat",
-        o.net_profit as "netProfit",
-        o.profit_margin_percent as "marginPercent",
         o.billed_desi as "billedDesi",
         o.calculated_desi as "calculatedDesi",
         o.is_corporate_invoice as "isCorporate",
@@ -70,6 +75,23 @@ export async function GET(
     }
 
     const order = orderRes[0];
+    const gross = parseFloat(order.grossAmount || 0);
+    const paid = parseFloat(order.paidAmount || 0);
+    const cogs = parseFloat(order.cogs || 0);
+    const comm = parseFloat(order.commission || 0);
+    const ship = parseFloat(order.shippingCost || 0);
+    const sFee = parseFloat(order.serviceFee || 0);
+    const wTax = parseFloat(order.withholdingTax || 0);
+    const nVat = parseFloat(order.netVat || 0);
+
+    const extraOpCost = Math.round((gross * extraOpFraction) * 100) / 100;
+    const netProf = Math.round((paid - (cogs + comm + ship + sFee + wTax + nVat + extraOpCost)) * 100) / 100;
+    const margin = paid > 0 ? Math.round((netProf / paid) * 1000) / 10 : 0;
+
+    order.extraOperationRate = extraOpRate;
+    order.extraOperationCost = extraOpCost;
+    order.netProfit = netProf;
+    order.marginPercent = margin;
 
     // Fetch Order Items
     const items = await query(`
@@ -98,13 +120,12 @@ export async function GET(
       FROM order_items oi
       LEFT JOIN products p ON p.id::text = oi.product_id::text
       WHERE oi.order_id::text = $1
-      ORDER BY oi.id ASC
-    `, [order.id.toString()]);
+    `, [order.id]);
 
     return NextResponse.json({ order, items });
   } catch (error: any) {
-    console.error('Order detail API error:', error);
-    return NextResponse.json({ error: 'Sipariş detayları alınamadı: ' + error.message }, { status: 500 });
+    console.error('Order detail fetch error:', error);
+    return NextResponse.json({ error: error.message }, { status: 500 });
   }
 }
 
@@ -117,36 +138,38 @@ export async function PUT(
     const body = await request.json();
     const { itemId, newCost } = body;
 
-    if (itemId && newCost !== undefined) {
-      await query(`
-        UPDATE order_items
-        SET unit_cost_price = $1,
-            net_profit = (invoiced_amount + platform_discount) - ($1 * quantity + commission_amount + shipping_amount + service_fee_share + withholding_tax + net_vat),
-            margin_percent = ROUND((((invoiced_amount + platform_discount) - ($1 * quantity + commission_amount + shipping_amount + service_fee_share + withholding_tax + net_vat)) / NULLIF(invoiced_amount, 0)) * 100, 2)
-        WHERE id::text = $2
-      `, [newCost, itemId]);
-
-      await query(`
-        WITH item_sums AS (
-          SELECT 
-            SUM(unit_cost_price * quantity) as new_total_cost,
-            SUM(net_profit) as new_net_profit
-          FROM order_items
-          WHERE order_id::text = $1
-        )
-        UPDATE orders
-        SET total_cost = item_sums.new_total_cost,
-            net_profit = item_sums.new_net_profit,
-            profit_margin_percent = ROUND((item_sums.new_net_profit / NULLIF(paid_amount, 0)) * 100, 2)
-        FROM item_sums
-        WHERE id::text = $1
-      `, [id]);
-
-      return NextResponse.json({ success: true, message: 'Ürün maliyeti ve kâr tutarları güncellendi!' });
+    if (!itemId || newCost === undefined) {
+      return NextResponse.json({ error: 'itemId ve newCost gereklidir.' }, { status: 400 });
     }
 
-    return NextResponse.json({ success: true });
+    const numCost = parseFloat(newCost);
+
+    // 1. Update order_items cost
+    await query(`
+      UPDATE order_items
+      SET unit_cost_price = $1,
+          net_profit = invoiced_amount - ($1 * quantity + commission_amount + shipping_amount + service_fee_share + withholding_tax + net_vat),
+          margin_percent = ROUND(((invoiced_amount - ($1 * quantity + commission_amount + shipping_amount + service_fee_share + withholding_tax + net_vat)) / NULLIF(invoiced_amount, 0) * 100)::numeric, 1)
+      WHERE id::text = $2
+    `, [numCost, itemId]);
+
+    // 2. Also update catalog products table if barcode exists
+    const itemRes = await query(`SELECT barcode FROM order_items WHERE id::text = $1`, [itemId]);
+    if (itemRes.length > 0 && itemRes[0].barcode) {
+      await query(`UPDATE products SET cost_price = $1 WHERE barcode = $2`, [numCost, itemRes[0].barcode]);
+    }
+
+    // 3. Recalculate order totals
+    await query(`
+      UPDATE orders
+      SET total_cost = (SELECT COALESCE(SUM(unit_cost_price * quantity), 0) FROM order_items WHERE order_id = orders.id),
+          updated_at = now()
+      WHERE id::text = $1
+    `, [id]);
+
+    return NextResponse.json({ success: true, message: `Birim maliyet ₺${numCost.toFixed(2)} olarak güncellendi ve kâr yeniden hesaplandı!` });
   } catch (error: any) {
+    console.error('Order item cost update error:', error);
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 }

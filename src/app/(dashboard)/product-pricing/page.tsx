@@ -40,6 +40,7 @@ export default function ProductPricingPage() {
   const [desi, setDesi] = useState<number>(1);
   const [carrier, setCarrier] = useState<string>("TEX");
   const [leadTimeDays, setLeadTimeDays] = useState<number>(1); // 1, 2, 3 days
+  const [extraOperationRate, setExtraOperationRate] = useState<number>(6.0);
   const [manualSalePrice, setManualSalePrice] = useState<number>(149.90);
   const [competitorBuyboxPrice, setCompetitorBuyboxPrice] = useState<number>(139.90);
   const [syncingPrice, setSyncingPrice] = useState(false);
@@ -53,6 +54,17 @@ export default function ProductPricingPage() {
       const pData = await pRes.json();
       const pList = Array.isArray(pData) ? pData : (pData.products || []);
       setDbProducts(pList);
+
+      // Fetch extra operation rate from settings
+      try {
+        const sRes = await fetch('/api/settings/general');
+        const sData = await sRes.json();
+        if (sData?.settings?.extraOperationRate !== undefined && sData?.settings?.extraOperationRate !== null) {
+          setExtraOperationRate(parseFloat(sData.settings.extraOperationRate));
+        }
+      } catch (err) {
+        console.error('Settings fetch error in pricing:', err);
+      }
 
       // 2. Cargo Barem & Desi Rates from DB
       const bRes = await fetch('/api/tariffs/cargo-barem');
@@ -95,14 +107,15 @@ export default function ProductPricingPage() {
   const withholdingTaxRate = 0.01; // %1 Stopaj Kesintisi
   const effectiveMargin = targetMargin / 100;
   const effectiveCommission = commissionRate / 100;
+  const effectiveExtraOp = (extraOperationRate || 0) / 100; // Dinamik Ekstra Operasyon Oranı
 
-  // 1. REVERSE PRICING CALCULATION WITH EXACT LINEARIZED VAT & WITHHOLDING
+  // 1. REVERSE PRICING CALCULATION WITH EXACT LINEARIZED VAT & WITHHOLDING & EXTRA OPERATION
   const kdvMultiplier = 1 + (vatRate / 100);
   const vatFraction = (vatRate / 100) / kdvMultiplier;
   const costPriceExVatDiff = costPrice * (1 - vatFraction);
 
   let calculatedTargetPrice = 0;
-  const denominator = 1 - effectiveCommission - withholdingTaxRate - vatFraction - effectiveMargin;
+  const denominator = 1 - effectiveCommission - withholdingTaxRate - vatFraction - effectiveMargin - effectiveExtraOp;
 
   if (denominator > 0) {
     let currentGuess = (costPriceExVatDiff + 46.50 + serviceFee) / denominator;
@@ -127,6 +140,7 @@ export default function ProductPricingPage() {
   // Cost Breakdown for Active Sale Price
   const commissionAmount = activeSalePrice * effectiveCommission;
   const withholdingAmount = activeSalePrice * withholdingTaxRate;
+  const extraOperationAmount = activeSalePrice * effectiveExtraOp;
 
   // KDV Doğrusallaştırma
   const saleVat = (activeSalePrice / kdvMultiplier) * (vatRate / 100);
@@ -134,7 +148,7 @@ export default function ProductPricingPage() {
   const netVatAmount = Math.max(0, saleVat - costVat);
 
   // Net Cash Profit & Margins
-  const netCashProfit = activeSalePrice - (costPrice + commissionAmount + effectiveShippingCost + serviceFee + withholdingAmount + netVatAmount);
+  const netCashProfit = activeSalePrice - (costPrice + commissionAmount + effectiveShippingCost + serviceFee + withholdingAmount + netVatAmount + extraOperationAmount);
   const achievedMarginPercent = activeSalePrice > 0 ? (netCashProfit / activeSalePrice) * 100 : 0;
   const achievedMarkupPercent = costPrice > 0 ? (netCashProfit / costPrice) * 100 : 0;
 
@@ -142,9 +156,10 @@ export default function ProductPricingPage() {
   const buyboxShipping = calculateTrendyolShipping(competitorBuyboxPrice, desi, carrier, leadTimeDays, baremTiers, desiRates);
   const buyboxCommission = competitorBuyboxPrice * effectiveCommission;
   const buyboxWithholding = competitorBuyboxPrice * withholdingTaxRate;
+  const buyboxExtraOp = competitorBuyboxPrice * effectiveExtraOp;
   const buyboxSaleVat = (competitorBuyboxPrice / kdvMultiplier) * (vatRate / 100);
   const buyboxNetVat = Math.max(0, buyboxSaleVat - costVat);
-  const buyboxProfit = competitorBuyboxPrice - (costPrice + buyboxCommission + buyboxShipping.appliedPriceIncVat + serviceFee + buyboxWithholding + buyboxNetVat);
+  const buyboxProfit = competitorBuyboxPrice - (costPrice + buyboxCommission + buyboxShipping.appliedPriceIncVat + serviceFee + buyboxWithholding + buyboxNetVat + buyboxExtraOp);
   const buyboxMargin = competitorBuyboxPrice > 0 ? (buyboxProfit / competitorBuyboxPrice) * 100 : 0;
 
   const handlePushPriceToTrendyol = async () => {
@@ -624,6 +639,11 @@ export default function ProductPricingPage() {
               <div className="flex items-center justify-between py-1 text-gray-600">
                 <span>6. Ödenecek Net KDV Farkı</span>
                 <span className="font-bold text-gray-800 tabular-nums">-₺{netVatAmount.toFixed(2)}</span>
+              </div>
+
+              <div className="flex items-center justify-between py-1 text-gray-600">
+                <span>7. Ekstra Operasyon Gideri (%{extraOperationRate})</span>
+                <span className="font-bold text-gray-800 tabular-nums">-₺{extraOperationAmount.toFixed(2)}</span>
               </div>
             </div>
 

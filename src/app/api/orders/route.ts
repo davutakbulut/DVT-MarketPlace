@@ -2,6 +2,8 @@ import { NextResponse } from 'next/server';
 import { query } from '@/lib/db';
 import { buildDateConditions } from '@/lib/dateFilterHelper';
 
+export const dynamic = 'force-dynamic';
+
 export async function GET(request: Request) {
   try {
     const { searchParams } = new URL(request.url);
@@ -10,6 +12,11 @@ export async function GET(request: Request) {
     const carrier = searchParams.get('carrier') || '';
     const limit = parseInt(searchParams.get('limit') || '50');
     const offset = parseInt(searchParams.get('offset') || '0');
+
+    // Fetch dynamic extra operation rate from company_settings (default 6.00%)
+    const settingsRes = await query(`SELECT extra_operation_rate as "extraOperationRate" FROM company_settings LIMIT 1`);
+    const extraOpRate = parseFloat(settingsRes[0]?.extraOperationRate ?? 6.00);
+    const extraOpFraction = extraOpRate / 100.0;
 
     let conditions: string[] = [];
     let params: any[] = [];
@@ -49,6 +56,10 @@ export async function GET(request: Request) {
 
     const whereClause = conditions.length > 0 ? conditions.join(' AND ') : '1=1';
 
+    // Add extra operation fraction param
+    const extraParamIdx = pIdx;
+    const statsParams = [...params, extraOpFraction];
+
     // Aggregate summary stats
     const statsQuery = `
       SELECT 
@@ -58,15 +69,20 @@ export async function GET(request: Request) {
         COALESCE(SUM(o.total_commission), 0) as "totalCommission",
         COALESCE(SUM(o.total_shipping_cost), 0) as "totalShipping",
         COALESCE(SUM(o.service_fee), 0) as "totalServiceFee",
-        COALESCE(SUM(o.net_profit), 0) as "totalNetProfit",
-        COALESCE(AVG(o.profit_margin_percent), 0) as "averageMarginPercent"
+        COALESCE(SUM(o.gross_amount * $${extraParamIdx}), 0) as "totalExtraOperation",
+        COALESCE(SUM(o.paid_amount - (o.total_cost + o.total_commission + o.total_shipping_cost + o.service_fee + o.withholding_tax + o.net_vat + (o.gross_amount * $${extraParamIdx}))), 0) as "totalNetProfit",
+        COALESCE(AVG((o.paid_amount - (o.total_cost + o.total_commission + o.total_shipping_cost + o.service_fee + o.withholding_tax + o.net_vat + (o.gross_amount * $${extraParamIdx}))) / NULLIF(o.paid_amount, 0) * 100), 0) as "averageMarginPercent"
       FROM orders o
       WHERE ${whereClause}
     `;
-    const statsRes = await query(statsQuery, params);
+    const statsRes = await query(statsQuery, statsParams);
     const summary = statsRes[0] || {};
 
-    // Orders List
+    // Orders List params: params + extraOpFraction + limit + offset
+    const listParams = [...params, extraOpFraction, limit, offset];
+    const limitIdx = pIdx + 1;
+    const offsetIdx = pIdx + 2;
+
     const listQuery = `
       SELECT 
         o.id,
@@ -91,8 +107,9 @@ export async function GET(request: Request) {
         o.service_fee as "serviceFee",
         o.withholding_tax as "withholdingTax",
         o.net_vat as "netVat",
-        o.net_profit as "netProfit",
-        o.profit_margin_percent as "marginPercent",
+        ROUND((o.gross_amount * $${extraParamIdx})::numeric, 2) as "extraOperationCost",
+        ROUND((o.paid_amount - (o.total_cost + o.total_commission + o.total_shipping_cost + o.service_fee + o.withholding_tax + o.net_vat + (o.gross_amount * $${extraParamIdx})))::numeric, 2) as "netProfit",
+        ROUND(((o.paid_amount - (o.total_cost + o.total_commission + o.total_shipping_cost + o.service_fee + o.withholding_tax + o.net_vat + (o.gross_amount * $${extraParamIdx}))) / NULLIF(o.paid_amount, 0) * 100)::numeric, 1) as "marginPercent",
         o.billed_desi as "billedDesi",
         o.calculated_desi as "calculatedDesi",
         o.is_corporate_invoice as "isCorporate",
@@ -108,23 +125,28 @@ export async function GET(request: Request) {
       LEFT JOIN stores s ON s.id = o.store_id
       WHERE ${whereClause}
       ORDER BY o.order_date DESC
-      LIMIT $${pIdx} OFFSET $${pIdx + 1}
+      LIMIT $${limitIdx} OFFSET $${offsetIdx}
     `;
 
-    params.push(limit, offset);
-    const orders = await query(listQuery, params);
+    const orders = await query(listQuery, listParams);
 
     return NextResponse.json({
-      summary,
       orders,
-      pagination: {
-        total: parseInt(summary.totalOrders || '0'),
-        limit,
-        offset
+      summary: {
+        totalOrders: parseInt(summary.totalOrders || 0),
+        totalGrossRevenue: parseFloat(summary.totalGrossRevenue || 0),
+        totalInvoicedRevenue: parseFloat(summary.totalInvoicedRevenue || 0),
+        totalCommission: parseFloat(summary.totalCommission || 0),
+        totalShipping: parseFloat(summary.totalShipping || 0),
+        totalServiceFee: parseFloat(summary.totalServiceFee || 0),
+        totalExtraOperation: parseFloat(summary.totalExtraOperation || 0),
+        totalNetProfit: parseFloat(summary.totalNetProfit || 0),
+        averageMarginPercent: parseFloat(summary.averageMarginPercent || 0),
+        extraOperationRate: extraOpRate
       }
     });
   } catch (error: any) {
     console.error('Orders API error:', error);
-    return NextResponse.json({ error: 'Siparişler alınamadı: ' + error.message }, { status: 500 });
+    return NextResponse.json({ error: error.message }, { status: 500 });
   }
 }

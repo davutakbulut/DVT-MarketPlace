@@ -160,14 +160,14 @@ export function OrderDetailModal({ orderId, onClose, onUpdated }: OrderDetailMod
             <div className="bg-canvas p-4 rounded-2xl border border-border space-y-2 text-xs">
               <span className="font-black text-dark text-xs block mb-1">Finansal Kesinti & Maliyet Şelalesi (Waterfall)</span>
               
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-[11px]">
+              <div className="grid grid-cols-2 sm:grid-cols-5 gap-2 text-[11px]">
                 <div className="bg-white p-2 rounded-xl border border-border">
                   <span className="text-gray-500 block">Satış Tutarı</span>
                   <strong className="text-dark">₺{parseFloat(o.grossAmount || 0).toFixed(2)}</strong>
                 </div>
 
                 <div className="bg-white p-2 rounded-xl border border-border">
-                  <span className="text-gray-500 block">Ürün Alış Maliyeti (COGS)</span>
+                  <span className="text-gray-500 block">Ürün Alış (COGS)</span>
                   <strong className="text-red-700">₺{parseFloat(o.cogs || 0).toFixed(2)}</strong>
                 </div>
 
@@ -179,6 +179,11 @@ export function OrderDetailModal({ orderId, onClose, onUpdated }: OrderDetailMod
                 <div className="bg-white p-2 rounded-xl border border-border">
                   <span className="text-gray-500 block">Ödenecek Net KDV</span>
                   <strong className="text-gray-700">₺{parseFloat(o.netVat || 0).toFixed(2)}</strong>
+                </div>
+
+                <div className="bg-white p-2 rounded-xl border border-border">
+                  <span className="text-gray-500 block">Ekstra Operasyon (%{o.extraOperationRate || 6})</span>
+                  <strong className="text-gray-700">₺{parseFloat(o.extraOperationCost || (parseFloat(o.grossAmount || 0) * 0.06)).toFixed(2)}</strong>
                 </div>
               </div>
             </div>

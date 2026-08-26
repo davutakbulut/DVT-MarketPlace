@@ -66,6 +66,7 @@ export default function DashboardPage() {
     { name: "Pazaryeri Komisyonu", value: parseFloat(d.commissionTotal || 0), color: "#F59E0B" },
     { name: "Kargo Gideri", value: parseFloat(d.shippingTotal || 0), color: "#38BDF8" },
     { name: "Ürün Alış (COGS)", value: Math.max(0, grossRev - parseFloat(d.grossProfit || 0)), color: "#EF4444" },
+    { name: `Ekstra Operasyon (%${d.extraOperationRate || 6})`, value: parseFloat(d.extraOperationTotal || 0), color: "#EC4899" },
     { name: "Hizmet Bedeli", value: parseFloat(d.serviceFeeTotal || 0), color: "#8B5CF6" },
     { name: "Vergi & Stopaj", value: parseFloat(d.taxesTotal || 0), color: "#64748B" },
   ].filter(x => x.value > 0);
