@@ -3,7 +3,8 @@ import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
-import { Building2, Mail, Lock, User, ArrowRight } from 'lucide-react';
+import { Building2, Mail, Lock, User, ArrowRight, ArrowLeft } from 'lucide-react';
+import { BrandLogo } from '@/components/common/BrandLogo';
 import Link from 'next/link';
 
 export default function RegisterPage() {
@@ -25,12 +26,18 @@ export default function RegisterPage() {
   };
 
   return (
-    <div className="min-h-screen bg-canvas flex flex-col justify-center items-center p-4">
+    <div className="min-h-screen bg-canvas flex flex-col justify-center items-center p-4 relative overflow-hidden">
+      {/* Top Floating Return to Home Button */}
+      <Link 
+        href="/" 
+        className="absolute top-4 sm:top-6 left-4 sm:left-6 z-20 inline-flex items-center gap-2 px-3.5 py-2 rounded-2xl bg-white/90 backdrop-blur-md border border-border text-xs font-bold text-dark hover:text-primary hover:bg-white shadow-xs transition-all"
+      >
+        <ArrowLeft className="w-4 h-4 text-primary" />
+        <span>Anasayfaya Dön</span>
+      </Link>
       <div className="w-full max-w-md bg-white rounded-3xl p-8 border border-border shadow-xl space-y-6">
         <div className="text-center space-y-2">
-          <div className="w-12 h-12 rounded-2xl bg-primary text-white font-black text-xl flex items-center justify-center mx-auto shadow-md">
-            D
-          </div>
+          <BrandLogo size="lg" showBadge={true} href="/" className="justify-center mx-auto mb-2" />
           <h2 className="text-2xl font-black tracking-tight text-dark">Yeni Firma Kaydı</h2>
           <p className="text-xs text-muted-foreground">Pazaryerlerinizi entegre edin ve kârlılığınızı canlı yönetin.</p>
         </div>

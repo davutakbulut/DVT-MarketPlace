@@ -3,7 +3,7 @@ import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
-import { Lock, Mail, ArrowRight, ShieldCheck, CheckCircle2, Zap, TrendingUp, Truck } from 'lucide-react';
+import { ArrowLeft, Lock, Mail, ArrowRight, ShieldCheck, CheckCircle2, Zap, TrendingUp, Truck } from 'lucide-react';
 import Link from 'next/link';
 import { BrandLogo } from '@/components/common/BrandLogo';
 
@@ -43,6 +43,14 @@ export default function LoginPage() {
 
   return (
     <div className="min-h-screen bg-canvas flex flex-col justify-center items-center p-4 relative overflow-hidden">
+      {/* Top Floating Return to Home Button */}
+      <Link 
+        href="/" 
+        className="absolute top-4 sm:top-6 left-4 sm:left-6 z-20 inline-flex items-center gap-2 px-3.5 py-2 rounded-2xl bg-white/90 backdrop-blur-md border border-border text-xs font-bold text-dark hover:text-primary hover:bg-white shadow-xs transition-all"
+      >
+        <ArrowLeft className="w-4 h-4 text-primary" />
+        <span>Anasayfaya Dön</span>
+      </Link>
       {/* Background Decorative Rings */}
       <div className="absolute -top-40 -right-40 w-96 h-96 rounded-full bg-primary/5 blur-3xl pointer-events-none" />
       <div className="absolute -bottom-40 -left-40 w-96 h-96 rounded-full bg-primary/5 blur-3xl pointer-events-none" />
@@ -51,7 +59,7 @@ export default function LoginPage() {
         
         {/* Brand Header */}
         <div className="text-center space-y-2 flex flex-col items-center">
-          <BrandLogo size="lg" showBadge={true} showSlogan={false} href="" />
+          <BrandLogo size="lg" showBadge={true} showSlogan={false} href="/" />
           <p className="text-xs text-muted-foreground font-medium pt-1">
             Akıllı Pazaryeri Finansal Yönetim & Kârlılık Zekası
           </p>

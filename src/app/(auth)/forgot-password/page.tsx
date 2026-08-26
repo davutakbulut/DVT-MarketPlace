@@ -3,6 +3,7 @@ import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { Mail, Lock, KeyRound, ArrowRight, ArrowLeft, CheckCircle2, ShieldCheck, AlertCircle } from 'lucide-react';
+import { BrandLogo } from '@/components/common/BrandLogo';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
 
