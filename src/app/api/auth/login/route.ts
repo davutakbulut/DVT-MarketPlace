@@ -4,7 +4,7 @@ import crypto from 'crypto';
 
 export async function POST(request: Request) {
   try {
-    const { email, password } = await request.json();
+    const { email, password, rememberMe } = await request.json();
 
     if (!email || !password) {
       return NextResponse.json({ error: 'E-posta ve şifre zorunludur.' }, { status: 400 });
@@ -61,13 +61,15 @@ export async function POST(request: Request) {
       }))
     };
 
+    const cookieMaxAge = rememberMe ? 60 * 60 * 24 * 30 : 60 * 60 * 24; // 30 days vs 1 day
+
     const response = NextResponse.json({ success: true, ...sessionPayload });
     response.cookies.set('dvt_session', JSON.stringify(sessionPayload), {
       httpOnly: false,
       secure: process.env.NODE_ENV === 'production',
       sameSite: 'lax',
       path: '/',
-      maxAge: 60 * 60 * 24 * 7, // 7 days
+      maxAge: cookieMaxAge,
     });
 
     return response;

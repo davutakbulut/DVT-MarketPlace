@@ -1,9 +1,9 @@
 "use client";
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
-import { ArrowLeft, Lock, Mail, ArrowRight, ShieldCheck, CheckCircle2, Zap, TrendingUp, Truck } from 'lucide-react';
+import { ArrowLeft, Lock, Mail, ArrowRight } from 'lucide-react';
 import Link from 'next/link';
 import { BrandLogo } from '@/components/common/BrandLogo';
 
@@ -11,17 +11,33 @@ export default function LoginPage() {
   const router = useRouter();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [rememberMe, setRememberMe] = useState(false);
   const [loading, setLoading] = useState(false);
+
+  // Restore remembered email on mount
+  useEffect(() => {
+    const savedEmail = localStorage.getItem('dvt_remember_email');
+    if (savedEmail) {
+      setEmail(savedEmail);
+      setRememberMe(true);
+    }
+  }, []);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
 
     try {
+      if (rememberMe) {
+        localStorage.setItem('dvt_remember_email', email);
+      } else {
+        localStorage.removeItem('dvt_remember_email');
+      }
+
       const res = await fetch('/api/auth/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, password }),
+        body: JSON.stringify({ email, password, rememberMe }),
       });
 
       const data = await res.json();
@@ -51,6 +67,7 @@ export default function LoginPage() {
         <ArrowLeft className="w-4 h-4 text-primary" />
         <span>Anasayfaya Dön</span>
       </Link>
+
       {/* Background Decorative Rings */}
       <div className="absolute -top-40 -right-40 w-96 h-96 rounded-full bg-primary/5 blur-3xl pointer-events-none" />
       <div className="absolute -bottom-40 -left-40 w-96 h-96 rounded-full bg-primary/5 blur-3xl pointer-events-none" />
@@ -65,32 +82,7 @@ export default function LoginPage() {
           </p>
         </div>
 
-        {/* Live Admin Credentials Card */}
-        <div className="bg-primary-tint-50 border border-primary-tint-200 p-3.5 rounded-2xl text-xs space-y-1.5">
-          <div className="flex items-center justify-between">
-            <div className="font-bold text-primary flex items-center gap-1.5">
-              <ShieldCheck className="w-4 h-4" /> Tanımlı Demo Admin:
-            </div>
-            <button
-              type="button"
-              onClick={() => {
-                setEmail('dvtakblt@gmail.com');
-                setPassword('a');
-                toast.success('Admin giriş bilgileri otomatik dolduruldu.');
-              }}
-              className="text-[10px] font-bold text-primary hover:underline bg-white px-2 py-0.5 rounded-lg border border-primary/20 shadow-2xs cursor-pointer"
-            >
-              Bilgileri Doldur
-            </button>
-          </div>
-          <div className="text-gray-700 text-[11px] font-mono flex items-center justify-between">
-            <span>E-posta:</span> <strong className="text-dark">dvtakblt@gmail.com</strong>
-          </div>
-          <div className="text-gray-700 text-[11px] font-mono flex items-center justify-between">
-            <span>Şifre:</span> <strong className="text-dark">a</strong>
-          </div>
-        </div>
-
+        {/* Login Form */}
         <form onSubmit={handleLogin} className="space-y-4">
           <div>
             <label className="text-xs font-bold text-dark block mb-1">E-Posta Adresi</label>
@@ -108,10 +100,7 @@ export default function LoginPage() {
           </div>
 
           <div>
-            <div className="flex justify-between items-center mb-1">
-              <label className="text-xs font-bold text-dark">Şifre</label>
-              <Link href={email ? `/forgot-password?email=${encodeURIComponent(email)}` : "/forgot-password"} className="text-[11px] font-semibold text-primary hover:underline">Şifremi Unuttum</Link>
-            </div>
+            <label className="text-xs font-bold text-dark block mb-1">Şifre</label>
             <div className="relative">
               <input
                 type="password"
@@ -125,24 +114,47 @@ export default function LoginPage() {
             </div>
           </div>
 
+          {/* Remember Me & Forgot Password */}
+          <div className="flex items-center justify-between text-xs pt-0.5">
+            <label className="flex items-center gap-2 cursor-pointer select-none text-gray-600 hover:text-dark font-medium">
+              <input
+                type="checkbox"
+                checked={rememberMe}
+                onChange={(e) => setRememberMe(e.target.checked)}
+                className="w-4 h-4 rounded border-border text-primary focus:ring-primary accent-primary cursor-pointer"
+              />
+              <span>Beni Hatırla</span>
+            </label>
+
+            <Link
+              href={email ? `/forgot-password?email=${encodeURIComponent(email)}` : "/forgot-password"}
+              className="text-[11px] font-semibold text-primary hover:underline"
+            >
+              Şifremi Unuttum?
+            </Link>
+          </div>
+
           <Button type="submit" disabled={loading} className="w-full h-11 rounded-2xl text-xs font-bold gap-2 bg-primary hover:bg-primary-hover text-white shadow-xs">
             <span>{loading ? 'Giriş Yapılıyor...' : 'Giriş Yap'}</span>
             <ArrowRight className="w-4 h-4" />
           </Button>
         </form>
 
+        {/* Register CTA */}
+        <div className="text-center pt-2 border-t border-border">
+          <p className="text-xs text-gray-500">
+            Hesabınız yok mu?{' '}
+            <Link href="/register" className="text-primary font-bold hover:underline">
+              Ücretsiz Kayıt Olun
+            </Link>
+          </p>
+        </div>
+
         {/* Feature Pillars */}
-        <div className="grid grid-cols-3 gap-2 pt-2 border-t border-border/80 text-[10px] text-gray-500 text-center font-bold">
+        <div className="grid grid-cols-3 gap-2 pt-1 border-t border-border/80 text-[10px] text-gray-500 text-center font-bold">
           <div className="p-1.5 rounded-xl bg-canvas">⚡ Ters Fiyatlama</div>
           <div className="p-1.5 rounded-xl bg-canvas">🚚 Barem Desteği</div>
           <div className="p-1.5 rounded-xl bg-canvas">📊 Canlı Net Kâr</div>
-        </div>
-
-        <div className="border-t border-border pt-4 text-center text-xs text-gray-500">
-          Hesabınız yok mu?{' '}
-          <Link href="/register" className="font-bold text-primary hover:underline">
-            Yeni Firma Kaydı Aç
-          </Link>
         </div>
       </div>
     </div>
