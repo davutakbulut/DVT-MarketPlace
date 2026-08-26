@@ -413,7 +413,7 @@ export default function LiveAnalysisPage() {
                         </td>
                         <td className="py-3 px-4 font-bold tabular-nums">
                           <Badge variant={isProfitable ? 'excellent' : 'secondary'}>
-                            %{parseFloat(o.profitMargin || 0).toFixed(1)}
+                            %{parseFloat(o.marginPercent ?? o.profitMargin ?? 0).toFixed(1)}
                           </Badge>
                         </td>
                         <td className="py-3 px-4 text-right">
@@ -460,7 +460,7 @@ export default function LiveAnalysisPage() {
                       </div>
 
                       <Badge variant={isProfitable ? 'excellent' : 'secondary'} className="text-[10px] shrink-0">
-                        %{parseFloat(o.profitMargin || 0).toFixed(1)} Marj
+                        %{parseFloat(o.marginPercent ?? o.profitMargin ?? 0).toFixed(1)} Marj
                       </Badge>
                     </div>
 
