@@ -10,6 +10,8 @@ import {
   Clock, Package, ArrowDown, TrendingUp, DollarSign, RefreshCw, Edit3, Check
 } from "lucide-react";
 
+import { OrderStatusBadge } from "@/components/common/OrderStatusBadge";
+
 interface OrderDetailModalProps {
   orderId: string | null;
   onClose: () => void;
@@ -86,9 +88,7 @@ export function OrderDetailModal({ orderId, onClose, onUpdated }: OrderDetailMod
                 Sipariş #{o?.orderNumber || 'Yükleniyor...'}
               </span>
               <Badge variant="excellent">Paket: {o?.packageNumber || '-'}</Badge>
-              <Badge variant={parseFloat(o?.netProfit || 0) > 0 ? "excellent" : "secondary"}>
-                {o?.status || 'Teslim Edildi'}
-              </Badge>
+              {o?.status && <OrderStatusBadge status={o.status} size="md" />}
             </div>
             <p className="text-xs text-muted-foreground mt-0.5">
               Sipariş Tarihi: <strong className="text-dark">{o?.orderDate || '-'}</strong> • Mağaza: <strong className="text-primary">{o?.storeName || 'Trendyol'}</strong>

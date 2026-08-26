@@ -4,6 +4,7 @@ import { formatCurrency } from "@/lib/formatters";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
+import { OrderStatusBadge } from "@/components/common/OrderStatusBadge";
 import { useDateStore } from "@/store/useDateStore";
 import { useTenantStore } from "@/stores/useTenantStore";
 import { 
@@ -332,9 +333,7 @@ export default function ReturnsCancellationsPage() {
                       <span className="font-mono font-black text-dark text-sm bg-canvas px-2.5 py-1 rounded-xl border border-border">
                         #{ord.orderNumber}
                       </span>
-                      <Badge variant={isReturn ? "danger" : "warning"} className="text-[10px] font-bold">
-                        {isReturn ? "📦 İade Edildi" : "🚫 İptal Edildi"}
-                      </Badge>
+                      <OrderStatusBadge status={ord.status || (isReturn ? 'Returned' : 'Cancelled')} size="sm" />
                       {ord.returnStatus && (
                         <span className="text-[10px] font-bold px-2 py-0.5 rounded-lg bg-emerald-50 text-emerald-800 border border-emerald-200">
                           ✓ {ord.returnStatus}

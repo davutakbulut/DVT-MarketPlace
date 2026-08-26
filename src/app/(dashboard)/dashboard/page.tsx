@@ -15,6 +15,7 @@ import {
 import Link from "next/link";
 import { useAuth } from "@/lib/auth-context";
 import { OrderDetailModal } from "@/components/orders/OrderDetailModal";
+import { OrderStatusBadge } from "@/components/common/OrderStatusBadge";
 import { useDateStore } from "@/store/useDateStore";
 import { useTenantStore } from "@/stores/useTenantStore";
 import {
@@ -662,6 +663,7 @@ export default function DashboardPage() {
                   <div className="min-w-0">
                     <div className="flex items-center gap-1.5">
                       <span className="font-bold text-dark font-mono">{ord.orderNumber}</span>
+                      <OrderStatusBadge status={ord.status} size="sm" />
                       <span className="text-[10px] text-gray-400">• {ord.city}</span>
                     </div>
                     <span className="text-[10px] text-gray-400 block">{ord.orderDate} • {ord.customerName}</span>

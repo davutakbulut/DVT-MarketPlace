@@ -11,6 +11,7 @@ import {
   Layers, Edit3, Check, X, TrendingUp, PieChart as PieIcon, BarChart3
 , Calendar } from "lucide-react";
 import { OrderDetailModal } from "@/components/orders/OrderDetailModal";
+import { OrderStatusBadge } from "@/components/common/OrderStatusBadge";
 import { useDateStore } from "@/store/useDateStore";
 import { useTenantStore } from "@/stores/useTenantStore";
 import {
@@ -413,7 +414,7 @@ export default function LiveAnalysisPage() {
                           <div className="flex items-center gap-2">
                             <span className="font-mono text-dark">{o.orderNumber}</span>
                             <Badge 
-                              className={`text-[9px] py-0 px-1.5 font-bold uppercase tracking-wider ${
+                              className={`text-[9px] py-0.5 px-1.5 font-bold uppercase tracking-wider ${
                                 o.marketplace === 'hepsiburada' 
                                   ? 'bg-amber-100 text-amber-800 border-amber-300' 
                                   : 'bg-orange-100 text-orange-800 border-orange-300'
@@ -421,9 +422,7 @@ export default function LiveAnalysisPage() {
                             >
                               {o.marketplace === 'hepsiburada' ? 'Hepsiburada' : 'Trendyol'}
                             </Badge>
-                            <Badge variant={o.status === 'Delivered' ? 'excellent' : 'default'} className="text-[10px] py-0">
-                              {o.status === 'Delivered' ? 'Teslim Edildi' : o.status === 'Shipped' ? 'Kargoda' : o.status === 'Cancelled' ? 'İptal' : 'Yeni'}
-                            </Badge>
+                            <OrderStatusBadge status={o.status} size="sm" />
                           </div>
                           <span className="text-[10px] text-gray-400 block font-normal mt-0.5">{o.customerName || 'Gizli Müşteri'}</span>
                         </td>
@@ -481,7 +480,7 @@ export default function LiveAnalysisPage() {
                         <div className="flex items-center gap-1.5">
                           <span className="font-bold text-xs text-dark font-mono">{o.orderNumber}</span>
                           <Badge 
-                            className={`text-[8px] py-0 px-1 font-bold uppercase tracking-wider ${
+                            className={`text-[8px] py-0.5 px-1 font-bold uppercase tracking-wider ${
                               o.marketplace === 'hepsiburada' 
                                 ? 'bg-amber-100 text-amber-800 border-amber-300' 
                                 : 'bg-orange-100 text-orange-800 border-orange-300'
@@ -489,9 +488,7 @@ export default function LiveAnalysisPage() {
                           >
                             {o.marketplace === 'hepsiburada' ? 'Hepsiburada' : 'Trendyol'}
                           </Badge>
-                          <Badge variant={o.status === 'Delivered' ? 'excellent' : 'default'} className="text-[9px] py-0">
-                            {o.status === 'Delivered' ? 'Teslim' : o.status === 'Shipped' ? 'Kargoda' : 'Yeni'}
-                          </Badge>
+                          <OrderStatusBadge status={o.status} size="sm" />
                         </div>
                         <span className="text-[10px] text-gray-400 block mt-0.5">{o.customerName || 'Müşteri'} • {o.orderDate}</span>
                       </div>
