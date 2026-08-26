@@ -262,120 +262,26 @@ export default function LandingHomePage() {
             )}
           </div>
         </div>
-
-        {/* 2. MOBILE SLIDE-IN DRAWER NAVIGATION FROM LEFT */}
-        {mobileMenuOpen && (
-          <div className="fixed inset-0 z-50 lg:hidden">
-            {/* Backdrop Overlay */}
-            <div 
-              className="fixed inset-0 bg-dark/60 backdrop-blur-xs transition-opacity animate-in fade-in"
-              onClick={() => setMobileMenuOpen(false)}
-            />
-
-            {/* Sliding Drawer Container */}
-            <div className="fixed inset-y-0 left-0 w-72 sm:w-80 bg-white z-50 p-5 shadow-2xl flex flex-col justify-between animate-in slide-in-from-left duration-200">
-              <div className="space-y-6">
-                {/* Drawer Top Header */}
-                <div className="flex items-center justify-between pb-4 border-b border-border">
-                  <BrandLogo size="sm" href="/" showSlogan={true} />
-                  <button
-                    onClick={() => setMobileMenuOpen(false)}
-                    className="p-1.5 rounded-xl text-gray-400 hover:text-dark hover:bg-canvas transition-colors"
-                  >
-                    <X className="w-5 h-5" />
-                  </button>
-                </div>
-
-                {/* Navigation Links */}
-                <nav className="space-y-1 text-sm font-bold text-dark">
-                  <a
-                    href="#canli-akis"
-                    onClick={() => setMobileMenuOpen(false)}
-                    className="flex items-center gap-2.5 p-3 rounded-2xl hover:bg-canvas text-dark hover:text-primary transition-colors"
-                  >
-                    <Sparkles className="w-4 h-4 text-primary" />
-                    <span>Canlı Akış Deneyimi</span>
-                  </a>
-                  <a
-                    href="#motorlar"
-                    onClick={() => setMobileMenuOpen(false)}
-                    className="flex items-center gap-2.5 p-3 rounded-2xl hover:bg-canvas text-dark hover:text-primary transition-colors"
-                  >
-                    <Layers className="w-4 h-4 text-primary" />
-                    <span>11 Güçlü Motor</span>
-                  </a>
-                  <a
-                    href="#hesaplayici"
-                    onClick={() => setMobileMenuOpen(false)}
-                    className="flex items-center gap-2.5 p-3 rounded-2xl hover:bg-canvas text-dark hover:text-primary transition-colors"
-                  >
-                    <Calculator className="w-4 h-4 text-primary" />
-                    <span>Tersine Kâr Simülatörü</span>
-                  </a>
-                  <a
-                    href="#karsilastirma"
-                    onClick={() => setMobileMenuOpen(false)}
-                    className="flex items-center gap-2.5 p-3 rounded-2xl hover:bg-canvas text-dark hover:text-primary transition-colors"
-                  >
-                    <CheckCircle2 className="w-4 h-4 text-emerald-600" />
-                    <span>Neden DVT-MarketPlace?</span>
-                  </a>
-                  <a
-                    href="#sss"
-                    onClick={() => setMobileMenuOpen(false)}
-                    className="flex items-center gap-2.5 p-3 rounded-2xl hover:bg-canvas text-dark hover:text-primary transition-colors"
-                  >
-                    <Compass className="w-4 h-4 text-gray-500" />
-                    <span>Sıkça Sorulan Sorular</span>
-                  </a>
-                </nav>
-              </div>
-
-              {/* Drawer Bottom Actions */}
-              <div className="pt-4 border-t border-border space-y-2.5">
-                <Button
-                  variant="outline"
-                  onClick={() => { setMobileMenuOpen(false); setTourOpen(true); }}
-                  className="w-full h-10 text-xs font-bold rounded-2xl gap-2 justify-center"
-                >
-                  <Compass className="w-4 h-4 text-primary" />
-                  <span>Sistem Turunu Başlat</span>
-                </Button>
-
-                <Link href="/login" className="block" onClick={() => setMobileMenuOpen(false)}>
-                  <Button variant="outline" className="w-full h-10 text-xs font-bold rounded-2xl justify-center bg-canvas">
-                    Giriş Yap
-                  </Button>
-                </Link>
-
-                <Link href="/register" className="block" onClick={() => setMobileMenuOpen(false)}>
-                  <Button className="w-full h-10 text-xs font-bold rounded-2xl justify-center bg-primary text-white hover:bg-primary-hover shadow-xs">
-                    Ücretsiz Başla ➔
-                  </Button>
-                </Link>
-              </div>
-            </div>
-          </div>
-        )}
       </header>
-      {/* 2. STANDALONE MOBILE SLIDE-IN DRAWER (OUTSIDE HEADER TO PREVENT BACKDROP/STACKING ARTIFACTS) */}
+
+      {/* 2. STANDALONE MOBILE SLIDE-IN DRAWER (CLEAN, SOLID OPAQUE & HIGH Z-INDEX) */}
       {mobileMenuOpen && (
-        <div className="fixed inset-0 z-99 lg:hidden">
+        <div className="fixed inset-0 z-[100] lg:hidden">
           {/* Opaque Dark Backdrop */}
           <div 
-            className="fixed inset-0 bg-black/60 backdrop-blur-xs transition-opacity animate-in fade-in duration-200"
+            className="fixed inset-0 bg-black/70 backdrop-blur-sm transition-opacity animate-in fade-in duration-200 z-[101]"
             onClick={() => setMobileMenuOpen(false)}
           />
 
           {/* Solid White Opaque Slide-In Drawer */}
-          <div className="fixed inset-y-0 left-0 w-72 sm:w-80 bg-white z-100 p-5 shadow-2xl flex flex-col justify-between animate-in slide-in-from-left duration-200 border-r border-border overflow-y-auto">
+          <div className="fixed inset-y-0 left-0 w-72 sm:w-80 bg-white z-[102] p-5 shadow-2xl flex flex-col justify-between animate-in slide-in-from-left duration-200 border-r border-border overflow-y-auto">
             <div className="space-y-6">
               {/* Drawer Top Header */}
               <div className="flex items-center justify-between pb-4 border-b border-border">
                 <BrandLogo size="sm" href="/" showSlogan={true} />
                 <button
                   onClick={() => setMobileMenuOpen(false)}
-                  className="p-1.5 rounded-xl text-gray-400 hover:text-dark hover:bg-canvas transition-colors cursor-pointer"
+                  className="p-1.5 rounded-xl text-gray-500 hover:text-dark hover:bg-canvas transition-colors cursor-pointer"
                   aria-label="Menüyü Kapat"
                 >
                   <X className="w-5 h-5" />
