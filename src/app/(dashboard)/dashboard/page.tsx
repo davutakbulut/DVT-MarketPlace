@@ -8,7 +8,8 @@ import {
   TrendingUp, TrendingDown, DollarSign, ShoppingCart, Truck, 
   Percent, RefreshCw, ArrowUpRight, CheckCircle2, ShieldCheck, 
   Layers, Package, Calendar, Award, ExternalLink, Users, Eye,
-  Clock, Store, Filter, PieChart as PieIcon, BarChart3, Activity
+  Clock, Store, Filter, PieChart as PieIcon, BarChart3, Activity,
+  ChevronDown, ChevronUp, Receipt, Info
 } from "lucide-react";
 import Link from "next/link";
 import { OrderDetailModal } from "@/components/orders/OrderDetailModal";
@@ -22,10 +23,12 @@ import {
 export default function DashboardPage() {
   const [data, setData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+  const [mounted, setMounted] = useState(false);
+  // Kart varsayılan olarak kapalı gelir (alandan kazanmak için)
+  const [isExpensesExpanded, setIsExpensesExpanded] = useState(false);
   const { period, startDate, endDate, label } = useDateStore();
   const { activeStoreId } = useTenantStore();
   const [selectedOrderId, setSelectedOrderId] = useState<string | null>(null);
-  const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
     setMounted(true);
@@ -40,7 +43,11 @@ export default function DashboardPage() {
       }
       const res = await fetch(url);
       const json = await res.json();
-      setData(json);
+      if (res.ok) {
+        setData(json);
+      } else {
+        toast.error("Dashboard verileri yüklenemedi.");
+      }
     } catch (e) {
       toast.error("Dashboard verileri yüklenemedi.");
     } finally {
@@ -53,11 +60,13 @@ export default function DashboardPage() {
   }, [period, startDate, endDate, activeStoreId]);
 
   const d = data || {};
+  const exp = d.expenses || {};
   const monthlyTrends = d.monthlyTrends || [];
   const topProducts = d.topProducts || [];
   const recentOrders = d.recentOrders || [];
   const carrierDistribution = d.carrierDistribution || [];
   const hourlyDistribution = d.hourlyDistribution || [];
+  const dailyProfitTrends = d.dailyProfitTrends || [];
   const stores = d.stores || [];
 
   const grossRev = parseFloat(d.invoicedRevenue || 1);
@@ -70,6 +79,35 @@ export default function DashboardPage() {
     { name: "Hizmet Bedeli", value: parseFloat(d.serviceFeeTotal || 0), color: "#8B5CF6" },
     { name: "Vergi & Stopaj", value: parseFloat(d.taxesTotal || 0), color: "#64748B" },
   ].filter(x => x.value > 0);
+
+  // 14 Masraf Kalemleri Donut Chart Data (Açılır-Kapanır Kart İçin)
+  const donutExpensesList = [
+    { id: "cogs", name: "Toplam Ürün Maliyeti (COGS)", value: exp.cogs || 0, color: "#F97316" },
+    { id: "comm", name: "Toplam Komisyon", value: exp.commission || 0, color: "#0EA5E9" },
+    { id: "ship", name: "Toplam Kargo Ücreti", value: exp.shipping || 0, color: "#22C55E" },
+    { id: "retShip", name: "İade Kargo Zararı", value: exp.returnShippingLoss || 0, color: "#EF4444" },
+    { id: "sFee", name: "Toplam Hizmet Bedeli", value: exp.serviceFee || 0, color: "#14B8A6" },
+    { id: "intlSFee", name: "Uluslararası Hizmet Bedeli", value: exp.intlServiceFee || 0, color: "#8B5CF6" },
+    { id: "intlOp", name: "Uluslararası Operasyon Bedeli", value: exp.intlOperationFee || 0, color: "#A855F7" },
+    { id: "wTax", name: "Toplam Stopaj Kesintisi", value: exp.withholdingTax || 0, color: "#E11D48" },
+    { id: "nVat", name: "Toplam Net KDV", value: exp.netVat || 0, color: "#64748B" },
+    { id: "adSpend", name: "Toplam Reklam Harcaması", value: exp.adSpendCost || 0, color: "#EAB308" },
+    { id: "penalty", name: "Toplam Ceza", value: exp.penaltyCost || 0, color: "#DC2626" },
+    { id: "earlyPayout", name: "Toplam Erken Ödeme Kesintisi", value: exp.earlyPayoutCost || 0, color: "#D97706" },
+    { id: "other", name: "Toplam Diğer Faturalar", value: exp.otherInvoices || 0, color: "#475569" },
+    { id: "fixedExtra", name: `Sabit Maliyet / Ekstra Operasyon (%${exp.extraOperationRate || 6})`, value: exp.fixedExtraOperation || 0, color: "#EC4899" },
+  ];
+
+  const filteredDonutData = donutExpensesList.filter(x => x.value > 0);
+
+  // Daily Spline Line Data
+  const dailyChartData = dailyProfitTrends.map((pt: any) => ({
+    date: pt.dayLabel || pt.fullDate,
+    fullDate: pt.fullDate,
+    kar: Math.round(parseFloat(pt.profit || 0)),
+    ciro: Math.round(parseFloat(pt.revenue || 0)),
+    siparis: parseInt(pt.orderCount || 0),
+  }));
 
   const hourlyChartData = Array.from({ length: 24 }).map((_, h) => {
     const hData = hourlyDistribution.find((x: any) => x.hour === h) || { orderCount: 0, revenue: 0, profit: 0 };
@@ -91,7 +129,7 @@ export default function DashboardPage() {
             <Badge variant="excellent" className="text-[10px] sm:text-xs">Canlı Analitik</Badge>
           </div>
           <p className="text-xs text-muted-foreground">
-            2.366 sipariş, kargo baremi, komisyon kesintileri ve interaktif kârlılık grafikleri
+            {d.totalOrders || 0} sipariş, kargo baremi, komisyon kesintileri ve interaktif kârlılık grafikleri
           </p>
         </div>
 
@@ -115,7 +153,9 @@ export default function DashboardPage() {
         </div>
       </div>
 
-      {/* Main KPI Cards */}
+      {/* ========================================================= */}
+      {/* 1. ORIGINAL 4 MAIN KPI CARDS */}
+      {/* ========================================================= */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
         
         {/* Total Invoiced Revenue */}
@@ -184,7 +224,173 @@ export default function DashboardPage() {
 
       </div>
 
-      {/* CHARTS ROW 1: Monthly Trend Area Chart + Donut Cost Breakdown */}
+      {/* ========================================================= */}
+      {/* 2. [EK ALAN] AÇILIR-KAPANIR (COLLAPSIBLE) MASRAF KALEMLERİ (₺) */}
+      {/* (Varsayılan Olarak KAPALI gelir, alandan kazanır) */}
+      {/* ========================================================= */}
+      <div className="bg-white rounded-3xl border border-border shadow-xs overflow-hidden transition-all">
+        {/* Header Bar */}
+        <div 
+          onClick={() => setIsExpensesExpanded(!isExpensesExpanded)}
+          className="p-4 sm:p-5 flex items-center justify-between bg-canvas/40 hover:bg-canvas/80 cursor-pointer border-b border-border/60 transition-colors"
+        >
+          <div className="flex items-center gap-2.5">
+            <Receipt className="w-4 h-4 text-primary" />
+            <h4 className="text-sm sm:text-base font-black text-dark">Masraf Kalemleri & Kesinti Dökümü (₺)</h4>
+            <Badge variant="secondary" className="text-[10px] font-bold">14 Ayrık Gider Kalemi</Badge>
+          </div>
+
+          <div className="flex items-center gap-3">
+            <div className="hidden sm:flex items-center gap-1.5 text-xs font-bold text-gray-600">
+              <span>Toplam Masraf:</span>
+              <strong className="text-dark font-black tabular-nums">{formatCurrency(exp.totalCostSum || 0)}</strong>
+            </div>
+
+            <Button size="sm" variant="ghost" className="h-7 text-xs font-bold gap-1 text-gray-600 hover:text-primary">
+              <span>{isExpensesExpanded ? 'Alanı Daralt' : 'Tüm Masrafları Göster'}</span>
+              {isExpensesExpanded ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+            </Button>
+          </div>
+        </div>
+
+        {/* Content Body (When Expanded) */}
+        {isExpensesExpanded && (
+          <div className="p-4 sm:p-6 animate-in fade-in zoom-in-95 duration-200">
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-center">
+              
+              {/* Left: Donut Chart with Center Total Cost */}
+              <div className="lg:col-span-4 flex flex-col items-center justify-center p-2 relative">
+                <div className="h-64 w-64 relative flex items-center justify-center">
+                  {mounted && (
+                    <ResponsiveContainer width="100%" height="100%">
+                      <PieChart>
+                        <Pie
+                          data={filteredDonutData}
+                          cx="50%"
+                          cy="50%"
+                          innerRadius={75}
+                          outerRadius={105}
+                          paddingAngle={3}
+                          dataKey="value"
+                        >
+                          {filteredDonutData.map((entry, index) => (
+                            <Cell key={`cell-${index}`} fill={entry.color} />
+                          ))}
+                        </Pie>
+                        <Tooltip 
+                          formatter={(val: any) => formatCurrency(parseFloat(val || 0))}
+                          contentStyle={{ borderRadius: '16px', border: '1px solid #E5E7EB', fontWeight: 'bold', fontSize: '11px' }}
+                        />
+                      </PieChart>
+                    </ResponsiveContainer>
+                  )}
+
+                  <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none text-center px-4">
+                    <span className="text-[11px] font-bold text-gray-500">Toplam Maliyet</span>
+                    <span className="text-base sm:text-lg font-black text-dark tabular-nums mt-0.5">
+                      {formatCurrency(exp.totalCostSum || 0)}
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Right: 14 Expense Items Grid */}
+              <div className="lg:col-span-8">
+                <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-3.5">
+                  {donutExpensesList.map((item) => (
+                    <div key={item.id} className="p-3 rounded-2xl bg-canvas/30 border border-border/80 hover:border-primary/30 transition-all space-y-1">
+                      <div className="flex items-center gap-1.5">
+                        <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: item.color }} />
+                        <span className="text-[11px] font-bold text-gray-600 truncate" title={item.name}>{item.name}</span>
+                      </div>
+                      <div className="text-sm font-black text-dark tabular-nums pl-4">
+                        {formatCurrency(item.value || 0)}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* ========================================================= */}
+      {/* 3. [EK ALAN] CHART: GÜNLÜK KÂR PERFORMANSI (Spline Curve) */}
+      {/* ========================================================= */}
+      <div className="bg-white p-4 sm:p-6 rounded-3xl border border-border shadow-xs space-y-4">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-3 border-b border-border gap-2">
+          <div className="flex items-center gap-2">
+            <span className="text-base">📈</span>
+            <div>
+              <h4 className="text-xs sm:text-sm font-black text-dark">Günlük Kâr Performansı</h4>
+              <p className="text-[11px] text-gray-500">Dönem boyunca gün gün gerçekleşen net nakit kâr eğrisi</p>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-3 text-xs font-bold">
+            <div className="flex items-center gap-1.5">
+              <span className="w-2.5 h-2.5 rounded-full bg-emerald-500" />
+              <span className="text-emerald-700">Net Kâr (₺)</span>
+            </div>
+          </div>
+        </div>
+
+        <div className="h-64 sm:h-72 w-full">
+          {mounted && dailyChartData.length > 0 ? (
+            <ResponsiveContainer width="100%" height="100%">
+              <AreaChart data={dailyChartData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                <defs>
+                  <linearGradient id="profitGrad" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor="#10B981" stopOpacity={0.3} />
+                    <stop offset="95%" stopColor="#10B981" stopOpacity={0.0} />
+                  </linearGradient>
+                </defs>
+                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#F3F4F6" />
+                <XAxis 
+                  dataKey="date" 
+                  tickLine={false} 
+                  axisLine={false} 
+                  tick={{ fill: '#6B7280', fontSize: 11, fontWeight: 'bold' }} 
+                />
+                <YAxis 
+                  tickLine={false} 
+                  axisLine={false} 
+                  tick={{ fill: '#6B7280', fontSize: 10, fontWeight: 'bold' }}
+                  tickFormatter={(v) => `₺${v >= 1000 ? `${(v / 1000).toFixed(0)}k` : v}`}
+                />
+                <Tooltip 
+                  formatter={(value: any, name: any) => [formatCurrency(parseFloat(value || 0)), name === 'kar' ? 'Net Kâr' : name]}
+                  labelFormatter={(lbl, items) => {
+                    const item = items?.[0]?.payload;
+                    return item ? `${item.fullDate || lbl} (${item.siparis || 0} Sipariş • Ciro: ${formatCurrency(item.ciro || 0)})` : lbl;
+                  }}
+                  contentStyle={{ borderRadius: '16px', border: '1px solid #E5E7EB', fontWeight: 'bold', fontSize: '11px' }}
+                />
+                <Area 
+                  type="monotone" 
+                  dataKey="kar" 
+                  stroke="#10B981" 
+                  strokeWidth={2.5} 
+                  fillOpacity={1} 
+                  fill="url(#profitGrad)" 
+                  dot={{ r: 3, fill: '#10B981', strokeWidth: 1.5, stroke: '#FFFFFF' }}
+                  activeDot={{ r: 6, fill: '#10B981' }}
+                />
+              </AreaChart>
+            </ResponsiveContainer>
+          ) : (
+            <div className="h-full flex items-center justify-center text-xs font-bold text-gray-400">
+              Seçili tarih aralığında günlük kâr verisi bulunamadı.
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* ========================================================= */}
+      {/* 4. CHARTS ROW 1 (3d9cc39): Monthly Trend + Cost Breakdown */}
+      {/* ========================================================= */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 sm:gap-6">
         
         {/* Monthly Revenue & Net Profit Area Chart (8 Cols) */}
@@ -249,7 +455,7 @@ export default function DashboardPage() {
             <p className="text-[11px] text-gray-500 mt-1">Cironun gider kalemleri ve net kâra oranı</p>
           </div>
 
-          <div className="h-52 w-full relative flex items-center justify-center">
+          <div className="h-52 w-full flex items-center justify-center">
             {mounted && (
               <ResponsiveContainer width="100%" height="100%">
                 <PieChart>
@@ -257,7 +463,7 @@ export default function DashboardPage() {
                     data={costBreakdownData}
                     cx="50%"
                     cy="50%"
-                    innerRadius={55}
+                    innerRadius={50}
                     outerRadius={80}
                     paddingAngle={3}
                     dataKey="value"
@@ -287,7 +493,9 @@ export default function DashboardPage() {
 
       </div>
 
-      {/* CHARTS ROW 2: Hourly 24-Hour Bar Chart + Carrier Distribution */}
+      {/* ========================================================= */}
+      {/* 5. CHARTS ROW 2 (3d9cc39): Hourly Bar Chart + Carrier Cards */}
+      {/* ========================================================= */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 sm:gap-6">
         
         {/* Hourly 24-Hour Orders & Revenue Bar Chart (8 Cols) */}
@@ -350,7 +558,9 @@ export default function DashboardPage() {
 
       </div>
 
-      {/* Top Profitable Products & Recent Orders Grid */}
+      {/* ========================================================= */}
+      {/* 6. BOTTOM ROW (3d9cc39): Top Products & Recent Live Orders */}
+      {/* ========================================================= */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 sm:gap-6">
         
         {/* Top Profitable Products */}
