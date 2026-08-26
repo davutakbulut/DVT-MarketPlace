@@ -33,6 +33,7 @@ export default function ProductsCatalogPage() {
   const [editCost, setEditCost] = useState<number>(0);
   const [editStock, setEditStock] = useState<number>(0);
   const [saving, setSaving] = useState(false);
+  const [syncing, setSyncing] = useState(false);
 
   const fetchProducts = async () => {
     setLoading(true);
@@ -47,6 +48,29 @@ export default function ProductsCatalogPage() {
       toast.error("Ürün listesi yüklenemedi.");
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleLiveSync = async () => {
+    setSyncing(true);
+    toast.info("Trendyol canlı ürün kataloğu ve stok senkronizasyonu başlatıldı...");
+    try {
+      const res = await fetch("/api/integrations/trendyol/sync-products", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ storeId: activeStoreId, fetchAll: true }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        toast.success(data.message || "Trendyol ürünleri başarıyla senkronize edildi!");
+        fetchProducts();
+      } else {
+        toast.error(data.error || "Senkronizasyon başarısız oldu.");
+      }
+    } catch (err: any) {
+      toast.error("Bağlantı hatası: " + err.message);
+    } finally {
+      setSyncing(false);
     }
   };
 
@@ -114,7 +138,17 @@ export default function ProductsCatalogPage() {
         </div>
 
         <div className="flex items-center gap-2">
-          <Button size="sm" variant="outline" onClick={fetchProducts} className="h-8 sm:h-9 text-xs gap-1.5 font-bold">
+          <Button
+            size="sm"
+            onClick={handleLiveSync}
+            disabled={syncing}
+            className="h-8 sm:h-9 text-xs gap-1.5 font-bold bg-primary hover:bg-primary-hover text-white shadow-xs cursor-pointer"
+          >
+            <RefreshCw className={`w-3.5 h-3.5 ${syncing ? 'animate-spin' : ''}`} />
+            <span>{syncing ? 'Çekiliyor...' : 'Canlı Senkronize Et'}</span>
+          </Button>
+
+          <Button size="sm" variant="outline" onClick={fetchProducts} className="h-8 sm:h-9 text-xs gap-1.5 font-bold cursor-pointer">
             <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />
             <span>Yenile</span>
           </Button>

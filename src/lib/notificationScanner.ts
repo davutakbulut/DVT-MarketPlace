@@ -204,3 +204,8 @@ export async function runNotificationScanner(): Promise<ScanResult> {
     return result;
   }
 }
+
+export const notificationScanner = {
+  scanAllAnomalies: runNotificationScanner,
+};
+

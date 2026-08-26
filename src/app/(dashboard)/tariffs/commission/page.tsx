@@ -69,7 +69,7 @@ export default function CommissionTariffPage() {
     toast.info(`Kademe ${tierIndex} seçildi. Yeni hedef fiyat: ₺${targetPrice.toFixed(2)}`);
   };
 
-  const handleSavePrice = async (productId: string) => {
+  const handleSavePrice = async (productId: string, barcode?: string) => {
     const newPrice = customPrices[productId];
     if (!newPrice || newPrice <= 0) {
       toast.error("Geçerli bir satış fiyatı giriniz.");
@@ -78,20 +78,39 @@ export default function CommissionTariffPage() {
 
     setSavingId(productId);
     try {
-      const res = await fetch("/api/products", {
+      // 1. Live writeback to Trendyol API
+      const liveRes = await fetch("/api/integrations/trendyol/update-price", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ productId, salePrice: newPrice }),
+        body: JSON.stringify({ 
+          storeId: activeStoreId,
+          productId, 
+          barcode, 
+          salePrice: newPrice 
+        }),
       });
 
-      if (res.ok) {
-        toast.success("Satış fiyatı ve komisyon baremi başarıyla güncellendi!");
+      const liveData = await liveRes.json();
+
+      if (liveRes.ok && liveData.success) {
+        toast.success(liveData.message || "Satış fiyatı Trendyol API ve veritabanında başarıyla güncellendi!");
         setProducts(prev => prev.map(p => p.id === productId ? { ...p, salePrice: newPrice } : p));
       } else {
-        toast.error("Fiyat güncellenemedi.");
+        // Fallback to local products API
+        const fallbackRes = await fetch("/api/products", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ productId, salePrice: newPrice }),
+        });
+        if (fallbackRes.ok) {
+          toast.success("Satış fiyatı veritabanında güncellendi!");
+          setProducts(prev => prev.map(p => p.id === productId ? { ...p, salePrice: newPrice } : p));
+        } else {
+          toast.error(liveData.error || "Fiyat güncellenemedi.");
+        }
       }
-    } catch (e) {
-      toast.error("Bağlantı hatası.");
+    } catch (e: any) {
+      toast.error("Bağlantı hatası: " + e.message);
     } finally {
       setSavingId(null);
     }
@@ -595,7 +614,7 @@ export default function CommissionTariffPage() {
                           <Button
                             size="sm"
                             disabled={savingId === p.id}
-                            onClick={() => handleSavePrice(p.id)}
+                            onClick={() => handleSavePrice(p.id, p.barcode)}
                             className={`w-full h-8 text-xs font-bold rounded-xl transition-all cursor-pointer ${
                               currentCustomPrice !== salePrice
                                 ? "bg-primary hover:bg-primary-hover text-white shadow-xs"

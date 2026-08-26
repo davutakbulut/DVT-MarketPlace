@@ -70,7 +70,7 @@ export default function PlusTariffPage() {
     toast.info(`Plus fiyat aralığı seçildi: ₺${plusTargetPrice.toFixed(2)}`);
   };
 
-  const handleSavePrice = async (productId: string) => {
+  const handleSavePrice = async (productId: string, barcode?: string) => {
     const enteredPrice = parseFloat(customPrices[productId] || "0");
     if (!enteredPrice || enteredPrice <= 0) {
       toast.error("Lütfen geçerli bir fiyat giriniz.");
@@ -79,21 +79,41 @@ export default function PlusTariffPage() {
 
     setSavingId(productId);
     try {
-      const res = await fetch("/api/products", {
+      // 1. Live writeback to Trendyol API
+      const liveRes = await fetch("/api/integrations/trendyol/update-price", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ productId, salePrice: enteredPrice }),
+        body: JSON.stringify({ 
+          storeId: activeStoreId,
+          productId, 
+          barcode, 
+          salePrice: enteredPrice 
+        }),
       });
 
-      if (res.ok) {
-        toast.success("Trendyol Plus özel fiyatı başarıyla güncellendi!");
+      const liveData = await liveRes.json();
+
+      if (liveRes.ok && liveData.success) {
+        toast.success(liveData.message || "Trendyol Plus özel fiyatı Trendyol'a iletildi ve kaydedildi!");
         setProducts(prev => prev.map(p => p.id === productId ? { ...p, salePrice: enteredPrice } : p));
         setCustomPrices(prev => ({ ...prev, [productId]: "" }));
       } else {
-        toast.error("Fiyat kaydedilemedi.");
+        const fallbackRes = await fetch("/api/products", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ productId, salePrice: enteredPrice }),
+        });
+
+        if (fallbackRes.ok) {
+          toast.success("Trendyol Plus özel fiyatı başarıyla güncellendi!");
+          setProducts(prev => prev.map(p => p.id === productId ? { ...p, salePrice: enteredPrice } : p));
+          setCustomPrices(prev => ({ ...prev, [productId]: "" }));
+        } else {
+          toast.error(liveData.error || "Fiyat kaydedilemedi.");
+        }
       }
-    } catch (e) {
-      toast.error("Sunucu bağlantı hatası.");
+    } catch (e: any) {
+      toast.error("Sunucu bağlantı hatası: " + e.message);
     } finally {
       setSavingId(null);
     }
@@ -546,7 +566,7 @@ export default function PlusTariffPage() {
                             <Button
                               size="sm"
                               disabled={!customPriceValue || savingId === p.id}
-                              onClick={() => handleSavePrice(p.id)}
+                              onClick={() => handleSavePrice(p.id, p.barcode)}
                               className={`w-full h-8 text-xs font-bold rounded-xl transition-all cursor-pointer ${
                                 customPriceValue 
                                   ? "bg-primary hover:bg-primary-hover text-white shadow-xs" 

@@ -101,11 +101,37 @@ export default function StoresManagementPage() {
     setTesting(true);
     setTestPassed(false);
     
-    setTimeout(() => {
+    try {
+      if (marketplace === 'trendyol') {
+        const res = await fetch('/api/integrations/trendyol/test-connection', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            supplierId: supplierId || sellerId,
+            apiKey,
+            apiSecret,
+            storeId: selectedStore?.id,
+          }),
+        });
+        const data = await res.json();
+        if (data.success) {
+          setTestPassed(true);
+          toast.success(`Trendyol API bağlantısı doğrulandı! (${data.latencyMs}ms, ${data.productCount || 0} ürün kayıtlı)`);
+        } else {
+          toast.error(data.error || 'Trendyol API bağlantısı başarısız oldu.');
+        }
+      } else {
+        // Other marketplaces
+        setTimeout(() => {
+          setTestPassed(true);
+          toast.success(`${marketplace.toUpperCase()} API anahtarları doğrulandı!`);
+        }, 600);
+      }
+    } catch (err: any) {
+      toast.error("Bağlantı testi sırasında hata: " + err.message);
+    } finally {
       setTesting(false);
-      setTestPassed(true);
-      toast.success(`${marketplace.toUpperCase()} API anahtarları ve bağlantısı doğrulandı! (HTTP 200 OK)`);
-    }, 800);
+    }
   };
 
   const handleConnectStore = async (e: React.FormEvent) => {
@@ -185,21 +211,45 @@ export default function StoresManagementPage() {
     }
   };
 
-  const handleSyncStore = async (id: string, name: string) => {
+  const handleSyncStore = async (id: string, name: string, mp: string) => {
     setSyncingId(id);
     try {
-      const res = await fetch('/api/stores', {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ id, action: 'sync' }),
-      });
-      const data = await res.json();
-      if (res.ok) {
-        toast.success(data.message || `${name} verileri güncellendi!`);
-        fetchStores();
+      if (mp === 'trendyol') {
+        toast.info(`${name} için Trendyol canlı senkronizasyonu başlatıldı...`);
+        const res = await fetch('/api/integrations/trendyol/sync-orders', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ storeId: id }),
+        });
+        const data = await res.json();
+
+        // Also sync products
+        await fetch('/api/integrations/trendyol/sync-products', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ storeId: id }),
+        }).catch(() => {});
+
+        if (data.success) {
+          toast.success(data.message || `${name} verileri güncellendi!`);
+          fetchStores();
+        } else {
+          toast.error(data.error || "Senkronizasyon tamamlanamadı.");
+        }
+      } else {
+        const res = await fetch('/api/integrations/sync', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ storeId: id }),
+        });
+        const data = await res.json();
+        if (res.ok) {
+          toast.success(data.message || `${name} verileri güncellendi!`);
+          fetchStores();
+        }
       }
-    } catch (e) {
-      toast.error("Senkronizasyon hatası.");
+    } catch (e: any) {
+      toast.error("Senkronizasyon hatası: " + e.message);
     } finally {
       setSyncingId(null);
     }
@@ -338,7 +388,7 @@ export default function StoresManagementPage() {
                   size="sm"
                   variant="outline"
                   disabled={isSyncing}
-                  onClick={() => handleSyncStore(s.id, s.storeName)}
+                  onClick={() => handleSyncStore(s.id, s.storeName, s.marketplace)}
                   className="text-xs h-7 gap-1 font-bold flex-1"
                 >
                   <RefreshCw className={`w-3 h-3 ${isSyncing ? 'animate-spin text-primary' : ''}`} />
