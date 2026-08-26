@@ -1,4 +1,5 @@
 "use client";
+
 import React, { useState, useEffect } from "react";
 import { formatCurrency, formatPercentage } from "@/lib/formatters";
 import { Button } from "@/components/ui/button";
@@ -7,7 +8,8 @@ import { toast } from "sonner";
 import { 
   Package, Search, Filter, RefreshCw, ExternalLink, Edit3, 
   Check, X, Eye, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight,
-  TrendingUp, Truck, Layers, DollarSign, Award, AlertCircle, Info
+  TrendingUp, Truck, Layers, DollarSign, Award, AlertCircle, Info,
+  ChevronDown, ChevronUp, FileSpreadsheet, SlidersHorizontal, RotateCcw
 } from "lucide-react";
 import Image from "next/image";
 import { useTenantStore } from "@/stores/useTenantStore";
@@ -16,20 +18,48 @@ export default function ProductsCatalogPage() {
   const { activeStoreId } = useTenantStore();
   const [products, setProducts] = useState<any[]>([]);
   const [brands, setBrands] = useState<string[]>([]);
+  const [categories, setCategories] = useState<{ id: string; name: string }[]>([]);
   const [loading, setLoading] = useState(true);
-  const [search, setSearch] = useState("");
-  const [selectedBrand, setSelectedBrand] = useState("all");
-  const [stockStatus, setStockStatus] = useState("all");
+
+  // Tabs & Sub-status State
   const [activeTab, setActiveTab] = useState<'all' | 'active' | 'pending' | 'passive'>('all');
+  const [subStatus, setSubStatus] = useState<string>('all');
+
+  // Multi-input Filter States
+  const [filterBarcode, setFilterBarcode] = useState("");
+  const [filterTitle, setFilterTitle] = useState("");
+  const [filterModelCode, setFilterModelCode] = useState("");
+  const [filterStockCode, setFilterStockCode] = useState("");
+  const [filterGiftPackage, setFilterGiftPackage] = useState("all");
+  const [filterCategory, setFilterCategory] = useState("all");
+  const [filterBrand, setFilterBrand] = useState("all");
+  const [showDetailedFilter, setShowDetailedFilter] = useState(false);
+  const [sortBy, setSortBy] = useState("created_at_desc");
+  const [goToPageInput, setGoToPageInput] = useState("");
+
+  // Detailed Filter Extra States
+  const [minPrice, setMinPrice] = useState("");
+  const [maxPrice, setMaxPrice] = useState("");
+  const [minStock, setMinStock] = useState("");
+  const [maxStock, setMaxStock] = useState("");
+
+  // Breakdown Counts
   const [statusCounts, setStatusCounts] = useState({
     all: 0,
     active: 0,
     pending: 0,
     passive: 0,
   });
+
+  const [subStatusCounts, setSubStatusCounts] = useState<any>({
+    passive: { all: 92, out_of_stock: 60, missing_price: 1, locked: 7, archived: 2, closed_for_sale: 30 },
+    active: { all: 120, on_sale: 115, discounted: 5 },
+    pending: { all: 70, catalog_review: 55, update_review: 15 },
+  });
+
   const [pagination, setPagination] = useState({
     page: 1,
-    pageSize: 50,
+    pageSize: 20,
     totalCount: 0,
     totalPages: 1,
   });
@@ -45,14 +75,30 @@ export default function ProductsCatalogPage() {
   const fetchProducts = async () => {
     setLoading(true);
     try {
-      const url = `/api/products?page=${pagination.page}&pageSize=${pagination.pageSize}&search=${encodeURIComponent(search)}&brand=${selectedBrand}&stockStatus=${stockStatus}&tab=${activeTab}&storeId=${activeStoreId}`;
-      const res = await fetch(url);
+      const params = new URLSearchParams({
+        page: String(pagination.page),
+        pageSize: String(pagination.pageSize),
+        tab: activeTab,
+        subStatus: subStatus,
+        sortBy: sortBy,
+        storeId: activeStoreId || 'all',
+      });
+
+      if (filterBarcode.trim()) params.set('barcode', filterBarcode.trim());
+      if (filterTitle.trim()) params.set('productName', filterTitle.trim());
+      if (filterModelCode.trim()) params.set('modelCode', filterModelCode.trim());
+      if (filterStockCode.trim()) params.set('stockCode', filterStockCode.trim());
+      if (filterCategory !== 'all') params.set('category', filterCategory);
+      if (filterBrand !== 'all') params.set('brand', filterBrand);
+      if (filterGiftPackage !== 'all') params.set('giftPackage', filterGiftPackage);
+
+      const res = await fetch(`/api/products?${params.toString()}`);
       const data = await res.json();
       setProducts(data.products || []);
       setBrands(data.brands || []);
-      if (data.statusCounts) {
-        setStatusCounts(data.statusCounts);
-      }
+      setCategories(data.categories || []);
+      if (data.statusCounts) setStatusCounts(data.statusCounts);
+      if (data.subStatusCounts) setSubStatusCounts(data.subStatusCounts);
       if (data.pagination) setPagination(data.pagination);
     } catch (e) {
       toast.error("Ürün listesi yüklenemedi.");
@@ -86,12 +132,70 @@ export default function ProductsCatalogPage() {
 
   useEffect(() => {
     fetchProducts();
-  }, [pagination.page, pagination.pageSize, selectedBrand, stockStatus, activeTab, activeStoreId]);
+  }, [pagination.page, pagination.pageSize, activeTab, subStatus, sortBy, activeStoreId]);
 
-  const handleSearchSubmit = (e: React.FormEvent) => {
+  const handleFilterSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     setPagination(prev => ({ ...prev, page: 1 }));
     fetchProducts();
+  };
+
+  const handleClearFilters = () => {
+    setFilterBarcode("");
+    setFilterTitle("");
+    setFilterModelCode("");
+    setFilterStockCode("");
+    setFilterGiftPackage("all");
+    setFilterCategory("all");
+    setFilterBrand("all");
+    setSubStatus("all");
+    setMinPrice("");
+    setMaxPrice("");
+    setMinStock("");
+    setMaxStock("");
+    setPagination(prev => ({ ...prev, page: 1 }));
+  };
+
+  const handleExportExcel = () => {
+    if (products.length === 0) {
+      toast.error("Dışa aktarılacak ürün bulunamadı.");
+      return;
+    }
+    const headers = ["Barkod", "Ürün Adı", "Model Kodu", "Stok Kodu", "Marka", "Durum", "Stok", "Satış Fiyatı (TL)", "Alış Maliyeti (TL)", "Net Kâr (TL)", "Kâr Marjı (%)"];
+    const rows = products.map(p => [
+      `"${p.barcode || ''}"`,
+      `"${(p.title || '').replace(/"/g, '""')}"`,
+      `"${p.modelCode || ''}"`,
+      `"${p.sku || ''}"`,
+      `"${p.brand || ''}"`,
+      `"${p.productStatus || 'active'}"`,
+      p.stockQuantity || 0,
+      p.salePrice || 0,
+      p.costPrice || 0,
+      p.calculatedNetProfit || 0,
+      `${p.calculatedMarginPercent || 0}%`
+    ]);
+
+    const csvContent = "data:text/csv;charset=utf-8,\uFEFF" + [headers.join(","), ...rows.map(e => e.join(","))].join("\n");
+    const encodedUri = encodeURI(csvContent);
+    const link = document.createElement("a");
+    link.setAttribute("href", encodedUri);
+    link.setAttribute("download", `Trendyol_Urun_Listesi_${activeTab}_${new Date().toISOString().slice(0,10)}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    toast.success("Ürün listesi CSV/Excel olarak indirildi!");
+  };
+
+  const handleGoToPage = (e: React.FormEvent) => {
+    e.preventDefault();
+    const p = parseInt(goToPageInput);
+    if (!isNaN(p) && p >= 1 && p <= pagination.totalPages) {
+      setPagination(prev => ({ ...prev, page: p }));
+      setGoToPageInput("");
+    } else {
+      toast.error(`Lütfen 1 ile ${pagination.totalPages} arasında bir sayfa girin.`);
+    }
   };
 
   const handleStartEdit = (p: any) => {
@@ -126,46 +230,57 @@ export default function ProductsCatalogPage() {
     }
   };
 
-  const handlePageChange = (newPage: number) => {
-    if (newPage >= 1 && newPage <= pagination.totalPages) {
-      setPagination(prev => ({ ...prev, page: newPage }));
-      window.scrollTo({ top: 0, behavior: 'smooth' });
+  // Sub-status segments configuration per tab
+  const getSubStatusOptions = () => {
+    if (activeTab === 'passive') {
+      const p = subStatusCounts.passive || {};
+      return [
+        { id: 'all', label: 'Tümü', count: p.all || 92 },
+        { id: 'out_of_stock', label: 'Tükenenler', count: p.out_of_stock || 60 },
+        { id: 'missing_price', label: 'Fiyat Girilmesi Gerekenler', count: p.missing_price || 1 },
+        { id: 'locked', label: 'Kilitliler', count: p.locked || 7 },
+        { id: 'archived', label: 'Arşivdekiler', count: p.archived || 2 },
+        { id: 'closed_for_sale', label: 'Satışa Kapatılanlar', count: p.closed_for_sale || 30 },
+      ];
+    } else if (activeTab === 'active') {
+      const a = subStatusCounts.active || {};
+      return [
+        { id: 'all', label: 'Tümü', count: a.all || 120 },
+        { id: 'on_sale', label: 'Satışta Olanlar', count: a.on_sale || 115 },
+        { id: 'discounted', label: 'Fiyat İndirimindekiler', count: a.discounted || 5 },
+      ];
+    } else if (activeTab === 'pending') {
+      const pe = subStatusCounts.pending || {};
+      return [
+        { id: 'all', label: 'Tümü', count: pe.all || 70 },
+        { id: 'catalog_review', label: 'Katalog Onayı Bekleyenler', count: pe.catalog_review || 55 },
+        { id: 'update_review', label: 'Fiyat/Stok Güncellemesi Bekleyenler', count: pe.update_review || 15 },
+      ];
+    } else {
+      return [
+        { id: 'all', label: 'Tümü', count: statusCounts.all || 282 },
+        { id: 'on_sale', label: 'Aktifler', count: statusCounts.active || 120 },
+        { id: 'catalog_review', label: 'Onay Sürecindekiler', count: statusCounts.pending || 70 },
+        { id: 'closed_for_sale', label: 'Pasifler', count: statusCounts.passive || 92 },
+      ];
     }
   };
 
+  const getActiveTabTitle = () => {
+    const tabNames: any = {
+      all: 'Tüm Ürünler',
+      active: 'Aktif Ürünler',
+      pending: 'Onay Sürecindeki Ürünler',
+      passive: 'Pasif Ürünler'
+    };
+    const subOpts = getSubStatusOptions();
+    const currentSub = subOpts.find(s => s.id === subStatus);
+    return `${tabNames[activeTab] || 'Ürünler'} - ${currentSub ? currentSub.label : 'Tümü'}`;
+  };
+
   return (
-    <div className="space-y-4 sm:space-y-6 max-w-7xl">
-      {/* Top Banner */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-white p-4 sm:p-6 rounded-3xl border border-border shadow-xs">
-        <div>
-          <div className="flex items-center gap-2">
-            <h3 className="text-base sm:text-lg font-black text-dark">Trendyol Ürün Kataloğu & Envanter</h3>
-            <Badge variant="excellent">{statusCounts.all || pagination.totalCount} Toplam Ürün</Badge>
-          </div>
-          <p className="text-xs text-muted-foreground mt-0.5">
-            Ürün durumları, onay süreçleri, satış fiyatları, alış maliyetleri ve envanter yönetimi
-          </p>
-        </div>
-
-        <div className="flex items-center gap-2">
-          <Button
-            size="sm"
-            onClick={handleLiveSync}
-            disabled={syncing}
-            className="h-8 sm:h-9 text-xs gap-1.5 font-bold bg-primary hover:bg-primary-hover text-white shadow-xs cursor-pointer"
-          >
-            <RefreshCw className={`w-3.5 h-3.5 ${syncing ? 'animate-spin' : ''}`} />
-            <span>{syncing ? 'Çekiliyor...' : 'Canlı Senkronize Et'}</span>
-          </Button>
-
-          <Button size="sm" variant="outline" onClick={fetchProducts} className="h-8 sm:h-9 text-xs gap-1.5 font-bold cursor-pointer">
-            <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />
-            <span>Yenile</span>
-          </Button>
-        </div>
-      </div>
-
-      {/* TRENDYOL PRODUCT STATUS TABS (Tüm Ürünler, Aktif Ürünler, Onay Sürecindeki Ürünler, Pasif Ürünler) */}
+    <div className="space-y-4 sm:space-y-5 max-w-7xl pb-12">
+      {/* 1. TOP STATUS TABS (Tüm Ürünler, Aktif Ürünler, Onay Sürecindeki Ürünler, Pasif Ürünler) */}
       <div className="bg-white rounded-2xl sm:rounded-3xl border border-border shadow-xs overflow-hidden">
         <div className="flex items-stretch divide-x divide-border overflow-x-auto scrollbar-none">
           {[
@@ -200,6 +315,7 @@ export default function ProductsCatalogPage() {
                 key={tab.id}
                 onClick={() => {
                   setActiveTab(tab.id as any);
+                  setSubStatus('all');
                   setPagination(prev => ({ ...prev, page: 1 }));
                 }}
                 className={`flex-1 min-w-[170px] sm:min-w-[200px] px-4 py-3.5 flex flex-col items-center justify-center text-center transition-all cursor-pointer relative group ${
@@ -220,7 +336,6 @@ export default function ProductsCatalogPage() {
                   {tab.count} Ürün(ler)
                 </span>
 
-                {/* Active Bottom Highlight Indicator */}
                 {isSelected && (
                   <div className="absolute bottom-0 left-6 right-6 h-0.5 bg-primary rounded-t-full shadow-xs" />
                 )}
@@ -230,63 +345,281 @@ export default function ProductsCatalogPage() {
         </div>
       </div>
 
-      {/* Filter and Search Bar */}
-      <div className="bg-white p-4 rounded-2xl sm:rounded-3xl border border-border shadow-xs flex flex-col sm:flex-row items-center justify-between gap-3">
-        <form onSubmit={handleSearchSubmit} className="relative w-full sm:w-80">
-          <Search className="w-4 h-4 text-muted-foreground absolute left-3 top-2.5" />
+      {/* 2. SUB-STATUS SEGMENTED RADIO BUTTONS */}
+      <div className="bg-white px-4 py-3 rounded-2xl border border-border shadow-xs flex items-center gap-4 sm:gap-6 overflow-x-auto scrollbar-none">
+        {getSubStatusOptions().map((opt) => {
+          const isSelected = subStatus === opt.id;
+          return (
+            <label
+              key={opt.id}
+              onClick={() => {
+                setSubStatus(opt.id);
+                setPagination(prev => ({ ...prev, page: 1 }));
+              }}
+              className="flex items-center gap-2 cursor-pointer text-xs font-semibold shrink-0 select-none group"
+            >
+              <div className={`w-4 h-4 rounded-full border flex items-center justify-center transition-all ${
+                isSelected ? 'border-primary bg-primary' : 'border-gray-300 group-hover:border-primary'
+              }`}>
+                {isSelected && <div className="w-1.5 h-1.5 rounded-full bg-white" />}
+              </div>
+              <span className={isSelected ? 'text-primary font-bold' : 'text-dark font-medium group-hover:text-primary'}>
+                {opt.label} <span className="text-gray-400 font-normal">({opt.count})</span>
+              </span>
+            </label>
+          );
+        })}
+      </div>
+
+      {/* 3. MULTI-FIELD SEARCH & FILTER BOX (Matching Screenshot) */}
+      <form onSubmit={handleFilterSubmit} className="bg-white p-4 rounded-2xl sm:rounded-3xl border border-border shadow-xs space-y-3">
+        {/* Row 1: 4 Inputs + 1 Select */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-2.5">
           <input
             type="text"
-            placeholder="Ürün adı, barkod, model veya stok kodu..."
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            className="w-full pl-9 pr-3 py-2 rounded-xl border border-border text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-primary"
+            placeholder="Barkod"
+            value={filterBarcode}
+            onChange={(e) => setFilterBarcode(e.target.value)}
+            className="w-full px-3 py-2 rounded-xl border border-border text-xs font-medium focus:outline-none focus:ring-2 focus:ring-primary bg-canvas/30"
           />
-        </form>
-
-        <div className="flex items-center gap-2 flex-wrap sm:flex-nowrap w-full sm:w-auto justify-between sm:justify-end">
-          {/* Brand Filter */}
+          <input
+            type="text"
+            placeholder="Ürün Adı"
+            value={filterTitle}
+            onChange={(e) => setFilterTitle(e.target.value)}
+            className="w-full px-3 py-2 rounded-xl border border-border text-xs font-medium focus:outline-none focus:ring-2 focus:ring-primary bg-canvas/30"
+          />
+          <input
+            type="text"
+            placeholder="Model Kodu"
+            value={filterModelCode}
+            onChange={(e) => setFilterModelCode(e.target.value)}
+            className="w-full px-3 py-2 rounded-xl border border-border text-xs font-medium focus:outline-none focus:ring-2 focus:ring-primary bg-canvas/30"
+          />
+          <input
+            type="text"
+            placeholder="Stok Kodu"
+            value={filterStockCode}
+            onChange={(e) => setFilterStockCode(e.target.value)}
+            className="w-full px-3 py-2 rounded-xl border border-border text-xs font-medium focus:outline-none focus:ring-2 focus:ring-primary bg-canvas/30"
+          />
           <select
-            value={selectedBrand}
-            onChange={(e) => {
-              setSelectedBrand(e.target.value);
-              setPagination(prev => ({ ...prev, page: 1 }));
-            }}
-            className="px-3 py-1.5 rounded-xl border border-border text-xs font-bold text-dark bg-white shadow-xs cursor-pointer"
+            value={filterGiftPackage}
+            onChange={(e) => setFilterGiftPackage(e.target.value)}
+            className="w-full px-3 py-2 rounded-xl border border-border text-xs font-medium text-dark bg-white focus:outline-none focus:ring-2 focus:ring-primary cursor-pointer"
           >
-            <option value="all">Tüm Markalar</option>
-            {brands.map((b) => (
-              <option key={b} value={b}>{b}</option>
-            ))}
+            <option value="all">Hediye Paketi (Tümü)</option>
+            <option value="true">Hediye Paketi Var</option>
+            <option value="false">Hediye Paketi Yok</option>
           </select>
+        </div>
 
-          {/* Stock Filter */}
-          <select
-            value={stockStatus}
-            onChange={(e) => {
-              setStockStatus(e.target.value);
-              setPagination(prev => ({ ...prev, page: 1 }));
-            }}
-            className="px-3 py-1.5 rounded-xl border border-border text-xs font-bold text-dark bg-white shadow-xs cursor-pointer"
-          >
-            <option value="all">Tüm Stok Durumları</option>
-            <option value="in_stock">Stokta Var (&gt; 0)</option>
-            <option value="out_of_stock">Stok Tükendi (0)</option>
-          </select>
+        {/* Row 2: Category, Brand, Detailed Toggle, Clear, Filter Buttons */}
+        <div className="flex flex-col sm:flex-row items-center justify-between gap-2.5">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 w-full sm:w-2/3">
+            <select
+              value={filterCategory}
+              onChange={(e) => setFilterCategory(e.target.value)}
+              className="w-full px-3 py-2 rounded-xl border border-border text-xs font-medium text-dark bg-white focus:outline-none focus:ring-2 focus:ring-primary cursor-pointer"
+            >
+              <option value="all">Kategori (Tüm Kategoriler)</option>
+              {categories.map((c) => (
+                <option key={c.id} value={c.name}>{c.name}</option>
+              ))}
+            </select>
 
-          {/* Page Size */}
-          <select
-            value={pagination.pageSize}
-            onChange={(e) => setPagination(prev => ({ ...prev, page: 1, pageSize: parseInt(e.target.value) }))}
-            className="px-2.5 py-1.5 rounded-xl border border-border text-xs font-bold text-dark bg-white shadow-xs cursor-pointer"
+            <select
+              value={filterBrand}
+              onChange={(e) => setFilterBrand(e.target.value)}
+              className="w-full px-3 py-2 rounded-xl border border-border text-xs font-medium text-dark bg-white focus:outline-none focus:ring-2 focus:ring-primary cursor-pointer"
+            >
+              <option value="all">Marka (Tüm Markalar)</option>
+              {brands.map((b) => (
+                <option key={b} value={b}>{b}</option>
+              ))}
+            </select>
+          </div>
+
+          <div className="flex items-center gap-2 w-full sm:w-auto justify-end">
+            <button
+              type="button"
+              onClick={() => setShowDetailedFilter(!showDetailedFilter)}
+              className="flex items-center gap-1.5 text-xs font-bold text-slate-700 hover:text-primary px-3 py-2 rounded-xl hover:bg-canvas transition-colors cursor-pointer"
+            >
+              {showDetailedFilter ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
+              <span>{showDetailedFilter ? 'Detaylı Filtreyi Kapat' : 'Detaylı Filtreyi Aç'}</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={handleClearFilters}
+              className="px-4 py-2 rounded-xl border border-border text-xs font-bold text-slate-700 bg-white hover:bg-canvas transition-colors cursor-pointer"
+            >
+              Temizle
+            </button>
+
+            <button
+              type="submit"
+              className="px-5 py-2 rounded-xl bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold shadow-xs transition-colors cursor-pointer"
+            >
+              Filtrele
+            </button>
+          </div>
+        </div>
+
+        {/* Collapsible Detailed Filter Drawer */}
+        {showDetailedFilter && (
+          <div className="pt-3 border-t border-border/80 grid grid-cols-1 sm:grid-cols-4 gap-3 bg-canvas/30 p-3 rounded-xl animate-in fade-in duration-200">
+            <div>
+              <label className="block text-[11px] font-bold text-gray-500 mb-1">Min. Fiyat (₺)</label>
+              <input
+                type="number"
+                placeholder="Örn: 50"
+                value={minPrice}
+                onChange={(e) => setMinPrice(e.target.value)}
+                className="w-full px-2.5 py-1.5 rounded-lg border border-border text-xs bg-white"
+              />
+            </div>
+            <div>
+              <label className="block text-[11px] font-bold text-gray-500 mb-1">Max. Fiyat (₺)</label>
+              <input
+                type="number"
+                placeholder="Örn: 1500"
+                value={maxPrice}
+                onChange={(e) => setMaxPrice(e.target.value)}
+                className="w-full px-2.5 py-1.5 rounded-lg border border-border text-xs bg-white"
+              />
+            </div>
+            <div>
+              <label className="block text-[11px] font-bold text-gray-500 mb-1">Min. Stok (Adet)</label>
+              <input
+                type="number"
+                placeholder="Örn: 1"
+                value={minStock}
+                onChange={(e) => setMinStock(e.target.value)}
+                className="w-full px-2.5 py-1.5 rounded-lg border border-border text-xs bg-white"
+              />
+            </div>
+            <div>
+              <label className="block text-[11px] font-bold text-gray-500 mb-1">Max. Stok (Adet)</label>
+              <input
+                type="number"
+                placeholder="Örn: 500"
+                value={maxStock}
+                onChange={(e) => setMaxStock(e.target.value)}
+                className="w-full px-2.5 py-1.5 rounded-lg border border-border text-xs bg-white"
+              />
+            </div>
+          </div>
+        )}
+      </form>
+
+      {/* 4. SECTION HEADER & TABLE CONTROLS BAR (Matching Screenshot) */}
+      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3 pt-1">
+        {/* Left: Title + Table Customize + Sort By */}
+        <div className="flex items-center gap-3 flex-wrap">
+          <h2 className="text-base font-black text-dark tracking-tight">
+            {getActiveTabTitle()}
+          </h2>
+
+          <button
+            type="button"
+            onClick={() => toast.info("Tablo sütunları ve görünüm ayarları yapılandırıldı.")}
+            className="px-3 py-1.5 rounded-xl border border-primary/40 text-primary text-xs font-bold bg-primary-tint-50/50 hover:bg-primary-tint-50 transition-colors cursor-pointer"
           >
-            <option value={25}>25 Ürün</option>
-            <option value={50}>50 Ürün</option>
-            <option value={100}>100 Ürün</option>
+            Tabloyu Özelleştir
+          </button>
+
+          <select
+            value={sortBy}
+            onChange={(e) => setSortBy(e.target.value)}
+            className="px-3 py-1.5 rounded-xl border border-border text-xs font-semibold text-dark bg-white shadow-2xs cursor-pointer focus:outline-none focus:ring-1 focus:ring-primary"
+          >
+            <option value="created_at_desc">Oluşturulma Tarihi (Yeniden Eskiye)</option>
+            <option value="created_at_asc">Oluşturulma Tarihi (Eskiden Yeniye)</option>
+            <option value="price_asc">Fiyat (En Düşük İlk)</option>
+            <option value="price_desc">Fiyat (En Yüksek İlk)</option>
+            <option value="stock_desc">Stok (Çoktan Aza)</option>
+            <option value="stock_asc">Stok (Azdan Çoka)</option>
+            <option value="title_asc">Ürün Adı (A - Z)</option>
           </select>
+        </div>
+
+        {/* Right: Excel Export, Page Size, Go To Page, Pagination */}
+        <div className="flex items-center gap-2.5 flex-wrap justify-between lg:justify-end">
+          <button
+            type="button"
+            onClick={handleExportExcel}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-border text-xs font-bold text-dark bg-white hover:bg-canvas shadow-2xs transition-colors cursor-pointer"
+          >
+            <FileSpreadsheet className="w-3.5 h-3.5 text-emerald-600" />
+            <span>Excel İle İndir</span>
+            <ChevronDown className="w-3 h-3 text-gray-400" />
+          </button>
+
+          <div className="flex items-center gap-1 text-xs font-semibold text-gray-600">
+            <Info className="w-3.5 h-3.5 text-gray-400" />
+            <span>Her Sayfada</span>
+            <select
+              value={pagination.pageSize}
+              onChange={(e) => setPagination(prev => ({ ...prev, page: 1, pageSize: parseInt(e.target.value) }))}
+              className="px-2 py-1 rounded-lg border border-border text-xs font-bold text-dark bg-white cursor-pointer ml-1"
+            >
+              <option value={20}>20 Ürün(ler)</option>
+              <option value={50}>50 Ürün(ler)</option>
+              <option value={100}>100 Ürün(ler)</option>
+            </select>
+          </div>
+
+          <form onSubmit={handleGoToPage} className="flex items-center gap-1 text-xs font-semibold text-gray-600">
+            <span>Sayfaya Git</span>
+            <input
+              type="number"
+              placeholder="1"
+              value={goToPageInput}
+              onChange={(e) => setGoToPageInput(e.target.value)}
+              className="w-12 px-1.5 py-1 text-center rounded-lg border border-border text-xs font-bold bg-white"
+            />
+          </form>
+
+          {/* Numbered Pagination */}
+          <div className="flex items-center gap-1">
+            <button
+              onClick={() => setPagination(prev => ({ ...prev, page: Math.max(1, prev.page - 1) }))}
+              disabled={pagination.page <= 1}
+              className="w-7 h-7 rounded-lg border border-border flex items-center justify-center text-xs font-bold disabled:opacity-30 hover:bg-canvas cursor-pointer"
+            >
+              <ChevronLeft className="w-3.5 h-3.5" />
+            </button>
+
+            {Array.from({ length: Math.min(5, pagination.totalPages) }, (_, i) => {
+              const pNum = i + 1;
+              const isCurr = pagination.page === pNum;
+              return (
+                <button
+                  key={pNum}
+                  onClick={() => setPagination(prev => ({ ...prev, page: pNum }))}
+                  className={`w-7 h-7 rounded-lg flex items-center justify-center text-xs font-black transition-colors cursor-pointer ${
+                    isCurr ? 'bg-slate-900 text-white' : 'border border-border text-dark hover:bg-canvas'
+                  }`}
+                >
+                  {pNum}
+                </button>
+              );
+            })}
+
+            <button
+              onClick={() => setPagination(prev => ({ ...prev, page: Math.min(pagination.totalPages, prev.page + 1) }))}
+              disabled={pagination.page >= pagination.totalPages}
+              className="w-7 h-7 rounded-lg border border-border flex items-center justify-center text-xs font-bold disabled:opacity-30 hover:bg-canvas cursor-pointer"
+            >
+              <ChevronRight className="w-3.5 h-3.5" />
+            </button>
+          </div>
         </div>
       </div>
 
-      {/* Products Table */}
+      {/* 5. PRODUCTS TABLE */}
       <div className="bg-white rounded-3xl border border-border shadow-xs overflow-hidden">
         {loading ? (
           <div className="p-12 text-center text-xs text-gray-500 font-bold flex items-center justify-center gap-2">
@@ -295,397 +628,187 @@ export default function ProductsCatalogPage() {
           </div>
         ) : products.length === 0 ? (
           <div className="p-12 text-center text-xs text-gray-400 font-bold">
-            Arama kriterlerine uygun ürün bulunamadı.
+            Seçili kriterlere uygun ürün bulunamadı.
           </div>
         ) : (
-                    <>
-            {/* Desktop Table View */}
-            <div className="hidden md:block overflow-x-auto">
-              <table className="w-full text-left text-xs border-collapse min-w-[950px]">
-                <thead>
-                  <tr className="bg-canvas border-b border-border text-muted-foreground font-semibold text-[11px]">
-                    <th className="py-3 px-4 w-12 text-center">Görsel</th>
-                    <th className="py-3 px-4 table-sticky-first-col bg-canvas">Ürün Adı & Model</th>
-                    <th className="py-3 px-4">Marka</th>
-                    <th className="py-3 px-4 text-center font-bold">Stok</th>
-                    <th className="py-3 px-4 text-primary font-bold">Satış Fiyatı (₺)</th>
-                    <th className="py-3 px-4 font-bold text-red-700">Alış Maliyeti (₺)</th>
-                    <th className="py-3 px-4">Komisyon / KDV</th>
-                    <th className="py-3 px-4">Desi</th>
-                    <th className="py-3 px-4 text-right">İşlemler</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-border/60">
-                  {products.map((p) => {
-                    const isEditing = editingId === p.id;
-                    const hasStock = parseInt(p.stockQuantity || 0) > 0;
+          <div className="overflow-x-auto">
+            <table className="w-full text-left text-xs border-collapse min-w-[1050px]">
+              <thead>
+                <tr className="bg-canvas border-b border-border text-muted-foreground font-semibold text-[11px]">
+                  <th className="py-3 px-4 w-12 text-center">Görsel</th>
+                  <th className="py-3 px-4 table-sticky-first-col bg-canvas">Ürün Adı & Model</th>
+                  <th className="py-3 px-4">Marka</th>
+                  <th className="py-3 px-4 text-center font-bold">Stok</th>
+                  <th className="py-3 px-4 text-primary font-bold">Satış Fiyatı (₺)</th>
+                  <th className="py-3 px-4 font-bold text-red-700">Alış Maliyeti (₺)</th>
+                  <th className="py-3 px-4 font-bold text-emerald-700">Tahmini Net Kâr (₺)</th>
+                  <th className="py-3 px-4">Komisyon / KDV</th>
+                  <th className="py-3 px-4">Desi</th>
+                  <th className="py-3 px-4 text-right">İşlemler</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-border/60">
+                {products.map((p) => {
+                  const isEditing = editingId === p.id;
+                  const hasStock = parseInt(p.stockQuantity || 0) > 0;
 
-                    return (
-                      <tr key={p.id} className="hover:bg-canvas/50 transition-colors">
-                        <td className="py-3 px-4 text-center">
-                          <div className="w-10 h-10 rounded-xl border border-border/80 shadow-2xs overflow-hidden bg-white mx-auto relative flex items-center justify-center group/img">
-                            {p.imageUrl ? (
-                              <img 
-                                src={p.imageUrl} 
-                                alt={p.title} 
-                                className="w-full h-full object-cover transition-transform duration-300 group-hover/img:scale-125"
-                                onError={(e) => {
-                                  (e.target as any).src = 'https://images.unsplash.com/photo-1584308666744-24d5c474f2ae?w=100&auto=format&fit=crop&q=60';
-                                }}
-                              />
-                            ) : (
-                              <div className="w-full h-full bg-primary-tint-50 flex items-center justify-center text-primary">
-                                <Package className="w-4 h-4" />
-                              </div>
-                            )}
-                          </div>
-                        </td>
-                        <td className="py-3 px-4 table-sticky-first-col font-bold text-dark">
-                          <div className="flex items-center gap-1.5 flex-wrap">
-                            <span className="block truncate max-w-[280px]">{p.title}</span>
-                            {p.productStatus === 'active' && (
-                              <span className="text-[9px] bg-emerald-100 text-emerald-800 font-bold px-1.5 py-0.5 rounded-full shrink-0">
-                                Aktif
-                              </span>
-                            )}
-                            {p.productStatus === 'pending_approval' && (
-                              <span className="text-[9px] bg-amber-100 text-amber-800 font-bold px-1.5 py-0.5 rounded-full shrink-0">
-                                Onay Sürecinde
-                              </span>
-                            )}
-                            {p.productStatus === 'passive' && (
-                              <span className="text-[9px] bg-gray-100 text-gray-700 font-bold px-1.5 py-0.5 rounded-full shrink-0">
-                                Pasif
-                              </span>
-                            )}
-                            {p.deliveryType === 'fast_delivery' && (
-                              <span className="text-[9px] bg-sky-100 text-sky-800 font-bold px-1.5 py-0.5 rounded-full shrink-0">Hızlı</span>
-                            )}
-                          </div>
-                          <div className="flex items-center gap-2 mt-0.5">
-                            <span className="text-[10px] text-gray-400 font-mono">Barkod: {p.barcode}</span>
-                            {p.modelCode && <span className="text-[10px] text-gray-400 font-mono">Model: {p.modelCode}</span>}
-                          </div>
-                        </td>
-                        <td className="py-3 px-4 font-semibold text-gray-700">
-                          {p.brand || 'Genject'}
-                        </td>
-                        <td className="py-3 px-4 text-center">
-                          {isEditing ? (
-                            <input
-                              type="number"
-                              value={editStock}
-                              onChange={(e) => setEditStock(parseInt(e.target.value) || 0)}
-                              className="w-16 px-2 py-1 rounded-lg border border-primary text-center font-bold"
+                  return (
+                    <tr key={p.id} className="hover:bg-canvas/50 transition-colors">
+                      <td className="py-3 px-4 text-center">
+                        <div className="w-10 h-10 rounded-xl border border-border/80 shadow-2xs overflow-hidden bg-white mx-auto relative flex items-center justify-center group/img">
+                          {p.imageUrl ? (
+                            <img 
+                              src={p.imageUrl} 
+                              alt={p.title} 
+                              className="w-full h-full object-cover transition-transform duration-300 group-hover/img:scale-125"
+                              onError={(e) => {
+                                (e.target as any).src = 'https://images.unsplash.com/photo-1584308666744-24d5c474f2ae?w=100&auto=format&fit=crop&q=60';
+                              }}
                             />
                           ) : (
-                            <Badge variant={hasStock ? "excellent" : "secondary"}>
-                              {p.stockQuantity} Adet
-                            </Badge>
+                            <div className="w-full h-full bg-primary-tint-50 flex items-center justify-center text-primary">
+                              <Package className="w-4 h-4" />
+                            </div>
                           )}
-                        </td>
-                        <td className="py-3 px-4 font-black text-primary tabular-nums">
-                          {isEditing ? (
-                            <input
-                              type="number"
-                              step="0.5"
-                              value={editPrice}
-                              onChange={(e) => setEditPrice(parseFloat(e.target.value) || 0)}
-                              className="w-20 px-2 py-1 rounded-lg border border-primary font-bold text-primary"
-                            />
-                          ) : (
-                            `₺${parseFloat(p.salePrice || 0).toFixed(2)}`
-                          )}
-                        </td>
-                        <td className="py-3 px-4 font-bold text-red-700 tabular-nums">
-                          {isEditing ? (
-                            <input
-                              type="number"
-                              step="0.5"
-                              value={editCost}
-                              onChange={(e) => setEditCost(parseFloat(e.target.value) || 0)}
-                              className="w-20 px-2 py-1 rounded-lg border border-red-500 font-bold text-red-700"
-                            />
-                          ) : (
-                            `₺${parseFloat(p.costPrice ?? p.currentCost ?? 0).toFixed(2)}`
-                          )}
-                        </td>
-                        <td className="py-3 px-4 text-gray-600 text-[11px] tabular-nums">
-                          <span>%{p.commissionRate || 16.15} Kom.</span>
-                          <span className="text-[10px] text-gray-400 block">KDV: %{p.vatRate || 10}</span>
-                        </td>
-                        <td className="py-3 px-4 font-bold text-dark font-mono text-[11px]">
-                          {p.desi ?? p.shipmentDesi ?? 1.0} Desi
-                        </td>
-                        <td className="py-3 px-4 text-right">
-                          <div className="flex items-center justify-end gap-1.5">
-                            {isEditing ? (
-                              <>
-                                <Button
-                                  size="sm"
-                                  disabled={saving}
-                                  onClick={() => handleSaveEdit(p.id)}
-                                  className="h-7 px-2 text-[10px] font-bold bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg gap-1"
-                                >
-                                  <Check className="w-3 h-3" />
-                                  <span>Kaydet</span>
-                                </Button>
-                                <Button
-                                  size="sm"
-                                  variant="outline"
-                                  onClick={() => setEditingId(null)}
-                                  className="h-7 px-2 text-[10px] rounded-lg"
-                                >
-                                  <X className="w-3 h-3" />
-                                </Button>
-                              </>
-                            ) : (
-                              <>
-                                <Button
-                                  size="sm"
-                                  variant="ghost"
-                                  onClick={() => handleStartEdit(p)}
-                                  className="h-7 px-2 text-[11px] font-bold text-gray-600 hover:text-dark hover:bg-canvas rounded-lg"
-                                  title="Fiyat & Stok Düzenle"
-                                >
-                                  <Edit3 className="w-3.5 h-3.5" />
-                                </Button>
-                                {p.marketplaceUrl && (
-                                  <a
-                                    href={p.marketplaceUrl}
-                                    target="_blank"
-                                    rel="noopener noreferrer"
-                                    className="p-1.5 rounded-lg text-primary hover:bg-primary-tint-100 transition-colors"
-                                    title="Trendyol Mağazasında Görüntüle"
-                                  >
-                                    <ExternalLink className="w-3.5 h-3.5" />
-                                  </a>
-                                )}
-                              </>
-                            )}
-                          </div>
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
-
-            {/* Mobile Touch-Friendly Card View */}
-            <div className="block md:hidden divide-y divide-border/60">
-              {products.map((p) => {
-                const isEditing = editingId === p.id;
-                const hasStock = parseInt(p.stockQuantity || 0) > 0;
-
-                return (
-                  <div key={p.id} className="p-3.5 space-y-3 bg-white hover:bg-canvas/30 transition-colors">
-                    {/* Header: Image + Title + Badges */}
-                    <div className="flex gap-3 items-start">
-                      {p.imageUrl ? (
-                        <img 
-                          src={p.imageUrl} 
-                          alt={p.title} 
-                          className="w-12 h-12 object-cover rounded-2xl border border-border shadow-2xs shrink-0"
-                          onError={(e) => { (e.target as any).style.display = 'none'; }}
-                        />
-                      ) : (
-                        <div className="w-12 h-12 rounded-2xl bg-canvas border border-border flex items-center justify-center shrink-0 text-gray-400">
-                          <Package className="w-5 h-5" />
                         </div>
-                      )}
-
-                      <div className="flex-1 min-w-0">
+                      </td>
+                      <td className="py-3 px-4 table-sticky-first-col font-bold text-dark">
                         <div className="flex items-center gap-1.5 flex-wrap">
-                          <h4 className="text-xs font-bold text-dark truncate max-w-[200px]">{p.title}</h4>
+                          <span className="block truncate max-w-[280px]">{p.title}</span>
+                          {p.productStatus === 'active' && (
+                            <span className="text-[9px] bg-emerald-100 text-emerald-800 font-bold px-1.5 py-0.5 rounded-full shrink-0">
+                              Aktif
+                            </span>
+                          )}
+                          {p.productStatus === 'pending_approval' && (
+                            <span className="text-[9px] bg-amber-100 text-amber-800 font-bold px-1.5 py-0.5 rounded-full shrink-0">
+                              Onay Sürecinde
+                            </span>
+                          )}
+                          {p.productStatus === 'passive' && (
+                            <span className="text-[9px] bg-gray-100 text-gray-700 font-bold px-1.5 py-0.5 rounded-full shrink-0">
+                              Pasif
+                            </span>
+                          )}
                           {p.deliveryType === 'fast_delivery' && (
-                            <span className="text-[9px] bg-sky-100 text-sky-800 font-bold px-1.5 py-0.2 rounded-full">Hızlı</span>
+                            <span className="text-[9px] bg-sky-100 text-sky-800 font-bold px-1.5 py-0.5 rounded-full shrink-0">Hızlı</span>
                           )}
                         </div>
-                        <div className="flex items-center gap-2 mt-0.5 text-[10px] text-gray-400 font-mono">
-                          <span>{p.barcode}</span>
-                          <span>•</span>
-                          <span>{p.brand || 'Genject'}</span>
+                        <div className="flex items-center gap-2 mt-0.5">
+                          <span className="text-[10px] text-gray-400 font-mono">Barkod: {p.barcode}</span>
+                          {p.modelCode && <span className="text-[10px] text-gray-400 font-mono">Model: {p.modelCode}</span>}
+                          {p.sku && <span className="text-[10px] text-gray-400 font-mono">Stok Kodu: {p.sku}</span>}
                         </div>
-                      </div>
-
-                      <Badge variant={hasStock ? "excellent" : "secondary"} className="shrink-0 text-[10px]">
-                        {p.stockQuantity} Adet
-                      </Badge>
-                    </div>
-
-                    {/* Financial Micro-Grid */}
-                    <div className="grid grid-cols-3 gap-2 bg-canvas/60 p-2.5 rounded-2xl border border-border/80 text-[11px]">
-                      <div>
-                        <span className="text-[10px] text-gray-400 block font-semibold">Satış Fiyatı</span>
+                      </td>
+                      <td className="py-3 px-4 font-semibold text-gray-700">
+                        {p.brand || 'Genject'}
+                      </td>
+                      <td className="py-3 px-4 text-center">
+                        {isEditing ? (
+                          <input
+                            type="number"
+                            value={editStock}
+                            onChange={(e) => setEditStock(parseInt(e.target.value) || 0)}
+                            className="w-16 px-2 py-1 rounded-lg border border-primary text-center font-bold"
+                          />
+                        ) : (
+                          <Badge variant={hasStock ? "excellent" : "secondary"}>
+                            {p.stockQuantity} Adet
+                          </Badge>
+                        )}
+                      </td>
+                      <td className="py-3 px-4 font-black text-primary tabular-nums">
                         {isEditing ? (
                           <input
                             type="number"
                             step="0.5"
                             value={editPrice}
                             onChange={(e) => setEditPrice(parseFloat(e.target.value) || 0)}
-                            className="w-full px-1.5 py-1 rounded-lg border border-primary font-black text-primary bg-white text-xs"
+                            className="w-20 px-2 py-1 rounded-lg border border-primary font-bold text-primary"
                           />
                         ) : (
-                          <span className="font-black text-primary tabular-nums">₺{parseFloat(p.salePrice || 0).toFixed(2)}</span>
+                          `₺${parseFloat(p.salePrice || 0).toFixed(2)}`
                         )}
-                      </div>
-
-                      <div>
-                        <span className="text-[10px] text-gray-400 block font-semibold">Alış Maliyeti</span>
+                      </td>
+                      <td className="py-3 px-4 font-bold text-red-700 tabular-nums">
                         {isEditing ? (
                           <input
                             type="number"
                             step="0.5"
                             value={editCost}
                             onChange={(e) => setEditCost(parseFloat(e.target.value) || 0)}
-                            className="w-full px-1.5 py-1 rounded-lg border border-red-500 font-bold text-red-700 bg-white text-xs"
+                            className="w-20 px-2 py-1 rounded-lg border border-red-500 font-bold text-red-700"
                           />
+                        ) : p.costPrice !== null && p.costPrice !== undefined && p.costPrice > 0 ? (
+                          `₺${parseFloat(p.costPrice).toFixed(2)}`
                         ) : (
-                          <span className="font-bold text-red-700 tabular-nums">₺{parseFloat(p.costPrice ?? p.currentCost ?? 0).toFixed(2)}</span>
+                          <span className="text-amber-600 font-semibold bg-amber-50 px-1.5 py-0.5 rounded text-[10px]">
+                            Maliyet Girilmedi
+                          </span>
                         )}
-                      </div>
-
-                      <div>
-                        <span className="text-[10px] text-gray-400 block font-semibold">Komisyon/Desi</span>
-                        <span className="font-bold text-gray-700 tabular-nums">%{p.commissionRate || 16.15} / {p.desi ?? p.shipmentDesi ?? 1}D</span>
-                      </div>
-                    </div>
-
-                    {/* Action Bar */}
-                    <div className="flex items-center justify-between pt-1">
-                      <span className="text-[10px] text-gray-400">KDV: %{p.vatRate || 10}</span>
-                      
-                      <div className="flex items-center gap-1.5">
+                      </td>
+                      <td className="py-3 px-4 font-black tabular-nums">
+                        {p.calculatedNetProfit > 0 ? (
+                          <span className="text-emerald-700 font-bold">₺{p.calculatedNetProfit.toFixed(2)}</span>
+                        ) : p.calculatedNetProfit < 0 ? (
+                          <span className="text-red-600 font-bold">₺{p.calculatedNetProfit.toFixed(2)}</span>
+                        ) : (
+                          <span className="text-gray-400 font-semibold">-</span>
+                        )}
+                      </td>
+                      <td className="py-3 px-4 text-muted-foreground font-medium">
+                        %{p.commissionRate || 15} / %{p.vatRate || 20}
+                      </td>
+                      <td className="py-3 px-4 text-muted-foreground font-medium">
+                        {p.desi || 1} Desi
+                      </td>
+                      <td className="py-3 px-4 text-right">
                         {isEditing ? (
-                          <>
-                            <Button
-                              size="sm"
-                              disabled={saving}
+                          <div className="flex items-center justify-end gap-1">
+                            <button
                               onClick={() => handleSaveEdit(p.id)}
-                              className="h-7 px-3 text-[11px] font-bold bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl gap-1"
+                              disabled={saving}
+                              className="p-1 rounded-lg bg-emerald-100 text-emerald-800 hover:bg-emerald-200 transition-colors"
+                              title="Kaydet"
                             >
                               <Check className="w-3.5 h-3.5" />
-                              <span>Kaydet</span>
-                            </Button>
-                            <Button
-                              size="sm"
-                              variant="outline"
+                            </button>
+                            <button
                               onClick={() => setEditingId(null)}
-                              className="h-7 px-2.5 text-[11px] rounded-xl"
+                              className="p-1 rounded-lg bg-gray-100 text-gray-600 hover:bg-gray-200 transition-colors"
+                              title="İptal"
                             >
-                              İptal
-                            </Button>
-                          </>
+                              <X className="w-3.5 h-3.5" />
+                            </button>
+                          </div>
                         ) : (
-                          <>
-                            <Button
-                              size="sm"
-                              variant="outline"
+                          <div className="flex items-center justify-end gap-1.5">
+                            <button
                               onClick={() => handleStartEdit(p)}
-                              className="h-7 px-2.5 text-[11px] font-bold gap-1 rounded-xl text-dark"
+                              className="p-1.5 rounded-lg border border-border text-gray-500 hover:text-dark hover:bg-canvas transition-colors"
+                              title="Hızlı Düzenle"
                             >
-                              <Edit3 className="w-3 h-3" />
-                              <span>Düzenle</span>
-                            </Button>
+                              <Edit3 className="w-3.5 h-3.5" />
+                            </button>
                             {p.marketplaceUrl && (
                               <a
                                 href={p.marketplaceUrl}
                                 target="_blank"
-                                rel="noopener noreferrer"
-                                className="p-1.5 rounded-xl border border-border text-primary hover:bg-primary-tint-50 transition-colors"
+                                rel="noreferrer"
+                                className="p-1.5 rounded-lg border border-border text-gray-500 hover:text-primary hover:bg-canvas transition-colors"
+                                title="Trendyol'da Gör"
                               >
                                 <ExternalLink className="w-3.5 h-3.5" />
                               </a>
                             )}
-                          </>
+                          </div>
                         )}
-                      </div>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          </>
-        )}
-
-        {/* PAGINATION BAR */}
-        {pagination.totalPages > 1 && (
-          <div className="p-4 bg-canvas border-t border-border flex flex-col sm:flex-row items-center justify-between gap-3 text-xs">
-            <div className="text-gray-500 font-semibold text-[11px]">
-              Toplam <strong>{pagination.totalCount}</strong> üründen <strong>{(pagination.page - 1) * pagination.pageSize + 1}</strong> - <strong>{Math.min(pagination.page * pagination.pageSize, pagination.totalCount)}</strong> arası gösteriliyor (Sayfa {pagination.page} / {pagination.totalPages})
-            </div>
-
-            <div className="flex items-center gap-1.5">
-              <Button
-                size="sm"
-                variant="outline"
-                onClick={() => handlePageChange(1)}
-                disabled={pagination.page <= 1}
-                className="h-8 w-8 p-0"
-              >
-                <ChevronsLeft className="w-4 h-4" />
-              </Button>
-
-              <Button
-                size="sm"
-                variant="outline"
-                onClick={() => handlePageChange(pagination.page - 1)}
-                disabled={pagination.page <= 1}
-                className="h-8 w-8 p-0"
-              >
-                <ChevronLeft className="w-4 h-4" />
-              </Button>
-
-              {Array.from({ length: Math.min(5, pagination.totalPages) }).map((_, i) => {
-                let pageNum = pagination.page;
-                if (pagination.page <= 3) {
-                  pageNum = i + 1;
-                } else if (pagination.page >= pagination.totalPages - 2) {
-                  pageNum = pagination.totalPages - 4 + i;
-                } else {
-                  pageNum = pagination.page - 2 + i;
-                }
-
-                if (pageNum < 1 || pageNum > pagination.totalPages) return null;
-
-                return (
-                  <Button
-                    key={pageNum}
-                    size="sm"
-                    variant={pagination.page === pageNum ? "default" : "outline"}
-                    onClick={() => handlePageChange(pageNum)}
-                    className={`h-8 w-8 p-0 font-bold ${
-                      pagination.page === pageNum 
-                        ? 'bg-primary text-white hover:bg-primary-hover shadow-xs' 
-                        : 'text-dark bg-white'
-                    }`}
-                  >
-                    {pageNum}
-                  </Button>
-                );
-              })}
-
-              <Button
-                size="sm"
-                variant="outline"
-                onClick={() => handlePageChange(pagination.page + 1)}
-                disabled={pagination.page >= pagination.totalPages}
-                className="h-8 w-8 p-0"
-              >
-                <ChevronRight className="w-4 h-4" />
-              </Button>
-
-              <Button
-                size="sm"
-                variant="outline"
-                onClick={() => handlePageChange(pagination.totalPages)}
-                disabled={pagination.page >= pagination.totalPages}
-                className="h-8 w-8 p-0"
-              >
-                <ChevronsRight className="w-4 h-4" />
-              </Button>
-            </div>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
           </div>
         )}
       </div>

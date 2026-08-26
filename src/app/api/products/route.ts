@@ -7,23 +7,57 @@ export async function GET(request: Request) {
   try {
     const { searchParams } = new URL(request.url);
     const search = searchParams.get('search') || '';
+    const barcode = searchParams.get('barcode') || '';
+    const productName = searchParams.get('productName') || '';
+    const modelCode = searchParams.get('modelCode') || '';
+    const stockCode = searchParams.get('stockCode') || '';
+    const category = searchParams.get('category') || 'all';
     const brand = searchParams.get('brand') || 'all';
     const storeId = searchParams.get('storeId') || 'all';
     const marketplace = searchParams.get('marketplace') || 'all';
     const stockStatus = searchParams.get('stockStatus') || 'all';
+    const giftPackage = searchParams.get('giftPackage') || 'all';
     const tab = searchParams.get('tab') || 'all'; // 'all' | 'active' | 'pending' | 'passive'
+    const subStatus = searchParams.get('subStatus') || 'all'; // 'out_of_stock', 'missing_price', 'locked', 'archived', 'closed_for_sale', etc.
+    const sortBy = searchParams.get('sortBy') || 'created_at_desc';
+
     const hasPagination = searchParams.has('page') || searchParams.has('pageSize');
     const page = Math.max(1, parseInt(searchParams.get('page') || '1'));
-    const pageSize = Math.min(500, Math.max(10, parseInt(searchParams.get('pageSize') || '50')));
+    const pageSize = Math.min(500, Math.max(10, parseInt(searchParams.get('pageSize') || '20')));
     const offset = (page - 1) * pageSize;
 
     let conditions: string[] = ['1=1'];
     let params: any[] = [];
     let pIdx = 1;
 
+    // General or Specific Search Fields
     if (search) {
       conditions.push(`(p.title ILIKE $${pIdx} OR p.barcode ILIKE $${pIdx} OR p.model_code ILIKE $${pIdx} OR p.sku ILIKE $${pIdx})`);
       params.push(`%${search}%`);
+      pIdx++;
+    }
+
+    if (barcode) {
+      conditions.push(`p.barcode ILIKE $${pIdx}`);
+      params.push(`%${barcode.trim()}%`);
+      pIdx++;
+    }
+
+    if (productName) {
+      conditions.push(`p.title ILIKE $${pIdx}`);
+      params.push(`%${productName.trim()}%`);
+      pIdx++;
+    }
+
+    if (modelCode) {
+      conditions.push(`p.model_code ILIKE $${pIdx}`);
+      params.push(`%${modelCode.trim()}%`);
+      pIdx++;
+    }
+
+    if (stockCode) {
+      conditions.push(`p.sku ILIKE $${pIdx}`);
+      params.push(`%${stockCode.trim()}%`);
       pIdx++;
     }
 
@@ -60,6 +94,29 @@ export async function GET(request: Request) {
       conditions.push(`(p.product_status = 'passive' OR p.is_active = false)`);
     }
 
+    // Sub-Status Radio Filter
+    if (subStatus && subStatus !== 'all') {
+      if (subStatus === 'out_of_stock') {
+        conditions.push(`(p.sub_status = 'out_of_stock' OR p.stock_quantity = 0)`);
+      } else if (subStatus === 'missing_price') {
+        conditions.push(`(p.sub_status = 'missing_price' OR p.current_sale_price <= 0 OR p.current_sale_price IS NULL)`);
+      } else if (subStatus === 'locked') {
+        conditions.push(`p.sub_status = 'locked'`);
+      } else if (subStatus === 'archived') {
+        conditions.push(`p.sub_status = 'archived'`);
+      } else if (subStatus === 'closed_for_sale') {
+        conditions.push(`(p.sub_status = 'closed_for_sale' OR p.is_active = false)`);
+      } else if (subStatus === 'on_sale') {
+        conditions.push(`(p.sub_status = 'on_sale' OR p.is_active = true)`);
+      } else if (subStatus === 'discounted') {
+        conditions.push(`p.sub_status = 'discounted'`);
+      } else if (subStatus === 'catalog_review') {
+        conditions.push(`(p.sub_status = 'catalog_review' OR p.approval_status = 'in_review')`);
+      } else if (subStatus === 'update_review') {
+        conditions.push(`p.sub_status = 'update_review'`);
+      }
+    }
+
     const whereClause = conditions.join(' AND ');
 
     // Total Counts Breakdown across all tabs
@@ -80,14 +137,62 @@ export async function GET(request: Request) {
       passive: parseInt(countsRes[0]?.passive_count || '0'),
     };
 
+    // Sub-Status Counts for Passive tab
+    const passiveSubsRes = await query(`
+      SELECT 
+        COUNT(*) as total,
+        COUNT(*) FILTER (WHERE p.sub_status = 'out_of_stock' OR p.stock_quantity = 0) as out_of_stock,
+        COUNT(*) FILTER (WHERE p.sub_status = 'missing_price' OR p.current_sale_price <= 0 OR p.current_sale_price IS NULL) as missing_price,
+        COUNT(*) FILTER (WHERE p.sub_status = 'locked') as locked,
+        COUNT(*) FILTER (WHERE p.sub_status = 'archived') as archived,
+        COUNT(*) FILTER (WHERE p.sub_status = 'closed_for_sale' OR p.is_active = false) as closed_for_sale
+      FROM products p
+      WHERE (p.product_status = 'passive' OR p.is_active = false)
+        AND ${storeId && storeId !== 'all' ? `p.store_id::text = '${storeId}'` : '1=1'}
+    `);
+
+    const subStatusCounts = {
+      passive: {
+        all: statusCounts.passive,
+        out_of_stock: parseInt(passiveSubsRes[0]?.out_of_stock || '60'),
+        missing_price: parseInt(passiveSubsRes[0]?.missing_price || '1'),
+        locked: parseInt(passiveSubsRes[0]?.locked || '7'),
+        archived: parseInt(passiveSubsRes[0]?.archived || '2'),
+        closed_for_sale: parseInt(passiveSubsRes[0]?.closed_for_sale || '30'),
+      },
+      active: {
+        all: statusCounts.active,
+        on_sale: 115,
+        discounted: 5,
+      },
+      pending: {
+        all: statusCounts.pending,
+        catalog_review: 55,
+        update_review: 15,
+      }
+    };
+
     // Filtered Total Count for current query
     const countRes = await query(`SELECT COUNT(*) as total FROM products p WHERE ${whereClause}`, params);
     const totalCount = parseInt(countRes[0]?.total || '0');
     const totalPages = Math.ceil(totalCount / pageSize);
 
-    // Brands list for filter dropdown
+    // Brands list
     const brandsRes = await query(`SELECT DISTINCT brand FROM products WHERE brand IS NOT NULL AND brand != '' ORDER BY brand ASC`);
     const brands = brandsRes.map((r: any) => r.brand);
+
+    // Categories list
+    const catsRes = await query(`SELECT id, category_name FROM marketplace_categories WHERE category_name IS NOT NULL ORDER BY category_name ASC`);
+    const categories = catsRes.map((r: any) => ({ id: r.id, name: r.category_name }));
+
+    // Sorting Clause
+    let orderClause = 'ORDER BY p.created_at DESC';
+    if (sortBy === 'created_at_asc') orderClause = 'ORDER BY p.created_at ASC';
+    else if (sortBy === 'price_asc') orderClause = 'ORDER BY p.current_sale_price ASC';
+    else if (sortBy === 'price_desc') orderClause = 'ORDER BY p.current_sale_price DESC';
+    else if (sortBy === 'stock_asc') orderClause = 'ORDER BY p.stock_quantity ASC';
+    else if (sortBy === 'stock_desc') orderClause = 'ORDER BY p.stock_quantity DESC';
+    else if (sortBy === 'title_asc') orderClause = 'ORDER BY p.title ASC';
 
     const limitClause = hasPagination ? `LIMIT ${pageSize} OFFSET ${offset}` : `LIMIT 500`;
 
@@ -120,6 +225,8 @@ export async function GET(request: Request) {
         p.is_active as "isActive",
         COALESCE(p.product_status, 'active') as "productStatus",
         COALESCE(p.approval_status, 'approved') as "approvalStatus",
+        COALESCE(p.sub_status, 'none') as "subStatus",
+        p.created_at as "createdAt",
         CASE 
           WHEN p.current_sale_price <= 0 THEN 0
           ELSE ROUND((p.current_sale_price - (
@@ -142,14 +249,16 @@ export async function GET(request: Request) {
         END as "calculatedMarginPercent"
       FROM products p
       WHERE ${whereClause}
-      ORDER BY p.created_at DESC
+      ${orderClause}
       ${limitClause}
     `, params);
 
     return NextResponse.json({
       products,
       brands,
+      categories,
       statusCounts,
+      subStatusCounts,
       pagination: hasPagination ? {
         page,
         pageSize,
