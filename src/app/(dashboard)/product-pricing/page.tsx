@@ -875,46 +875,62 @@ export default function ProductPricingPage() {
                 </select>
               </div>
 
-              {/* Termin Süresi */}
-              <div className="p-3 rounded-2xl bg-canvas border border-border space-y-2">
-                <label className="font-black text-dark flex items-center justify-between">
-                  <span className="flex items-center gap-1.5">
+              {/* Teslimat Modeli & Platform Hizmet Bedeli (Bugün Kargoda 4.99 TL vs Standart 10.99 TL) */}
+              <div className="p-3.5 rounded-2xl bg-canvas border border-border space-y-2.5">
+                <div className="flex items-center justify-between">
+                  <label className="font-black text-dark flex items-center gap-1.5 text-xs">
                     <Clock className="w-4 h-4 text-primary" />
-                    <span>Termin Süresi & Kargo Barem Desteği</span>
+                    <span>Teslimat Modeli & Platform Hizmet Bedeli</span>
+                  </label>
+                  <span className={`text-[10px] font-black px-2 py-0.5 rounded-lg border ${
+                    leadTimeDays === 1 
+                      ? 'bg-emerald-50 text-emerald-800 border-emerald-300' 
+                      : 'bg-amber-50 text-amber-800 border-amber-300'
+                  }`}>
+                    {leadTimeDays === 1 ? '⚡ 4.99 TL + KDV (7.20 ₺ Tasarruf)' : '10.99 TL + KDV Standart'}
                   </span>
-                  <span className={`text-[11px] font-black ${leadTimeDays === 1 ? 'text-emerald-700' : 'text-amber-700'}`}>
-                    {leadTimeDays === 1 ? '⚡ 1 Gün: Avantajlı Barem (İndirimli)' : '⚠️ 1 Günden Fazla: Standart Barem'}
-                  </span>
-                </label>
+                </div>
 
                 <div className="grid grid-cols-2 gap-2">
                   <button
                     type="button"
-                    onClick={() => setLeadTimeDays(1)}
-                    className={`p-2 rounded-xl border text-left transition-all cursor-pointer ${
+                    onClick={() => {
+                      setLeadTimeDays(1);
+                      setServiceFee(5.99); // 4.99 TL + %20 KDV
+                    }}
+                    className={`p-2.5 rounded-xl border text-left transition-all cursor-pointer ${
                       leadTimeDays === 1
-                        ? 'border-emerald-500 bg-emerald-50 text-emerald-900 font-bold shadow-xs ring-2 ring-emerald-500/20'
+                        ? 'border-emerald-500 bg-emerald-50 text-emerald-950 font-bold shadow-xs ring-2 ring-emerald-500/20'
                         : 'border-border bg-white text-gray-600 hover:bg-gray-50'
                     }`}
                   >
-                    <span className="text-xs font-black block">1 Gün Termin (Hızlı)</span>
-                    <span className="text-[10px] text-emerald-700 block mt-0.5 font-semibold">
-                      ✓ Avantajlı Barem
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-black block">⚡ Bugün Kargoda</span>
+                      <span className="text-[10px] font-black text-emerald-700 bg-white px-1.5 py-0.5 rounded border border-emerald-200">₺5.99</span>
+                    </div>
+                    <span className="text-[10px] text-emerald-700 block mt-1 font-semibold leading-tight">
+                      ✓ 4.99 TL + KDV Hizmet Bedeli + Avantajlı Kargo Baremi
                     </span>
                   </button>
 
                   <button
                     type="button"
-                    onClick={() => setLeadTimeDays(2)}
-                    className={`p-2 rounded-xl border text-left transition-all cursor-pointer ${
+                    onClick={() => {
+                      setLeadTimeDays(2);
+                      setServiceFee(13.19); // 10.99 TL + %20 KDV
+                    }}
+                    className={`p-2.5 rounded-xl border text-left transition-all cursor-pointer ${
                       leadTimeDays >= 2
-                        ? 'border-amber-500 bg-amber-50 text-amber-900 font-bold shadow-xs ring-2 ring-amber-500/20'
+                        ? 'border-amber-500 bg-amber-50 text-amber-950 font-bold shadow-xs ring-2 ring-amber-500/20'
                         : 'border-border bg-white text-gray-600 hover:bg-gray-50'
                     }`}
                   >
-                    <span className="text-xs font-black block">1 Günden Fazla (2-3 Gün)</span>
-                    <span className="text-[10px] text-amber-700 block mt-0.5 font-semibold">
-                      ⚠️ Standart Barem
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-black block">📦 Standart Gönderi</span>
+                      <span className="text-[10px] font-black text-amber-800 bg-white px-1.5 py-0.5 rounded border border-amber-200">₺13.19</span>
+                    </div>
+                    <span className="text-[10px] text-amber-700 block mt-1 font-semibold leading-tight">
+                      10.99 TL + KDV Hizmet Bedeli (Standart Barem)
                     </span>
                   </button>
                 </div>
@@ -1037,7 +1053,9 @@ export default function ProductPricingPage() {
 
               {/* 4. Platform Hizmet Bedeli */}
               <div className="flex items-center justify-between py-1 text-gray-700">
-                <span>4. Platform Hizmet Bedeli (₺{serviceFee.toFixed(2)}/sipariş)</span>
+                <span>
+                  4. Platform Hizmet Bedeli ({serviceFee <= 6.5 ? 'Bugün Kargoda: 4.99 TL + KDV = ₺5.99/sipariş' : 'Standart: 10.99 TL + KDV = ₺13.19/sipariş'})
+                </span>
                 <span className="font-bold text-gray-800 tabular-nums">
                   -₺{(breakdownView === 'unit' ? (serviceFee / currentSim.q) : serviceFee).toFixed(2)}
                 </span>
