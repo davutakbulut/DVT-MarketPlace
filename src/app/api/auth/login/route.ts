@@ -12,7 +12,7 @@ export async function POST(request: Request) {
 
     // Verify user in auth.users using pgcrypto crypt
     const users = await query(`
-      SELECT id, email, raw_user_meta_data, encrypted_password
+      SELECT id, email, raw_user_meta_data, encrypted_password, is_super_admin
       FROM auth.users
       WHERE email = $1 AND encrypted_password = crypt($2, encrypted_password)
     `, [email, password]);
@@ -34,6 +34,7 @@ export async function POST(request: Request) {
     const role = roles.length > 0 ? roles[0].role : 'user';
     const companyId = roles.length > 0 ? roles[0].company_id : null;
     const companyName = roles.length > 0 ? roles[0].company_name : '';
+    const isSuperAdmin = !!(user.is_super_admin || user.raw_user_meta_data?.is_super_admin || role === 'super_admin');
 
     // Fetch permitted stores
     const stores = await query(`
@@ -49,6 +50,7 @@ export async function POST(request: Request) {
         email: user.email,
         name: user.raw_user_meta_data?.full_name || user.email,
         role: role,
+        isSuperAdmin: isSuperAdmin,
         companyId: companyId,
         companyName: companyName,
       },

@@ -7,6 +7,8 @@ import { NotificationCenter } from './NotificationCenter';
 import { InteractiveSpotlightGuide } from './InteractiveSpotlightGuide';
 import { Menu, Compass, User, LogOut, ShieldCheck } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
+import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
 import { BrandLogo } from '@/components/common/BrandLogo';
@@ -100,6 +102,18 @@ export function Header({ onMobileMenuToggle }: { onMobileMenuToggle: () => void 
                     <div className="text-[10px] text-gray-500 font-mono">bilgi@davutakbulut.co</div>
                     <div className="text-[10px] text-primary font-bold mt-0.5">Admin (Firma Yöneticisi)</div>
                   </div>
+
+                  <Link
+                    href="/super-admin"
+                    onClick={() => setUserDropdown(false)}
+                    className="w-full flex items-center justify-between px-2.5 py-2 rounded-xl text-xs font-black bg-gradient-to-r from-indigo-50 to-purple-50 text-indigo-700 hover:from-indigo-100 hover:to-purple-100 border border-indigo-200 transition-all cursor-pointer shadow-2xs"
+                  >
+                    <div className="flex items-center gap-2">
+                      <span className="text-sm">👑</span>
+                      <span>Süper Admin Paneli</span>
+                    </div>
+                    <Badge className="bg-indigo-600 text-white text-[9px] py-0 px-1">Master</Badge>
+                  </Link>
 
                   <button
                     onClick={handleLogout}

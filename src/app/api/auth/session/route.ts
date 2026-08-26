@@ -20,7 +20,7 @@ export async function GET() {
 
     // Direct Database check: Verify user is still active in auth.users
     const userRows = await query(`
-      SELECT u.id, u.email, u.raw_user_meta_data, ucr.role, ucr.company_id, c.name as company_name
+      SELECT u.id, u.email, u.is_super_admin, u.raw_user_meta_data, ucr.role, ucr.company_id, c.name as company_name
       FROM auth.users u
       LEFT JOIN user_company_roles ucr ON ucr.user_id = u.id
       LEFT JOIN companies c ON c.id = ucr.company_id
@@ -32,6 +32,7 @@ export async function GET() {
     }
 
     const dbUser = userRows[0];
+    const isSuperAdmin = !!(dbUser.is_super_admin || dbUser.raw_user_meta_data?.is_super_admin || dbUser.role === 'super_admin');
 
     // Fetch user's active stores directly from DB
     const storeRows = await query(`
@@ -49,6 +50,7 @@ export async function GET() {
         email: dbUser.email,
         name: dbUser.raw_user_meta_data?.full_name || dbUser.email,
         role: dbUser.role || 'user',
+        isSuperAdmin: isSuperAdmin,
         companyId: dbUser.company_id,
         companyName: dbUser.company_name || 'Firma',
       },
