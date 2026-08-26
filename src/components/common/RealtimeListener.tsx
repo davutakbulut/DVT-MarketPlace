@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useRef } from 'react';
-import { createClient } from '@/lib/supabase/client';
 import { useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 
@@ -55,7 +54,7 @@ export function RealtimeListener() {
   const seenOrderIdsRef = useRef<Set<string>>(new Set());
   const isInitialLoadRef = useRef<boolean>(true);
 
-  // 1. FAST REALTIME LIVE-SYNC POLLING (Every 5 seconds)
+  // FAST REALTIME LIVE-SYNC POLLING (Every 5 seconds)
   useEffect(() => {
     let isMounted = true;
 
@@ -87,7 +86,7 @@ export function RealtimeListener() {
             if (!seenOrderIdsRef.current.has(order.id)) {
               seenOrderIdsRef.current.add(order.id);
 
-              // Play chime
+              // Play pleasant audio chime
               playOrderChime();
 
               // Trigger interactive top-right Toast notification
@@ -121,7 +120,7 @@ export function RealtimeListener() {
             }
           }
         }
-      } catch (err) {
+      } catch {
         // Silent poll error
       }
     };
@@ -136,72 +135,6 @@ export function RealtimeListener() {
       isMounted = false;
       clearInterval(interval);
     };
-  }, [queryClient]);
-
-  // 2. SUPABASE REALTIME (WEBSOCKET) AS ADDITIONAL INSTANT CHANNEL
-  useEffect(() => {
-    try {
-      const supabase = createClient();
-
-      const ordersChannel = supabase
-        .channel('realtime-orders-changes')
-        .on(
-          'postgres_changes',
-          { event: 'INSERT', schema: 'public', table: 'orders' },
-          (payload: any) => {
-            const newOrder = payload.new;
-            if (newOrder && !seenOrderIdsRef.current.has(newOrder.id)) {
-              seenOrderIdsRef.current.add(newOrder.id);
-              playOrderChime();
-
-              const amount = Number(newOrder.paid_amount || 0).toLocaleString('tr-TR', {
-                minimumFractionDigits: 2,
-                maximumFractionDigits: 2,
-              });
-              toast.success(`🎉 Yeni Sipariş Düştü: #${newOrder.marketplace_order_number || newOrder.id}`, {
-                description: `${newOrder.customer_name || 'Müşteri'} • ₺${amount} (${newOrder.marketplace || 'Trendyol'})`,
-                duration: 8000,
-                action: {
-                  label: 'Siparişi Gör',
-                  onClick: () => {
-                    window.location.href = `/live-analysis?search=${newOrder.marketplace_order_number || newOrder.id || ''}`;
-                  },
-                },
-              });
-
-              queryClient.invalidateQueries({ queryKey: ['orders'] });
-              queryClient.invalidateQueries({ queryKey: ['dashboard'] });
-              queryClient.invalidateQueries({ queryKey: ['live-analysis'] });
-            }
-          }
-        )
-        .on(
-          'postgres_changes',
-          { event: 'UPDATE', schema: 'public', table: 'orders' },
-          (payload: any) => {
-            const updatedOrder = payload.new;
-            const oldOrder = payload.old;
-
-            if (updatedOrder && oldOrder && updatedOrder.status !== oldOrder.status) {
-              toast.info(`📦 Sipariş Durumu Değişti: #${updatedOrder.marketplace_order_number || updatedOrder.id}`, {
-                description: `${oldOrder.status || 'Bilinmiyor'} ➔ ${updatedOrder.status}`,
-                duration: 4000,
-              });
-            }
-
-            queryClient.invalidateQueries({ queryKey: ['orders'] });
-            queryClient.invalidateQueries({ queryKey: ['dashboard'] });
-            queryClient.invalidateQueries({ queryKey: ['live-analysis'] });
-          }
-        )
-        .subscribe();
-
-      return () => {
-        supabase.removeChannel(ordersChannel);
-      };
-    } catch {
-      // Supabase fallback
-    }
   }, [queryClient]);
 
   return null;

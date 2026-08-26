@@ -144,30 +144,73 @@ export async function PUT(
 
     const numCost = parseFloat(newCost);
 
-    // 1. Update order_items cost
+    // 1. Update order_items cost and net profit
     await query(`
       UPDATE order_items
-      SET unit_cost_price = $1,
-          net_profit = invoiced_amount - ($1 * quantity + commission_amount + shipping_amount + service_fee_share + withholding_tax + net_vat),
-          margin_percent = ROUND(((invoiced_amount - ($1 * quantity + commission_amount + shipping_amount + service_fee_share + withholding_tax + net_vat)) / NULLIF(invoiced_amount, 0) * 100)::numeric, 1)
+      SET unit_cost_price = $1::numeric,
+          net_profit = COALESCE(invoiced_amount, unit_sale_price * quantity, 0) - (
+            $1::numeric * quantity + 
+            COALESCE(commission_amount, 0) + 
+            COALESCE(shipping_amount, 0) + 
+            COALESCE(service_fee_share, 0) + 
+            COALESCE(withholding_tax, 0) + 
+            COALESCE(net_vat, 0) + 
+            COALESCE(extra_cost, 0)
+          ),
+          margin_percent = ROUND(
+            ((COALESCE(invoiced_amount, unit_sale_price * quantity, 0) - (
+              $1::numeric * quantity + 
+              COALESCE(commission_amount, 0) + 
+              COALESCE(shipping_amount, 0) + 
+              COALESCE(service_fee_share, 0) + 
+              COALESCE(withholding_tax, 0) + 
+              COALESCE(net_vat, 0) + 
+              COALESCE(extra_cost, 0)
+            )) / NULLIF(COALESCE(invoiced_amount, unit_sale_price * quantity, 0), 0) * 100)::numeric, 2
+          ),
+          has_missing_cost = false
       WHERE id::text = $2
     `, [numCost, itemId]);
 
     // 2. Also update catalog products table if barcode exists
     const itemRes = await query(`SELECT barcode FROM order_items WHERE id::text = $1`, [itemId]);
     if (itemRes.length > 0 && itemRes[0].barcode) {
-      await query(`UPDATE products SET cost_price = $1 WHERE barcode = $2`, [numCost, itemRes[0].barcode]);
+      await query(`UPDATE products SET current_cost = $1, updated_at = NOW() WHERE barcode = $2`, [numCost, itemRes[0].barcode]);
     }
 
-    // 3. Recalculate order totals
+    // 3. Recalculate order totals and net profit
     await query(`
       UPDATE orders
       SET total_cost = (SELECT COALESCE(SUM(unit_cost_price * quantity), 0) FROM order_items WHERE order_id = orders.id),
-          updated_at = now()
-      WHERE id::text = $1
+          net_profit = paid_amount - (
+            (SELECT COALESCE(SUM(unit_cost_price * quantity), 0) FROM order_items WHERE order_id = orders.id) +
+            COALESCE(total_commission, 0) + 
+            COALESCE(total_shipping_cost, 0) + 
+            COALESCE(service_fee, 0) + 
+            COALESCE(withholding_tax, 0) + 
+            COALESCE(net_vat, 0) + 
+            COALESCE(extra_cost, 0)
+          ),
+          profit_margin_percent = ROUND(
+            ((paid_amount - (
+              (SELECT COALESCE(SUM(unit_cost_price * quantity), 0) FROM order_items WHERE order_id = orders.id) +
+              COALESCE(total_commission, 0) + 
+              COALESCE(total_shipping_cost, 0) + 
+              COALESCE(service_fee, 0) + 
+              COALESCE(withholding_tax, 0) + 
+              COALESCE(net_vat, 0) + 
+              COALESCE(extra_cost, 0)
+            )) / NULLIF(paid_amount, 0) * 100)::numeric, 2
+          ),
+          has_missing_cost = FALSE,
+          updated_at = NOW()
+      WHERE id::text = $1 OR marketplace_order_number = $1
     `, [id]);
 
-    return NextResponse.json({ success: true, message: `Birim maliyet ₺${numCost.toFixed(2)} olarak güncellendi ve kâr yeniden hesaplandı!` });
+    return NextResponse.json({ 
+      success: true, 
+      message: `Birim maliyet ₺${numCost.toFixed(2)} olarak güncellendi ve sipariş kârlılığı anında yeniden hesaplandı!` 
+    });
   } catch (error: any) {
     console.error('Order item cost update error:', error);
     return NextResponse.json({ error: error.message }, { status: 500 });
