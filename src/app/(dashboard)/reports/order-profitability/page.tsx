@@ -182,7 +182,7 @@ export default function OrderProfitabilityReportPage() {
       </div>
 
       {/* Report Tables */}
-      <div className="bg-white rounded-3xl border border-border shadow-xs overflow-hidden">
+      <div data-tour="reports-table" className="bg-white rounded-3xl border border-border shadow-xs overflow-hidden">
         <div className="overflow-x-auto">
           {reportType === 'order' && (
             <table className="w-full text-left text-xs border-collapse min-w-[900px]">

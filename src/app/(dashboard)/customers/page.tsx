@@ -116,7 +116,7 @@ export default function CustomersPage() {
       </div>
 
       {/* KPI Cards */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+      <div data-tour="customers-kpis" className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
         <div className="bg-white p-4 sm:p-5 rounded-3xl border border-border shadow-xs">
           <span className="text-[11px] font-bold text-muted-foreground uppercase tracking-wide block">Toplam Tekil Müşteri</span>
           <div className="text-2xl font-black text-dark tabular-nums mt-1">{summary.totalCustomers || summary.totalCustomersCount || 0} Kişi</div>
@@ -170,7 +170,7 @@ export default function CustomersPage() {
       </div>
 
       {/* Customer Table */}
-      <div className="bg-white rounded-3xl border border-border shadow-xs overflow-hidden">
+      <div data-tour="customers-table" className="bg-white rounded-3xl border border-border shadow-xs overflow-hidden">
                   <>
             {/* Desktop Table View */}
             <div className="hidden md:block overflow-x-auto">

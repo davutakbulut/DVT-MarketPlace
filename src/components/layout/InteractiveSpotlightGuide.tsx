@@ -1,16 +1,15 @@
 "use client";
-import React, { useState, useEffect, useRef, useCallback } from "react";
-import { usePathname } from "next/navigation";
-import {
-  Compass, X, Sparkles, CheckCircle2, ChevronRight, ChevronLeft,
-  LayoutDashboard, Activity, Package, Undo2, TrendingUp, Calculator,
-  Percent, Megaphone, Truck, Layers, FileCheck2, FileSpreadsheet,
-  Users, AlertOctagon, Store, ShieldAlert, Settings, Lightbulb,
-  Boxes, Coins, BadgePercent, Award, ArrowRight
-} from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import Link from "next/link";
+import React, { useState, useEffect, useCallback, useRef } from 'react';
+import { usePathname, useRouter } from 'next/navigation';
+import Link from 'next/link';
+import { 
+  X, ChevronRight, ChevronLeft, CheckCircle2, 
+  Lightbulb, Compass, ArrowRight, LayoutDashboard, Activity, Package,
+  Undo2, TrendingUp, Calculator, Percent, Megaphone,
+  Boxes, Coins, BadgePercent, FileCheck2, FileSpreadsheet, AlertOctagon, Store, Settings, Users
+} from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
 
 export interface TourStep {
   target?: string; // CSS selector or data-tour attribute
@@ -46,15 +45,15 @@ export const TOUR_PAGES: Record<string, TourGuidePage> = {
       },
       {
         target: '[data-tour="dashboard-expenses"]',
-        title: "2. 14 Masraf Kalemi Akordeon Matrisi (Donut Pasta)",
-        desc: "Alandan kazanmak için varsayılan olarak kapalı gelen bu kartı 'Tüm Masrafları Göster' butonuna basarak açabilirsiniz. COGS, Komisyon, Kargo, İade Kargo Zararı, Stopaj, Net KDV, Reklam, Ceza, Erken Ödeme ve %6 Ekstra Operasyon maliyetlerinin ayrı ayrı ve toplam dökümünü içerir.",
-        tip: "Ortadaki halka grafiğin merkezinde toplam kesinti ve maliyet tutarınız otomatik toplanır.",
+        title: "2. 14 Masraf Kalemi Akordeon Matrisi",
+        desc: "COGS, Komisyon, Kargo, İade Kargo Zararı, Stopaj, Net KDV, Reklam, Ceza, Erken Ödeme ve %6 Ekstra Operasyon kesintilerinin ayrı ayrı ve toplam dökümü.",
+        tip: "Tüm Masrafları Göster butonuna basarak tüm kalemleri inceleyebilirsiniz.",
         tag: "14 Masraf Kalemi"
       },
       {
         target: '[data-tour="dashboard-daily-profit"]',
         title: "3. Günlük Kâr Performansı Eğri Grafiği",
-        desc: "Seçili tarih aralığında gün gün gerçekleşen net kazancınızı yeşil gradyanlı yumuşak eğri (spline curve) grafiği üzerinde görün.",
+        desc: "Seçili tarih aralığında gün gün gerçekleşen net kazancınızı yeşil gradyanlı eğri grafiği üzerinde görün.",
         tip: "Kârınızın aniden düştüğü günleri anında tespit edip nedenini analiz edebilirsiniz.",
         tag: "Günlük Trend"
       },
@@ -68,15 +67,15 @@ export const TOUR_PAGES: Record<string, TourGuidePage> = {
       {
         target: '[data-tour="dashboard-hourly-carrier"]',
         title: "5. 24 Saatlik Sipariş Yoğunluğu & Kargo Dağılımı",
-        desc: "Siparişlerinizin günün hangi saatlerinde yoğunlaştığını (00:00-23:00) ve hangi kargo şirketiyle kaç adet gönderildiğini inceleyin.",
+        desc: "Siparişlerinizin günün hangi saatlerinde yoğunlaştığını ve hangi kargo şirketiyle kaç adet gönderildiğini inceleyin.",
         tip: "En çok sipariş aldığınız saatlere özel reklam bütçesi planlayabilirsiniz.",
         tag: "Saatlik & Kargo"
       },
       {
         target: '[data-tour="dashboard-top-products"]',
         title: "6. En Kârlı Ürünler & Canlı Son Siparişler Akışı",
-        desc: "Dönemin en kârlı 5 ürününü ve en son gelen canlı siparişleri listeleyin. Canlı siparişe tıklayarak sipariş detay modalını açabilirsiniz.",
-        tip: "Her siparişin yanındaki 'İncele' butonuna basarak siparişin kargo baremini ve net kârını anında görün.",
+        desc: "Dönemin en kârlı ürünlerini ve en son gelen canlı siparişleri listeleyin.",
+        tip: "Her siparişin yanındaki 'İncele' butonuna basarak kargo baremini ve net kârını anında görün.",
         tag: "Canlı Siparişler"
       }
     ]
@@ -99,7 +98,7 @@ export const TOUR_PAGES: Record<string, TourGuidePage> = {
       {
         target: '[data-tour="live-charts"]',
         title: "2. Kümülatif Kâr Eğrisi & Marj Sağlığı Pastası",
-        desc: "Günün 1. siparişinden son siparişine kadar biriken kümülatif kârı ve siparişlerin kârlılık sağlık dilimlerini (%20+ Yüksek Kâr, Standart, Düşük ve Zarar) görün.",
+        desc: "Günün 1. siparişinden son siparişine kadar biriken kümülatif kârı ve siparişlerin kârlılık sağlık dilimlerini görün.",
         tip: "Kırmızı renkle gösterilen zararına siparişleri anında fark edip fiyat güncelleyin.",
         tag: "Grafikler"
       },
@@ -113,7 +112,7 @@ export const TOUR_PAGES: Record<string, TourGuidePage> = {
       {
         target: '[data-tour="live-table"]',
         title: "4. Canlı Sipariş Tablosu & Detay Modalı",
-        desc: "Sipariş no, müşteri adı, kargo desi, ciro, komisyon, kargo bedeli ve net kâr sütunlarını inceleyin. 'İncele' butonuna tıklayarak siparişin ayrıntılı kesinti şelalesine ulaşın.",
+        desc: "Sipariş no, müşteri adı, kargo desi, ciro, komisyon, kargo bedeli ve net kâr sütunlarını inceleyin.",
         tip: "Tablo kuruşsuz tam TL formatında raporlama kolaylığı sunar.",
         tag: "Sipariş Tablosu"
       }
@@ -125,7 +124,7 @@ export const TOUR_PAGES: Record<string, TourGuidePage> = {
     title: "Ürünlerim (Katalog)",
     category: "Katalog & Maliyet",
     icon: Package,
-    summary: "Trendyol mağazanızdaki tüm ürünlerin satış fiyatı, stok miktarı ve alış maliyetlerini tek ekranda yönetin.",
+    summary: "Mağazanızdaki tüm ürünlerin satış fiyatı, stok miktarı ve alış maliyetlerini tek ekranda yönetin.",
     steps: [
       {
         target: '[data-tour="products-search"]',
@@ -154,14 +153,14 @@ export const TOUR_PAGES: Record<string, TourGuidePage> = {
       {
         target: '[data-tour="returns-kpis"]',
         title: "1. İade & İptal Sipariş Takibi",
-        desc: "Müşteri tarafından iptal edilen veya teslim alındıktan sonra iade edilen siparişlerin tarih, müşteri ve tutar dökümüdür.",
-        tip: "Hangi ürünlerin daha sık iade edildiğini tespit etmek için kategoriye göre filtreleyebilirsiniz.",
+        desc: "Müşteri tarafından iptal edilen veya iade edilen siparişlerin tarih, müşteri ve tutar dökümüdür.",
+        tip: "Hangi ürünlerin daha sık iade edildiğini tespit etmek için gerekçeye göre filtreleyebilirsiniz.",
         tag: "İade Takibi"
       },
       {
         target: '[data-tour="returns-table"]',
         title: "2. İade Kargo Zarar Tespiti",
-        desc: "Trendyol ve kargo şirketlerinin iade edilen siparişlerde satıcıdan kestiği gidiş-dönüş kargo bedellerinin hesaplanmasıdır.",
+        desc: "İade edilen siparişlerde satıcıdan kesilen gidiş-dönüş kargo bedellerinin hesaplanmasıdır.",
         tip: "İade kargo zararı Dashboard üzerindeki 14 masraf kalemi içerisine otomatik dahil edilir.",
         tag: "Kargo Zararı"
       }
@@ -173,21 +172,28 @@ export const TOUR_PAGES: Record<string, TourGuidePage> = {
     title: "Ürün Kârlılık Analizi",
     category: "Finansal Analiz",
     icon: TrendingUp,
-    summary: "5 ayrık raporlama türüyle sipariş, ürün, kategori ve reklam bazında derinlemesine kârlılık analizi yapın.",
+    summary: "Sipariş, ürün ve kategori bazında derinlemesine kârlılık analizi yapın.",
     steps: [
       {
-        target: '[data-tour="profitability-tabs"]',
-        title: "1. 5 Ayrık Rapor Türü",
-        desc: "Sipariş Bazlı, Ürün Bazlı, Kategori Bazlı, İade Zarar ve Reklam Kârlılık raporları arasında tek tıkla geçiş yapın.",
-        tip: "Hangi kategorinin mağazanıza en çok kâr bıraktığını Kategori Raporu üzerinden görün.",
-        tag: "5 Rapor Türü"
+        target: '[data-tour="profitability-kpis"]',
+        title: "1. Kârlılık Özet Metrikleri",
+        desc: "Satılan ürün çeşidi, toplam adet, faturalanan brüt ciro ve gerçekleşen net kâr dökümüdür.",
+        tip: "Ağırlıklı kâr marjınızı ciroya oranla anlık denetleyin.",
+        tag: "Kâr Özeti"
       },
       {
         target: '[data-tour="profitability-export"]',
-        title: "2. Excel & CSV Dışa Aktarım",
-        desc: "Oluşturulan tüm kârlılık analizlerini tek tıkla Türkçe karakter destekli Excel veya CSV formatında bilgisayarınıza indirin.",
+        title: "2. Excel (CSV) Dışa Aktarım",
+        desc: "Oluşturulan tüm kârlılık analizlerini tek tıkla Türkçe karakter destekli Excel veya CSV formatında indirin.",
         tip: "Muhasebe ve finans ekiplerinizle paylaşmak için Excel export butonunu kullanın.",
         tag: "Excel İndir"
+      },
+      {
+        target: '[data-tour="profitability-table"]',
+        title: "3. Ürün Bazlı Kâr & Marj Tablosu",
+        desc: "Her bir ürünün adet, toplam ciro, komisyon kesintisi, kargo bedeli ve net kâr sütunlarını inceleyin.",
+        tip: "Tabloda en kârlı ürünleriniz en üstte sıralanır.",
+        tag: "Kârlılık Tablosu"
       }
     ]
   },
@@ -197,26 +203,26 @@ export const TOUR_PAGES: Record<string, TourGuidePage> = {
     title: "Ürün Fiyatlandırma",
     category: "Fiyatlandırma Motoru",
     icon: Calculator,
-    summary: "Hedef kâr marjınızı girin; komisyon, 10 Ağustos barem kargo bedeli, KDV, stopaj ve %6 ekstra operasyon kesintisini otomatik düşerek ideal satış fiyatınızı bulun.",
+    summary: "Hedef kâr marjınızı girin; komisyon, barem kargo, KDV, stopaj ve %6 ekstra operasyon kesintisini otomatik düşerek ideal satış fiyatınızı bulun.",
     steps: [
       {
         target: '[data-tour="pricing-form"]',
         title: "1. Tersine Hedef Satış Fiyatı Hesaplayıcı",
-        desc: "Ürünün birim alış maliyetini ve kazanmak istediğiniz net kâr marjını (%25 vb.) girin. Motor komisyon, kargo, KDV ve vergileri hesaba katarak Trendyol satış fiyatını anında hesaplar.",
+        desc: "Ürünün birim alış maliyetini ve kazanmak istediğiniz net kâr marjını (%25 vb.) girin. Motor satış fiyatını anında hesaplar.",
         tip: "Fiyat hesaplanırken %6 Ekstra Operasyon Oranı paydadan otomatik düşülür.",
         tag: "Tersine Hesaplama"
       },
       {
         target: '[data-tour="pricing-waterfall"]',
         title: "2. 7 Satırlı Finansal Şelale (Waterfall)",
-        desc: "1. Satış Fiyatı, 2. Ürün Alış (COGS), 3. Kargo Maliyeti, 4. Pazaryeri Komisyonu, 5. Stopaj Kesintisi (%1), 6. Net KDV, 7. Ekstra Operasyon (%6) ve Net Nakit Kâr dökümünü adım adım inceleyin.",
+        desc: "Satış Fiyatı, COGS, Kargo Maliyeti, Komisyon, Stopaj Kesintisi (%1), Net KDV ve Ekstra Operasyon (%6) dökümünü adım adım inceleyin.",
         tip: "Her bir kesintinin TL ve yüzde payı şelalede açıkça gösterilir.",
         tag: "Maliyet Şelalesi"
       },
       {
         target: '[data-tour="pricing-buybox"]',
         title: "3. Buybox Rekabet Simülasyonu",
-        desc: "Rakip firmanın Trendyol fiyatını girin; o fiyata indiğinizde net kârınızın ve kâr marjınızın ne olacağını canlı simüle edin.",
+        desc: "Rakip firmanın fiyatını girin; o fiyata indiğinizde net kârınızın ve kâr marjınızın ne olacağını canlı simüle edin.",
         tip: "Zararına rekabete girmeden önce Buybox simülasyonunu mutlaka çalıştırın.",
         tag: "Buybox Testi"
       }
@@ -228,31 +234,55 @@ export const TOUR_PAGES: Record<string, TourGuidePage> = {
     title: "Kâr Marjı Listesi",
     category: "Fiyat & Marj",
     icon: Percent,
-    summary: "Ürünlerin liste fiyatı ile müşteri satış fiyatı arasındaki farkı görün, kâr marjlarını toplu olarak güncelleyin.",
+    summary: "Ürünlerin satış fiyatı ile maliyetleri arasındaki kâr marjlarını toplu olarak inceleyin ve düzenleyin.",
     steps: [
       {
         target: '[data-tour="margin-table"]',
-        title: "1. Liste Fiyatı vs Müşteri Fiyatı Kıyası",
-        desc: "Ürününüzün katalog liste fiyatı ile sepette uygulanan indirimli müşteri fiyatı arasındaki kâr marjı değişimini takip edin.",
-        tip: "Kupon ve indirim kampanyalarında marjınızın eksiye düşüp düşmediğini kontrol edin.",
-        tag: "Fiyat Kıyası"
+        title: "1. Ürün Marjı Listesi & Satır İçi Düzenleme",
+        desc: "Her ürünün güncel satış fiyatı, alış maliyeti, komisyon oranı, tahmini net kârı ve kâr marjını tek tabloda görün.",
+        tip: "Maliyeti değiştirdiğinizde tahmini net kâr anında yeniden hesaplanır.",
+        tag: "Marj Listesi"
       }
     ]
   },
 
   "/marketing/ads": {
     pathname: "/marketing/ads",
-    title: "Reklamlarım",
+    title: "Reklamlarım & HepsiAd",
     category: "Pazarlama & ROAS",
     icon: Megaphone,
-    summary: "Trendyol reklam faturalarınızı kaydedin; ROAS, TACoS ve sipariş başına düşen reklam payını net kârınıza yansıtın.",
+    summary: "Trendyol ve Hepsiburada reklam faturalarınızı kaydedin; ROAS, TACoS ve sipariş başına reklam payını net kârınıza yansıtın.",
     steps: [
       {
         target: '[data-tour="ads-invoices"]',
-        title: "1. Reklam Faturaları Kaydı & ROAS",
-        desc: "Dönem içinde Trendyol tarafından kesilen reklam faturalarını sisteme kaydedin ve sipariş başına reklam maliyetini hesaplatın.",
-        tip: "ROAS 5x ve üzeri kampanyalar kârlı reklam performansına işaret eder.",
+        title: "1. Reklam Faturaları Kaydı & Harcama Listesi",
+        desc: "Dönem içinde kesilen reklam faturalarını kaydedin, mağaza bazlı filtreleyin ve sipariş başına reklam maliyetini hesaplatın.",
+        tip: "Hepsiburada seçildiğinde HepsiAd harcamaları, Trendyol seçildiğinde Trendyol reklamları listelenir.",
         tag: "Reklam Faturası"
+      }
+    ]
+  },
+
+  "/customers": {
+    pathname: "/customers",
+    title: "Müşteri Listesi & Sadakat",
+    category: "Müşteri Yönetimi",
+    icon: Users,
+    summary: "Müşterilerinizin toplam harcamaları, bıraktıkları net kâr ve VIP tekrarlayan sipariş dökümleri.",
+    steps: [
+      {
+        target: '[data-tour="customers-kpis"]',
+        title: "1. Müşteri KPI Kartları & Sadakat Özeti",
+        desc: "Toplam tekil müşteri, toplam faturalanan ciro, bırakılan net kâr ve 2+ sipariş veren VIP müşteri sayısı.",
+        tip: "Mağaza bazında müşterilerinizin bıraktığı toplam net kârı buradan izleyebilirsiniz.",
+        tag: "Müşteri KPI"
+      },
+      {
+        target: '[data-tour="customers-table"]',
+        title: "2. Müşteri Geçmişi & Sipariş Dökümü",
+        desc: "Müşterilerin isim, şehir, sipariş sayısı, toplam ciro, net kâr ve son sipariş tarihi tablosudur.",
+        tip: "'Geçmiş' butonuna tıklayarak müşterinin tüm eski sipariş dökümünü inceleyebilirsiniz.",
+        tag: "Müşteri Tablosu"
       }
     ]
   },
@@ -267,8 +297,8 @@ export const TOUR_PAGES: Record<string, TourGuidePage> = {
       {
         target: '[data-tour="desi-table"]',
         title: "1. 501 Kademe Kargo Matrisi & Excel",
-        desc: "Trendyol Express, Aras, Yurtiçi, MNG, Sürat ve PTT kargonun 0'dan 500 desiye kadar güncel fiyat skalasını listeleyin ve Excel ile düzenleyin.",
-        tip: "Excel yüklemesiyle binlerce desi kademesi anında güncellenir.",
+        desc: "Trendyol Express, Aras, Yurtiçi, MNG, Sürat ve PTT kargonun güncel fiyat skalasını listeleyin ve Excel ile düzenleyin.",
+        tip: "Hücrelerdeki fiyatı klavyeden doğrudan değiştirip 'Kaydet'e basabilirsiniz.",
         tag: "Desi Matrisi"
       }
     ]
@@ -296,13 +326,13 @@ export const TOUR_PAGES: Record<string, TourGuidePage> = {
     title: "Ürün Komisyon Tarifesi",
     category: "Pazaryeri Tarifeleri",
     icon: BadgePercent,
-    summary: "Trendyol'un tüm kategorilerdeki standart komisyon oranlarını inceleyin, özel komisyonlarınızı tanımlayın.",
+    summary: "Tüm kategorilerdeki standart komisyon oranlarını inceleyin, özel komisyonlarınızı tanımlayın.",
     steps: [
       {
         target: '[data-tour="commission-search"]',
         title: "1. Kategori Komisyon Arama & Özel Oranlar",
-        desc: "Yüzlerce kategori arasından arama yaparak ürününüzün güncel standart komisyon oranını anında bulun veya özel oran tanımlayın.",
-        tip: "Kategori adı yazarak saniyeler içinde komisyon yüzdesini görebilirsiniz.",
+        desc: "Yüzlerce kategori arasından arama yaparak ürününüzün güncel standart komisyon oranını anında bulun.",
+        tip: "Excel ile içe aktararak tüm kategorilerin komisyonunu tek seferde güncelleyebilirsiniz.",
         tag: "Komisyon Arama"
       }
     ]
@@ -330,7 +360,7 @@ export const TOUR_PAGES: Record<string, TourGuidePage> = {
     title: "Finansal Raporlar",
     category: "Raporlama",
     icon: FileSpreadsheet,
-    summary: "Sipariş, ürün, kategori ve pazaryeri bazlı detaylı finansal raporlarınızı inceleyin ve Türkçe Excel olarak indirin.",
+    summary: "Sipariş, ürün ve kategori bazlı detaylı finansal raporlarınızı inceleyin ve Türkçe Excel olarak indirin.",
     steps: [
       {
         target: '[data-tour="reports-table"]',
@@ -369,7 +399,7 @@ export const TOUR_PAGES: Record<string, TourGuidePage> = {
       {
         target: '[data-tour="stores-list"]',
         title: "1. API Anahtarları & Bağlantı Testi",
-        desc: "Trendyol Satıcı Panelinden aldığınız App Key, App Secret ve Satıcı ID bilgilerinizi kaydedin ve test edin.",
+        desc: "Pazaryeri panellerinden aldığınız API anahtarlarını kaydedin ve tek tıkla test edin.",
         tip: "Yeşil rozet mağazanızın canlı ve senkron olduğunu gösterir.",
         tag: "API Bağlantısı"
       }
@@ -392,8 +422,8 @@ export const TOUR_PAGES: Record<string, TourGuidePage> = {
       },
       {
         target: '[data-tour="settings-expenses"]',
-        title: "2. Kesintiler & Sabit Giderler (%6 Ekstra Operasyon & %0.16 Erken Ödeme)",
-        desc: "Platform Hizmet Bedeli (₺13.19), Stopaj (%1), Koli, Fatura, Günlük Erken Ödeme (%0.16) ve Siparişin %6'sı oranında Ekstra Operasyon kesintilerini tanımlayın.",
+        title: "2. Kesintiler & Sabit Giderler",
+        desc: "Platform Hizmet Bedeli, Stopaj (%1), Koli, Fatura, Günlük Erken Ödeme (%0.16) ve %6 Ekstra Operasyon kesintilerini tanımlayın.",
         tip: "Burada tanımladığınız giderler tüm kârlılık motorlarına ve raporlara anında uygulanır.",
         tag: "Gider Ayarları"
       }
@@ -409,6 +439,7 @@ export function InteractiveSpotlightGuide({
   onClose: () => void;
 }) {
   const currentPathname = usePathname();
+  const router = useRouter();
   const [selectedPath, setSelectedPath] = useState<string>("/dashboard");
   const [stepIndex, setStepIndex] = useState<number>(0);
   const [highlightRect, setHighlightRect] = useState<{
@@ -434,42 +465,52 @@ export function InteractiveSpotlightGuide({
   const currentStep = steps[stepIndex] || steps[0];
   const Icon = currentGuide.icon || LayoutDashboard;
 
-  // Measure and scroll target element into view
+  // Measure and scroll target element into view with retries
   const updateTargetPosition = useCallback(() => {
     if (!open || !currentStep?.target) {
       setHighlightRect(null);
       return;
     }
 
-    try {
-      const el = document.querySelector(currentStep.target);
-      if (el) {
-        // Smooth scroll element into view if not visible
-        const rect = el.getBoundingClientRect();
-        const isInViewport =
-          rect.top >= 80 &&
-          rect.bottom <= window.innerHeight - 80;
+    let attempts = 0;
+    const maxAttempts = 8;
 
-        if (!isInViewport) {
-          el.scrollIntoView({ behavior: "smooth", block: "center" });
+    const findAndMeasure = () => {
+      try {
+        const el = document.querySelector(currentStep.target!);
+        if (el) {
+          const rect = el.getBoundingClientRect();
+          const isInViewport =
+            rect.top >= 80 &&
+            rect.bottom <= window.innerHeight - 80;
+
+          if (!isInViewport) {
+            el.scrollIntoView({ behavior: "smooth", block: "center" });
+          }
+
+          setTimeout(() => {
+            const freshRect = el.getBoundingClientRect();
+            setHighlightRect({
+              top: freshRect.top,
+              left: freshRect.left,
+              width: freshRect.width,
+              height: freshRect.height,
+            });
+          }, 120);
+        } else {
+          attempts++;
+          if (attempts < maxAttempts) {
+            setTimeout(findAndMeasure, 150);
+          } else {
+            setHighlightRect(null);
+          }
         }
-
-        // Wait slightly for scroll then update bounding rect
-        setTimeout(() => {
-          const freshRect = el.getBoundingClientRect();
-          setHighlightRect({
-            top: freshRect.top,
-            left: freshRect.left,
-            width: freshRect.width,
-            height: freshRect.height,
-          });
-        }, 150);
-      } else {
+      } catch (e) {
         setHighlightRect(null);
       }
-    } catch (e) {
-      setHighlightRect(null);
-    }
+    };
+
+    findAndMeasure();
   }, [open, currentStep]);
 
   useEffect(() => {
@@ -496,6 +537,59 @@ export function InteractiveSpotlightGuide({
     if (stepIndex > 0) {
       setStepIndex(stepIndex - 1);
     }
+  };
+
+  const handlePageChange = (newPath: string) => {
+    setSelectedPath(newPath);
+    setStepIndex(0);
+    if (currentPathname !== newPath) {
+      router.push(newPath);
+    }
+  };
+
+  // Smart floating popover positioning relative to target element
+  const getPopoverStyle = (): React.CSSProperties => {
+    if (typeof window === 'undefined') return { position: 'fixed', bottom: '1.5rem', right: '1.5rem' };
+
+    const cardWidth = Math.min(window.innerWidth - 32, 480);
+    const cardHeight = 330;
+
+    if (!highlightRect) {
+      return {
+        position: 'fixed',
+        bottom: '1.5rem',
+        right: '1.5rem',
+        width: `${cardWidth}px`,
+        maxWidth: 'calc(100vw - 2rem)',
+        zIndex: 102,
+      };
+    }
+
+    const spaceBelow = window.innerHeight - (highlightRect.top + highlightRect.height);
+    const spaceAbove = highlightRect.top;
+
+    let top: number;
+    if (spaceBelow >= cardHeight + 20) {
+      top = highlightRect.top + highlightRect.height + 16;
+    } else if (spaceAbove >= cardHeight + 20) {
+      top = Math.max(16, highlightRect.top - cardHeight - 16);
+    } else {
+      top = Math.max(16, Math.min(window.innerHeight - cardHeight - 16, highlightRect.top + 20));
+    }
+
+    const targetCenterX = highlightRect.left + (highlightRect.width / 2);
+    let left = targetCenterX - (cardWidth / 2);
+    left = Math.max(16, Math.min(window.innerWidth - cardWidth - 16, left));
+
+    return {
+      position: 'fixed',
+      top: `${top}px`,
+      left: `${left}px`,
+      width: `${cardWidth}px`,
+      maxWidth: 'calc(100vw - 2rem)',
+      zIndex: 102,
+      transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+    };
   };
 
   return (
@@ -525,9 +619,9 @@ export function InteractiveSpotlightGuide({
         />
       )}
 
-      {/* 3. Floating Interactive Guide Card (Clamped & Perfectly Positioned) */}
-      <div className="fixed bottom-4 sm:bottom-8 right-4 sm:right-8 z-102 max-w-lg w-[calc(100vw-2rem)] sm:w-full animate-in fade-in zoom-in-95 duration-200">
-        <div className="bg-white rounded-3xl p-5 sm:p-6 shadow-2xl border-2 border-primary/20 space-y-4">
+      {/* 3. Floating Interactive Guide Card (Smart Positioned directly next to Target) */}
+      <div style={getPopoverStyle()} className="animate-in fade-in zoom-in-95 duration-200">
+        <div className="bg-white rounded-3xl p-5 sm:p-6 shadow-2xl border-2 border-primary/30 space-y-4">
           
           {/* Header Bar */}
           <div className="flex items-center justify-between pb-3 border-b border-border gap-2">
@@ -557,7 +651,7 @@ export function InteractiveSpotlightGuide({
             </button>
           </div>
 
-          {/* Page Switcher Selector */}
+          {/* Page Switcher Selector with Router Push */}
           <div className="flex items-center justify-between gap-2 p-2 rounded-xl bg-canvas border border-border/80 text-xs">
             <div className="flex items-center gap-1.5 font-bold text-gray-600">
               <Icon className="w-3.5 h-3.5 text-primary" />
@@ -566,10 +660,7 @@ export function InteractiveSpotlightGuide({
 
             <select
               value={selectedPath}
-              onChange={(e) => {
-                setSelectedPath(e.target.value);
-                setStepIndex(0);
-              }}
+              onChange={(e) => handlePageChange(e.target.value)}
               className="px-2 py-1 rounded-lg border border-border text-[11px] font-bold text-dark bg-white shadow-2xs focus:ring-1 focus:ring-primary cursor-pointer max-w-[240px] truncate"
             >
               {Object.entries(TOUR_PAGES).map(([path, guide]) => (

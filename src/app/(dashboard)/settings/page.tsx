@@ -290,7 +290,7 @@ export default function SettingsPage() {
 
       <div className="grid grid-cols-1 md:grid-cols-12 gap-4 sm:gap-6">
         {/* Navigation Tabs (Vertical Sidebar on desktop, horizontal scroll on mobile) */}
-        <div className="md:col-span-4 bg-white p-2 sm:p-3 rounded-2xl sm:rounded-3xl border border-border flex md:flex-col overflow-x-auto gap-1 shadow-xs max-h-[750px] custom-scrollbar">
+        <div data-tour="settings-tabs" className="md:col-span-4 bg-white p-2 sm:p-3 rounded-2xl sm:rounded-3xl border border-border flex md:flex-col overflow-x-auto gap-1 shadow-xs max-h-[750px] custom-scrollbar">
           {tabs.map((t) => {
             const Icon = t.icon;
             return (
@@ -311,7 +311,7 @@ export default function SettingsPage() {
         </div>
 
         {/* Tab Content Panels */}
-        <div className="md:col-span-8 bg-white p-4 sm:p-6 rounded-2xl sm:rounded-3xl border border-border shadow-xs">
+        <div data-tour="settings-expenses" className="md:col-span-8 bg-white p-4 sm:p-6 rounded-2xl sm:rounded-3xl border border-border shadow-xs">
           {loading ? (
             <div className="py-20 text-center text-xs font-bold text-gray-500">
               <RefreshCw className="w-7 h-7 text-primary animate-spin mx-auto mb-2" />

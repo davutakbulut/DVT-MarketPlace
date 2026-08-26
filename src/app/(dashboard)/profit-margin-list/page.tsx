@@ -106,7 +106,7 @@ export default function ProfitMarginListPage() {
         </div>
       </div>
 
-      <div className="bg-white rounded-3xl border border-border shadow-xs overflow-hidden">
+      <div data-tour="margin-table" className="bg-white rounded-3xl border border-border shadow-xs overflow-hidden">
                   <>
             {/* Desktop Table View */}
             <div className="hidden md:block overflow-x-auto">

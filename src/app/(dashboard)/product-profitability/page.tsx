@@ -91,7 +91,7 @@ export default function ProductProfitabilityPage() {
           </p>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div data-tour="profitability-export" className="flex items-center gap-2">
           <Button size="sm" onClick={handleExportCSV} className="h-8 sm:h-9 text-xs gap-1.5 font-bold shadow-xs bg-primary hover:bg-primary-hover text-white">
             <Download className="w-3.5 h-3.5" />
             <span>Excel (CSV) İndir</span>
@@ -104,7 +104,7 @@ export default function ProductProfitabilityPage() {
       </div>
 
       {/* Summary KPI Cards */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+      <div data-tour="profitability-kpis" className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
         <div className="bg-white p-4 sm:p-5 rounded-3xl border border-border shadow-xs">
           <span className="text-[11px] font-bold text-muted-foreground uppercase tracking-wide block">Satılan Toplam Ürün</span>
           <div className="text-2xl font-black text-dark tabular-nums mt-1">{summary.totalUnitsSold || 0} Adet</div>
@@ -163,7 +163,7 @@ export default function ProductProfitabilityPage() {
       </div>
 
       {/* Profitability Table */}
-      <div className="bg-white rounded-3xl border border-border shadow-xs overflow-hidden">
+      <div data-tour="profitability-table" className="bg-white rounded-3xl border border-border shadow-xs overflow-hidden">
         {loading ? (
           <div className="p-12 text-center text-xs text-gray-500 font-bold flex items-center justify-center gap-2">
             <RefreshCw className="w-4 h-4 animate-spin text-primary" />

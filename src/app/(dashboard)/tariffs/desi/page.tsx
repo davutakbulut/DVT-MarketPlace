@@ -231,7 +231,7 @@ export default function DesiTariffsPage() {
       </div>
 
       {/* 501 Desi Table with Sticky Header & First Column */}
-      <div className="bg-white rounded-3xl border border-border shadow-xs overflow-hidden">
+      <div data-tour="desi-table" className="bg-white rounded-3xl border border-border shadow-xs overflow-hidden">
         <div className="overflow-x-auto max-h-[640px]">
           <table className="w-full text-left text-xs border-collapse min-w-[1000px]">
             <thead className="sticky top-0 z-30 bg-canvas/95 backdrop-blur-md border-b border-border shadow-xs">
