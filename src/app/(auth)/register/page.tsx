@@ -18,11 +18,34 @@ export default function RegisterPage() {
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
-    // Registration logic connected to Supabase
-    setTimeout(() => {
-      toast.success("Firma kaydı başarıyla oluşturuldu! Giriş yapabilirsiniz.");
-      router.push('/login');
-    }, 800);
+    try {
+      const res = await fetch('/api/auth/register', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          companyName,
+          fullName,
+          email,
+          password
+        }),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        toast.error(data.error || "Kayıt işlemi başarısız oldu.");
+        return;
+      }
+
+      toast.success("Firma ve kullanıcı kaydınız başarıyla oluşturuldu! Giriş yapabilirsiniz.");
+      setTimeout(() => {
+        router.push(`/login?registered=${encodeURIComponent(email)}`);
+      }, 1000);
+    } catch (err: any) {
+      toast.error("Bağlantı hatası oluştu: " + err.message);
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
