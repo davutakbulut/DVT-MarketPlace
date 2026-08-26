@@ -7,9 +7,13 @@ import { toast } from "sonner";
 import { 
   Activity, RefreshCw, Search, Eye, Filter, Truck, CheckCircle2, 
   AlertTriangle, DollarSign, Package, Clock, ShieldCheck, ChevronRight, 
-  Layers, Edit3, Check, X
+  Layers, Edit3, Check, X, TrendingUp, PieChart as PieIcon, BarChart3
 } from "lucide-react";
 import { OrderDetailModal } from "@/components/orders/OrderDetailModal";
+import {
+  ResponsiveContainer, AreaChart, Area, BarChart, Bar,
+  PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend
+} from "recharts";
 
 export default function LiveAnalysisPage() {
   const [orders, setOrders] = useState<any[]>([]);
@@ -18,7 +22,13 @@ export default function LiveAnalysisPage() {
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [carrierFilter, setCarrierFilter] = useState("all");
-  
+  const [showCharts, setShowCharts] = useState(true);
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
   // Selected Order for Detail Modal
   const [selectedOrderId, setSelectedOrderId] = useState<string | null>(null);
 
@@ -61,7 +71,6 @@ export default function LiveAnalysisPage() {
 
     setSavingBatch(true);
     try {
-      // Update in products table
       const res = await fetch('/api/products', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -79,6 +88,34 @@ export default function LiveAnalysisPage() {
     }
   };
 
+  // Cumulative Trend Data for Recent Orders
+  let runningRev = 0;
+  let runningProfit = 0;
+  const cumulativeData = [...orders].reverse().map((o, idx) => {
+    runningRev += parseFloat(o.paidAmount || 0);
+    runningProfit += parseFloat(o.netProfit || 0);
+    return {
+      index: idx + 1,
+      orderNumber: o.orderNumber,
+      kumulatifCiro: Math.round(runningRev),
+      kumulatifKar: Math.round(runningProfit),
+      kar: parseFloat(o.netProfit || 0),
+    };
+  });
+
+  // Margin Brackets Data for Donut Chart
+  const highMarginCount = orders.filter(o => parseFloat(o.marginPercent) >= 20).length;
+  const normalMarginCount = orders.filter(o => parseFloat(o.marginPercent) >= 5 && parseFloat(o.marginPercent) < 20).length;
+  const lowMarginCount = orders.filter(o => parseFloat(o.marginPercent) >= 0 && parseFloat(o.marginPercent) < 5).length;
+  const negativeMarginCount = orders.filter(o => parseFloat(o.marginPercent) < 0).length;
+
+  const marginPieData = [
+    { name: "%20+ Yüksek Kâr", value: highMarginCount, color: "#10B981" },
+    { name: "%5-%20 Standart", value: normalMarginCount, color: "#38BDF8" },
+    { name: "%0-%5 Düşük Marj", value: lowMarginCount, color: "#F59E0B" },
+    { name: "Zararına Sipariş", value: negativeMarginCount, color: "#EF4444" },
+  ].filter(x => x.value > 0);
+
   return (
     <div className="space-y-4 sm:space-y-6 max-w-7xl">
       {/* Top Banner */}
@@ -92,11 +129,21 @@ export default function LiveAnalysisPage() {
             </span>
           </div>
           <p className="text-xs text-muted-foreground mt-0.5">
-            Trendyol mağazanızdan çekilen gerçek siparişler, komisyon, kargo baremi ve net kâr dökümleri
+            Trendyol mağazanızdan çekilen gerçek siparişler, kümülatif kâr eğrileri ve anlık maliyet dökümleri
           </p>
         </div>
 
         <div className="flex items-center gap-2">
+          <Button 
+            size="sm" 
+            variant="outline"
+            onClick={() => setShowCharts(!showCharts)}
+            className="text-xs h-8 sm:h-9 gap-1.5 font-bold"
+          >
+            <BarChart3 className="w-3.5 h-3.5" />
+            <span>{showCharts ? 'Grafikleri Gizle' : 'Grafikleri Göster'}</span>
+          </Button>
+
           <Button 
             size="sm" 
             onClick={() => setBatchCostModal(true)}
@@ -108,7 +155,6 @@ export default function LiveAnalysisPage() {
 
           <Button size="sm" variant="outline" onClick={fetchOrders} className="h-8 sm:h-9 text-xs gap-1.5 font-bold">
             <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />
-            <span>Yenile</span>
           </Button>
         </div>
       </div>
@@ -140,7 +186,103 @@ export default function LiveAnalysisPage() {
         </div>
       </div>
 
-      {/* Order Status Tabs (Tümü, Teslim Edildi, Kargoda, İptal/İade) */}
+      {/* LIVE CHARTS ROW: Cumulative Profit Stream + Margin Health Pie Chart */}
+      {showCharts && (
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 sm:gap-6 animate-in fade-in">
+          
+          {/* Cumulative Profit Stream Area Chart (8 Cols) */}
+          <div className="lg:col-span-8 bg-white p-4 sm:p-6 rounded-3xl border border-border shadow-xs space-y-4">
+            <div className="flex items-center justify-between pb-3 border-b border-border">
+              <div>
+                <h4 className="text-xs sm:text-sm font-bold text-dark flex items-center gap-2">
+                  <TrendingUp className="w-4 h-4 text-emerald-600" />
+                  Sipariş Akışı Kümülatif Kâr & Ciro Eğrisi
+                </h4>
+                <p className="text-[11px] text-gray-500">Son 100 sipariş boyunca kümülatif net kâr birikimi</p>
+              </div>
+              <div className="flex items-center gap-3 text-xs font-bold">
+                <div className="flex items-center gap-1.5">
+                  <span className="w-2.5 h-2.5 rounded-full bg-emerald-500" />
+                  <span className="text-emerald-700">Kümülatif Kâr (₺)</span>
+                </div>
+              </div>
+            </div>
+
+            <div className="h-56 sm:h-64 w-full">
+              {mounted && (
+                <ResponsiveContainer width="100%" height="100%">
+                  <AreaChart data={cumulativeData} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
+                    <defs>
+                      <linearGradient id="colorKumulatifKar" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="5%" stopColor="#10B981" stopOpacity={0.4}/>
+                        <stop offset="95%" stopColor="#10B981" stopOpacity={0.0}/>
+                      </linearGradient>
+                    </defs>
+                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E5E7EB" />
+                    <XAxis dataKey="index" stroke="#9CA3AF" fontSize={11} tickLine={false} tickFormatter={(v) => `#${v}`} />
+                    <YAxis stroke="#9CA3AF" fontSize={11} tickLine={false} tickFormatter={(v) => `₺${v >= 1000 ? (v/1000).toFixed(0) + 'k' : v}`} />
+                    <Tooltip 
+                      contentStyle={{ backgroundColor: "#FFFFFF", borderRadius: "1rem", border: "1px solid #E5E7EB" }}
+                      formatter={(val: any) => [formatCurrency(parseFloat(val || 0)), "Kümülatif Net Kâr"]}
+                      labelFormatter={(l) => `Sipariş Sırası: ${l}`}
+                    />
+                    <Area type="monotone" dataKey="kumulatifKar" stroke="#10B981" strokeWidth={3} fillOpacity={1} fill="url(#colorKumulatifKar)" />
+                  </AreaChart>
+                </ResponsiveContainer>
+              )}
+            </div>
+          </div>
+
+          {/* Margin Health Donut Chart (4 Cols) */}
+          <div className="lg:col-span-4 bg-white p-4 sm:p-6 rounded-3xl border border-border shadow-xs space-y-3 flex flex-col justify-between">
+            <div>
+              <h4 className="text-xs sm:text-sm font-bold text-dark flex items-center gap-2 pb-2 border-b border-border">
+                <PieIcon className="w-4 h-4 text-primary" />
+                Sipariş Kâr Marjı Sağlık Dağılımı
+              </h4>
+              <p className="text-[11px] text-gray-500 mt-1">Siparişlerin kârlılık dilimlerine göre dağılımı</p>
+            </div>
+
+            <div className="h-48 w-full relative flex items-center justify-center">
+              {mounted && (
+                <ResponsiveContainer width="100%" height="100%">
+                  <PieChart>
+                    <Pie
+                      data={marginPieData}
+                      cx="50%"
+                      cy="50%"
+                      innerRadius={45}
+                      outerRadius={70}
+                      paddingAngle={4}
+                      dataKey="value"
+                    >
+                      {marginPieData.map((entry, index) => (
+                        <Cell key={`cell-${index}`} fill={entry.color} />
+                      ))}
+                    </Pie>
+                    <Tooltip 
+                      contentStyle={{ backgroundColor: "#FFFFFF", borderRadius: "0.75rem", border: "1px solid #E5E7EB" }}
+                      formatter={(val: any) => [`${val} Sipariş`, "Adet"]}
+                    />
+                  </PieChart>
+                </ResponsiveContainer>
+              )}
+            </div>
+
+            <div className="grid grid-cols-2 gap-1.5 pt-2 border-t border-border text-[11px]">
+              {marginPieData.map((c, idx) => (
+                <div key={idx} className="flex items-center gap-1.5">
+                  <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: c.color }} />
+                  <span className="text-gray-600 truncate">{c.name} ({c.value})</span>
+                </div>
+              ))}
+            </div>
+          </div>
+
+        </div>
+      )}
+
+      {/* Order Status Tabs */}
       <div className="flex items-center bg-canvas p-1 rounded-2xl border border-border overflow-x-auto gap-1">
         {[
           { id: 'all', label: 'Tüm Siparişler (2.366)' },
