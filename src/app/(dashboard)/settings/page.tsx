@@ -6,7 +6,8 @@ import { toast } from "sonner";
 import { 
   Settings, Key, Truck, Mail, Users, Layers, Save, RefreshCw, 
   Sparkles, CheckCircle2, ShieldCheck, Check, AlertTriangle, 
-  Percent, Receipt, Package, Download, Database, Store, ExternalLink
+  Percent, Receipt, Package, Download, Database, Store, ExternalLink,
+  Coins, FileText, Box
 } from "lucide-react";
 import Link from "next/link";
 
@@ -17,15 +18,12 @@ export default function SettingsPage() {
   const [runningCron, setRunningCron] = useState(false);
   const [lastScanResult, setLastScanResult] = useState<any>(null);
 
-  // DB Grounded State (No hardcoded demo values)
+  // DB Grounded State
   const [defaultVatRate, setDefaultVatRate] = useState<number>(10);
   const [defaultWithholdingRate, setDefaultWithholdingRate] = useState<number>(1);
   const [defaultServiceFee, setDefaultServiceFee] = useState<number>(13.19);
   const [minProfitMarginWarning, setMinProfitMarginWarning] = useState<number>(15);
   const [defaultShippingCarrier, setDefaultShippingCarrier] = useState<string>('TEX');
-
-  // Cargo Barem Tiers
-  const [baremTiers, setBaremTiers] = useState<any[]>([]);
 
   // Users RBAC
   const [users, setUsers] = useState<any[]>([]);
@@ -64,12 +62,6 @@ export default function SettingsPage() {
       const usersData = await usersRes.json();
       const usersList = Array.isArray(usersData) ? usersData : (usersData.users || []);
       setUsers(usersList);
-
-      // Fetch Barem tiers
-      const baremRes = await fetch('/api/tariffs/cargo-barem');
-      const baremData = await baremRes.json();
-      const tiersList = Array.isArray(baremData) ? baremData : (baremData.tiers || []);
-      setBaremTiers(tiersList);
     } catch (e) {
       console.error("Settings load error:", e);
       toast.error("Ayarlar veritabanından yüklenirken hata oluştu.");
@@ -82,7 +74,7 @@ export default function SettingsPage() {
     fetchAllSettings();
   }, []);
 
-    const handleRunCron = async () => {
+  const handleRunCron = async () => {
     setRunningCron(true);
     try {
       const res = await fetch('/api/cron/notifications', { method: 'POST' });
@@ -108,14 +100,14 @@ export default function SettingsPage() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          defaultVatRate,
-          defaultWithholdingRate,
-          defaultServiceFee,
-          minProfitMarginWarning,
-          defaultShippingCarrier,
-          defaultPackagingCost: packagingCost,
-          invoiceFixedCost,
-          extraOperationCost,
+          defaultVatRate: Number(defaultVatRate),
+          defaultWithholdingRate: Number(defaultWithholdingRate),
+          defaultServiceFee: Number(defaultServiceFee),
+          minProfitMarginWarning: Number(minProfitMarginWarning),
+          defaultShippingCarrier: defaultShippingCarrier,
+          defaultPackagingCost: Number(packagingCost),
+          invoiceFixedCost: Number(invoiceFixedCost),
+          extraOperationCost: Number(extraOperationCost),
           emailDailySummaryEnabled: emailDailySummary,
           emailNegativeProfitAlert: emailNegativeProfitAlert,
         }),
@@ -129,32 +121,6 @@ export default function SettingsPage() {
       toast.error("Kaydedilirken hata oluştu.");
     } finally {
       setSaving(false);
-    }
-  };
-
-  const handleBaremPriceChange = (id: string, field: 'discountedPriceExVat' | 'standardPriceExVat', value: number) => {
-    setBaremTiers((prev) =>
-      (Array.isArray(prev) ? prev : []).map((t) => (t.id === id ? { ...t, [field]: value, isDirty: true } : t))
-    );
-  };
-
-  const handleSaveBaremTier = async (tier: any) => {
-    try {
-      const res = await fetch('/api/tariffs/cargo-barem', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          id: tier.id,
-          discountedPriceExVat: tier.discountedPriceExVat,
-          standardPriceExVat: tier.standardPriceExVat,
-        }),
-      });
-      if (res.ok) {
-        setBaremTiers((prev) => (Array.isArray(prev) ? prev : []).map((t) => (t.id === tier.id ? { ...t, isDirty: false } : t)));
-        toast.success(`${tier.carrierName} (${tier.tierName}) barem fiyatı veritabanına kaydedildi!`);
-      }
-    } catch (e) {
-      toast.error("Kaydedilirken hata oluştu.");
     }
   };
 
@@ -188,14 +154,16 @@ export default function SettingsPage() {
   };
 
   const tabs = [
-    { id: "general", label: "1. Genel & Finansal Ayarlar", icon: Settings },
-    { id: "service_fee", label: "2. Platform Hizmet Bedeli", icon: Receipt },
+    { id: "general", label: "1. Genel Sistem Ayarları", icon: Settings },
+    { id: "financial_deductions", label: "2. Kesintiler & Sabit Giderler", icon: Receipt },
     { id: "users", label: "3. Kullanıcılar & RBAC", icon: Users },
     { id: "notifications", label: "4. Bildirim & E-Posta", icon: Mail },
-    { id: "tax_withholding", label: "5. Vergi & %1 Stopaj", icon: Percent },
-    { id: "fixed_expenses", label: "6. Sabit Gider Şablonları", icon: Package },
-    { id: "backup_logs", label: "7. Yedekleme & Loglar", icon: Database },
+    { id: "backup_logs", label: "5. Yedekleme & Loglar", icon: Database },
   ];
+
+  const totalFixedCosts = (parseFloat(packagingCost as any) || 0) + 
+                          (parseFloat(invoiceFixedCost as any) || 0) + 
+                          (parseFloat(extraOperationCost as any) || 0);
 
   return (
     <div className="space-y-4 sm:space-y-6 max-w-7xl">
@@ -207,7 +175,7 @@ export default function SettingsPage() {
             <Badge variant="excellent">Supabase Canlı DB</Badge>
           </div>
           <p className="text-[11px] sm:text-xs text-muted-foreground mt-0.5">
-            Vergi katsayıları, kargo barem tarifeleri, sabit giderler ve kullanıcı yetkilendirme parametreleri
+            Vergi katsayıları, platform kesintileri, sabit giderler ve kullanıcı yetkilendirme parametreleri
           </p>
         </div>
 
@@ -248,27 +216,25 @@ export default function SettingsPage() {
         </div>
 
         {/* Tab Content Panels */}
-        <div className="md:col-span-8 bg-white p-4 sm:p-6 rounded-2xl sm:rounded-3xl border border-border space-y-4 sm:space-y-5 shadow-xs">
-          
+        <div className="md:col-span-8 bg-white p-4 sm:p-6 rounded-2xl sm:rounded-3xl border border-border shadow-xs">
           {loading ? (
-            <div className="p-12 text-center text-xs text-gray-500 font-bold flex items-center justify-center gap-2">
-              <RefreshCw className="w-4 h-4 animate-spin text-primary" />
-              <span>Ayarlar veritabanından yükleniyor...</span>
+            <div className="py-16 text-center text-xs font-bold text-gray-500">
+              <RefreshCw className="w-6 h-6 text-primary animate-spin mx-auto mb-2" />
+              Veritabanı ayarları yükleniyor...
             </div>
           ) : (
             <>
               {/* TAB 1: GENEL AYARLAR */}
               {activeTab === "general" && (
                 <form onSubmit={handleSaveGeneral} className="space-y-4">
-                  <div className="flex items-center justify-between pb-3 border-b border-border">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-3 border-b border-border gap-2">
                     <div>
-                      <h4 className="text-xs sm:text-sm font-bold text-dark">Genel Sistem & Finansal Parametreler</h4>
-                      <p className="text-[11px] text-gray-500">Kâr hesaplama motoru varsayılanları</p>
+                      <h4 className="text-xs sm:text-sm font-bold text-dark">Genel Sistem Parametreleri</h4>
+                      <p className="text-[11px] text-gray-500">Katalog varsayılanları ve kârlılık uyarı sınırları</p>
                     </div>
-                    <Badge variant="excellent">Canlı Veritabanı</Badge>
                   </div>
 
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div>
                       <label className="text-xs font-bold text-dark block mb-1">Varsayılan KDV Oranı (%)</label>
                       <input
@@ -280,35 +246,30 @@ export default function SettingsPage() {
                     </div>
 
                     <div>
-                      <label className="text-xs font-bold text-dark block mb-1">Pazaryeri Stopaj Oranı (%)</label>
-                      <input
-                        type="number"
-                        step="0.1"
-                        value={defaultWithholdingRate}
-                        onChange={(e) => setDefaultWithholdingRate(parseFloat(e.target.value) || 0)}
-                        className="w-full px-3 py-2 rounded-xl border border-border text-xs font-bold"
-                      />
+                      <label className="text-xs font-bold text-dark block mb-1">Varsayılan Kargo Firması</label>
+                      <select
+                        value={defaultShippingCarrier}
+                        onChange={(e) => setDefaultShippingCarrier(e.target.value)}
+                        className="w-full px-3 py-2 rounded-xl border border-border text-xs font-bold bg-white"
+                      >
+                        <option value="TEX">TEX (Trendyol Express)</option>
+                        <option value="Aras">Aras Kargo</option>
+                        <option value="Sürat">Sürat Kargo</option>
+                        <option value="PTT">PTT Kargo</option>
+                        <option value="MNG">MNG Kargo</option>
+                        <option value="YK">Yurtiçi Kargo</option>
+                      </select>
                     </div>
 
                     <div>
-                      <label className="text-xs font-bold text-primary block mb-1">Sipariş Hizmet Bedeli (₺)</label>
-                      <input
-                        type="number"
-                        step="0.01"
-                        value={defaultServiceFee}
-                        onChange={(e) => setDefaultServiceFee(parseFloat(e.target.value) || 0)}
-                        className="w-full px-3 py-2 rounded-xl border border-primary text-xs font-bold text-primary bg-primary-tint-50/20"
-                      />
-                    </div>
-
-                    <div>
-                      <label className="text-xs font-bold text-dark block mb-1">Minimum Marj Uyarısı (%)</label>
+                      <label className="text-xs font-bold text-dark block mb-1">Minimum Kâr Marjı Uyarısı (%)</label>
                       <input
                         type="number"
                         value={minProfitMarginWarning}
                         onChange={(e) => setMinProfitMarginWarning(parseFloat(e.target.value) || 0)}
                         className="w-full px-3 py-2 rounded-xl border border-border text-xs font-bold"
                       />
+                      <span className="text-[10px] text-gray-400 mt-1 block">Bu marjın altındaki ürünler uyarı listesine düşer.</span>
                     </div>
                   </div>
 
@@ -319,33 +280,135 @@ export default function SettingsPage() {
                 </form>
               )}
 
+              {/* TAB 2: UNIFIED KESİNTİLER & SABİT GİDERLER (Platform Hizmet Bedeli + Vergi/Stopaj + Sabit Giderler) */}
+              {activeTab === "financial_deductions" && (
+                <form onSubmit={handleSaveGeneral} className="space-y-6">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-3 border-b border-border gap-2">
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <h4 className="text-xs sm:text-sm font-bold text-dark">Platform Kesintileri, Vergi & Sabit Giderler</h4>
+                        <Badge variant="excellent">Birleşik Finans Modülü</Badge>
+                      </div>
+                      <p className="text-[11px] text-gray-500 mt-0.5">
+                        Platform hizmet bedelleri, %1 tevkifat stopajı ve sipariş başı operasyonel gider şablonu
+                      </p>
+                    </div>
 
-
-              {/* TAB 4: PLATFORM HİZMET BEDELLERİ */}
-              {activeTab === "service_fee" && (
-                <div className="space-y-4">
-                  <h4 className="text-xs sm:text-sm font-bold text-dark pb-2 border-b border-border">Pazaryeri Hizmet Bedeli Yönetimi</h4>
-                  <p className="text-xs text-gray-600">Her siparişte maliyet olarak kesilen sabit platform bedeli.</p>
-
-                  <div>
-                    <label className="text-xs font-bold text-primary block mb-1">Güncel Hizmet Bedeli (₺ KDV Dahil)</label>
-                    <input
-                      type="number"
-                      step="0.01"
-                      value={defaultServiceFee}
-                      onChange={(e) => setDefaultServiceFee(parseFloat(e.target.value) || 0)}
-                      className="w-48 px-3 py-2 rounded-xl border border-primary text-sm font-black text-primary bg-primary-tint-50/20"
-                    />
+                    <Button type="submit" disabled={saving} className="text-xs font-bold gap-1.5 shadow-xs bg-primary hover:bg-primary-hover text-white self-start sm:self-auto">
+                      <Save className="w-3.5 h-3.5" />
+                      <span>{saving ? "Kaydediliyor..." : "Tümünü Kaydet"}</span>
+                    </Button>
                   </div>
 
-                  <Button onClick={handleSaveGeneral} className="text-xs font-bold gap-1.5 shadow-xs bg-primary hover:bg-primary-hover text-white">
-                    <Save className="w-3.5 h-3.5" />
-                    <span>Hizmet Bedelini Kaydet (₺{defaultServiceFee})</span>
-                  </Button>
-                </div>
+                  {/* SECTION 1: PLATFORM HİZMET BEDELİ */}
+                  <div className="p-4 rounded-2xl bg-canvas/60 border border-border space-y-3">
+                    <div className="flex items-center gap-2">
+                      <Receipt className="w-4 h-4 text-primary" />
+                      <h5 className="text-xs font-black text-dark">1. Pazaryeri Hizmet Bedeli</h5>
+                    </div>
+                    <p className="text-[11px] text-gray-500">Her siparişte pazaryeri tarafından kesilen sabit platform işlem bedeli.</p>
+
+                    <div className="flex items-center gap-3">
+                      <div className="w-48">
+                        <label className="text-[11px] font-bold text-dark block mb-1">Hizmet Bedeli (₺ KDV Dahil)</label>
+                        <div className="relative">
+                          <span className="absolute left-3 top-2 text-xs font-bold text-primary">₺</span>
+                          <input
+                            type="number"
+                            step="0.01"
+                            value={defaultServiceFee}
+                            onChange={(e) => setDefaultServiceFee(parseFloat(e.target.value) || 0)}
+                            className="w-full pl-7 pr-3 py-1.5 rounded-xl border border-primary text-xs font-black text-primary bg-white focus:ring-2 focus:ring-primary shadow-xs"
+                          />
+                        </div>
+                      </div>
+                      <span className="text-[11px] text-gray-500 mt-5">Sipariş kârlılık hesaplamalarında doğrudan maliyete eklenir.</span>
+                    </div>
+                  </div>
+
+                  {/* SECTION 2: VERGİ & %1 STOPAJ */}
+                  <div className="p-4 rounded-2xl bg-canvas/60 border border-border space-y-3">
+                    <div className="flex items-center gap-2">
+                      <Percent className="w-4 h-4 text-primary" />
+                      <h5 className="text-xs font-black text-dark">2. Vergi Mevzuatı & %1 Stopaj</h5>
+                    </div>
+                    <p className="text-[11px] text-gray-500">Trendyol ve Hepsiburada tarafından KDV hariç ciro üzerinden kesilen e-ticaret tevkifat stopajı.</p>
+
+                    <div className="flex items-center gap-3">
+                      <div className="w-48">
+                        <label className="text-[11px] font-bold text-dark block mb-1">Tevkifat Stopaj Oranı (%)</label>
+                        <div className="relative">
+                          <input
+                            type="number"
+                            step="0.1"
+                            value={defaultWithholdingRate}
+                            onChange={(e) => setDefaultWithholdingRate(parseFloat(e.target.value) || 0)}
+                            className="w-full px-3 py-1.5 rounded-xl border border-border text-xs font-black text-dark bg-white focus:ring-2 focus:ring-primary shadow-xs"
+                          />
+                          <span className="absolute right-3 top-2 text-xs font-bold text-gray-400">%</span>
+                        </div>
+                      </div>
+                      <span className="text-[11px] text-gray-500 mt-5">Yasal stopaj oranı: %1 (KDV hariç tutardan kesilir).</span>
+                    </div>
+                  </div>
+
+                  {/* SECTION 3: SABİT GİDER ŞABLONLARI */}
+                  <div className="p-4 rounded-2xl bg-canvas/60 border border-border space-y-3">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <Package className="w-4 h-4 text-primary" />
+                        <h5 className="text-xs font-black text-dark">3. Sipariş Başı Sabit Operasyonel Giderler</h5>
+                      </div>
+                      <Badge variant="secondary" className="text-[10px] font-bold">
+                        Toplam Sabit Gider: ₺{totalFixedCosts.toFixed(2)}
+                      </Badge>
+                    </div>
+                    <p className="text-[11px] text-gray-500">Her siparişte paketleme, faturalandırma ve operasyon için ayrılan sabit maliyetler.</p>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                      <div>
+                        <label className="text-[11px] font-bold text-dark block mb-1">Koli / Paketleme (₺)</label>
+                        <input
+                          type="number"
+                          step="0.5"
+                          value={packagingCost}
+                          onChange={(e) => setPackagingCost(parseFloat(e.target.value) || 0)}
+                          className="w-full px-3 py-1.5 rounded-xl border border-border text-xs font-bold bg-white focus:ring-2 focus:ring-primary shadow-xs"
+                        />
+                      </div>
+                      <div>
+                        <label className="text-[11px] font-bold text-dark block mb-1">Fatura Kesim Bedeli (₺)</label>
+                        <input
+                          type="number"
+                          step="0.5"
+                          value={invoiceFixedCost}
+                          onChange={(e) => setInvoiceFixedCost(parseFloat(e.target.value) || 0)}
+                          className="w-full px-3 py-1.5 rounded-xl border border-border text-xs font-bold bg-white focus:ring-2 focus:ring-primary shadow-xs"
+                        />
+                      </div>
+                      <div>
+                        <label className="text-[11px] font-bold text-dark block mb-1">Ekstra Operasyon (₺)</label>
+                        <input
+                          type="number"
+                          step="0.5"
+                          value={extraOperationCost}
+                          onChange={(e) => setExtraOperationCost(parseFloat(e.target.value) || 0)}
+                          className="w-full px-3 py-1.5 rounded-xl border border-border text-xs font-bold bg-white focus:ring-2 focus:ring-primary shadow-xs"
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="pt-2">
+                    <Button type="submit" disabled={saving} className="text-xs font-bold gap-2 shadow-xs bg-primary hover:bg-primary-hover text-white">
+                      <Save className="w-4 h-4" />
+                      <span>{saving ? "Kaydediliyor..." : "Tüm Finansal Kesinti & Gider Ayarlarını Kaydet"}</span>
+                    </Button>
+                  </div>
+                </form>
               )}
 
-              {/* TAB 5: USERS RBAC & KÂR MASKELEME */}
+              {/* TAB 3: USERS RBAC & KÂR MASKELEME */}
               {activeTab === "users" && (
                 <div className="space-y-4">
                   <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-2 border-b border-border gap-2">
@@ -371,7 +434,7 @@ export default function SettingsPage() {
                         <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 pt-2 border-t border-border/60 text-[11px]">
                           <button
                             onClick={() => handleToggleUserPermission(u.id, 'canViewMargins', u.canViewMargins)}
-                            className={`p-2 rounded-xl border text-center font-bold transition-all ${
+                            className={`p-2 rounded-xl border text-center font-bold transition-all cursor-pointer ${
                               u.canViewMargins ? 'bg-emerald-50 border-emerald-300 text-emerald-800' : 'bg-gray-100 text-gray-500'
                             }`}
                           >
@@ -380,7 +443,7 @@ export default function SettingsPage() {
 
                           <button
                             onClick={() => handleToggleUserPermission(u.id, 'canViewCogs', u.canViewCogs)}
-                            className={`p-2 rounded-xl border text-center font-bold transition-all ${
+                            className={`p-2 rounded-xl border text-center font-bold transition-all cursor-pointer ${
                               u.canViewCogs ? 'bg-emerald-50 border-emerald-300 text-emerald-800' : 'bg-gray-100 text-gray-500'
                             }`}
                           >
@@ -389,7 +452,7 @@ export default function SettingsPage() {
 
                           <button
                             onClick={() => handleToggleUserPermission(u.id, 'canEditPrices', u.canEditPrices)}
-                            className={`p-2 rounded-xl border text-center font-bold transition-all ${
+                            className={`p-2 rounded-xl border text-center font-bold transition-all cursor-pointer ${
                               u.canEditPrices ? 'bg-emerald-50 border-emerald-300 text-emerald-800' : 'bg-gray-100 text-gray-500'
                             }`}
                           >
@@ -398,7 +461,7 @@ export default function SettingsPage() {
 
                           <button
                             onClick={() => handleToggleUserPermission(u.id, 'canExportReports', u.canExportReports)}
-                            className={`p-2 rounded-xl border text-center font-bold transition-all ${
+                            className={`p-2 rounded-xl border text-center font-bold transition-all cursor-pointer ${
                               u.canExportReports ? 'bg-emerald-50 border-emerald-300 text-emerald-800' : 'bg-gray-100 text-gray-500'
                             }`}
                           >
@@ -411,7 +474,7 @@ export default function SettingsPage() {
                 </div>
               )}
 
-              {/* TAB 6: NOTIFICATIONS & AUTOMATION */}
+              {/* TAB 4: NOTIFICATIONS & AUTOMATION */}
               {activeTab === "notifications" && (
                 <div className="space-y-5">
                   <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-2 border-b border-border gap-2">
@@ -435,7 +498,7 @@ export default function SettingsPage() {
                         size="sm"
                         onClick={handleRunCron}
                         disabled={runningCron}
-                        className="h-8 text-xs font-bold bg-primary text-white hover:bg-primary-hover shadow-xs gap-1.5"
+                        className="h-8 text-xs font-bold bg-primary text-white hover:bg-primary-hover shadow-xs gap-1.5 cursor-pointer"
                       >
                         <RefreshCw className={`w-3.5 h-3.5 ${runningCron ? 'animate-spin' : ''}`} />
                         <span>{runningCron ? 'Taranıyor...' : 'Otomasyonu Şimdi Çalıştır'}</span>
@@ -445,7 +508,7 @@ export default function SettingsPage() {
                     <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 pt-2 border-t border-primary-tint-100 text-[11px]">
                       <div className="bg-white p-2.5 rounded-2xl border border-border">
                         <span className="text-gray-400 block font-semibold text-[10px]">TARAMA PERİYODU</span>
-                        <span className="font-bold text-dark">60 Saniyede Bir Canlı</span>
+                        <span className="font-bold text-dark">30 Saniyede Bir Canlı</span>
                       </div>
                       <div className="bg-white p-2.5 rounded-2xl border border-border">
                         <span className="text-gray-400 block font-semibold text-[10px]">OTOMATİK KURALLAR</span>
@@ -488,81 +551,14 @@ export default function SettingsPage() {
                     </label>
                   </div>
 
-                  <Button onClick={handleSaveGeneral} disabled={saving} className="text-xs font-bold gap-1.5 shadow-xs bg-primary hover:bg-primary-hover text-white">
+                  <Button onClick={handleSaveGeneral} disabled={saving} className="text-xs font-bold gap-1.5 shadow-xs bg-primary hover:bg-primary-hover text-white cursor-pointer">
                     <Save className="w-3.5 h-3.5" />
                     <span>Bildirim Tercihlerini Kaydet</span>
                   </Button>
                 </div>
               )}
 
-              {/* TAB 7: VERGİ & STOPAJ */}
-              {activeTab === "tax_withholding" && (
-                <div className="space-y-4">
-                  <h4 className="text-xs sm:text-sm font-bold text-dark pb-2 border-b border-border">Vergi Mevzuatı & Stopaj Parametreleri</h4>
-                  <div className="space-y-3 text-xs">
-                    <div>
-                      <label className="font-bold text-dark block mb-1">E-Ticaret Pazaryeri Tevkifat Stopajı (%)</label>
-                      <input
-                        type="number"
-                        step="0.1"
-                        value={defaultWithholdingRate}
-                        onChange={(e) => setDefaultWithholdingRate(parseFloat(e.target.value) || 0)}
-                        className="w-48 px-3 py-2 rounded-xl border border-border font-bold"
-                      />
-                      <span className="text-[11px] text-gray-500 block mt-1">Trendyol ve Hepsiburada tarafından KDV hariç ciro üzerinden kesilen %1 stopaj.</span>
-                    </div>
-                  </div>
-                  <Button onClick={handleSaveGeneral} className="text-xs font-bold gap-1.5 shadow-xs bg-primary hover:bg-primary-hover text-white">
-                    <Save className="w-3.5 h-3.5" />
-                    <span>Vergi Ayarlarını Kaydet</span>
-                  </Button>
-                </div>
-              )}
-
-              {/* TAB 8: SABİT GİDERLER */}
-              {activeTab === "fixed_expenses" && (
-                <div className="space-y-4">
-                  <h4 className="text-xs sm:text-sm font-bold text-dark pb-2 border-b border-border">Sipariş Başı Sabit Operasyonel Giderler</h4>
-                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                    <div>
-                      <label className="text-xs font-bold text-dark block mb-1">Koli / Paketleme (₺)</label>
-                      <input
-                        type="number"
-                        step="0.5"
-                        value={packagingCost}
-                        onChange={(e) => setPackagingCost(parseFloat(e.target.value) || 0)}
-                        className="w-full px-3 py-2 rounded-xl border border-border text-xs font-bold"
-                      />
-                    </div>
-                    <div>
-                      <label className="text-xs font-bold text-dark block mb-1">Fatura Kesim Bedeli (₺)</label>
-                      <input
-                        type="number"
-                        step="0.5"
-                        value={invoiceFixedCost}
-                        onChange={(e) => setInvoiceFixedCost(parseFloat(e.target.value) || 0)}
-                        className="w-full px-3 py-2 rounded-xl border border-border text-xs font-bold"
-                      />
-                    </div>
-                    <div>
-                      <label className="text-xs font-bold text-dark block mb-1">Ekstra Operasyon (₺)</label>
-                      <input
-                        type="number"
-                        step="0.5"
-                        value={extraOperationCost}
-                        onChange={(e) => setExtraOperationCost(parseFloat(e.target.value) || 0)}
-                        className="w-full px-3 py-2 rounded-xl border border-border text-xs font-bold"
-                      />
-                    </div>
-                  </div>
-                  <Button onClick={handleSaveGeneral} className="text-xs font-bold gap-1.5 shadow-xs bg-primary hover:bg-primary-hover text-white">
-                    <Save className="w-3.5 h-3.5" />
-                    <span>Gider Şablonunu Kaydet</span>
-                  </Button>
-                </div>
-              )}
-
-              {/* TAB 9: YEDEKLEME & LOGLAR */}
+              {/* TAB 5: YEDEKLEME & LOGLAR */}
               {activeTab === "backup_logs" && (
                 <div className="space-y-4">
                   <h4 className="text-xs sm:text-sm font-bold text-dark pb-2 border-b border-border">Veritabanı Yedekleme & Sistem Logları</h4>
@@ -570,7 +566,7 @@ export default function SettingsPage() {
                     Tüm sipariş, ürün, kargo barem ve finansal tablolarınızı tek tıkla güvenli JSON formatında dışa aktarın.
                   </p>
                   <div className="flex gap-2">
-                    <Button onClick={() => toast.success("Sistem yedeği başarıyla indirildi!")} variant="outline" className="text-xs font-bold gap-1.5">
+                    <Button onClick={() => toast.success("Sistem yedeği başarıyla indirildi!")} variant="outline" className="text-xs font-bold gap-1.5 cursor-pointer">
                       <Download className="w-3.5 h-3.5" />
                       <span>Tam Veritabanı Yedeği Al (JSON)</span>
                     </Button>
@@ -579,7 +575,6 @@ export default function SettingsPage() {
               )}
             </>
           )}
-
         </div>
       </div>
     </div>

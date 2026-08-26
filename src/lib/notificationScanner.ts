@@ -162,18 +162,19 @@ export async function runNotificationScanner(): Promise<ScanResult> {
         o.id,
         o.marketplace_order_number,
         o.customer_name,
-        o.order_status,
+        o.status,
         o.total_sale_price,
         o.return_reason,
+        o.cancellation_reason,
         o.order_date
       FROM orders o
-      WHERE o.order_status IN ('Cancelled', 'Returned') OR o.return_reason IS NOT NULL
+      WHERE o.status IN ('Cancelled', 'Returned', 'İptal Edildi', 'İade Edildi') OR o.return_reason IS NOT NULL OR o.cancellation_reason IS NOT NULL
       ORDER BY o.order_date DESC
       LIMIT 10
     `);
 
     for (const ret of returnsCancellations) {
-      const isReturn = ret.order_status === 'Returned' || !!ret.return_reason;
+      const isReturn = ret.status === 'Returned' || ret.status === 'İade Edildi' || !!ret.return_reason;
       const title = isReturn 
         ? `🔄 Yeni İade Talebi: #${ret.marketplace_order_number}`
         : `❌ İptal Edilen Sipariş: #${ret.marketplace_order_number}`;
