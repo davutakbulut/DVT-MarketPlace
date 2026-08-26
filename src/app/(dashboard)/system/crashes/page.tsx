@@ -8,8 +8,10 @@ import { TablePagination } from "@/components/common/TablePagination";
 import { 
   AlertTriangle, ShieldAlert, CheckCircle2, RefreshCw, 
   Copy, Download, Terminal, Bug, Clock, ExternalLink,
-  ChevronDown, ChevronRight, Activity, Filter, Eye, Check
+  ChevronDown, ChevronRight, Activity, Filter, Eye, Check,
+  Zap, Cpu, Database, Server, Radio, Flame
 } from "lucide-react";
+import { reportCrash } from "@/lib/telemetry";
 
 export default function SystemCrashesPage() {
   const [logs, setLogs] = useState<any[]>([]);
@@ -20,6 +22,7 @@ export default function SystemCrashesPage() {
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
+  const [testingError, setTestingError] = useState(false);
 
   const fetchCrashes = async () => {
     setLoading(true);
@@ -54,6 +57,33 @@ export default function SystemCrashesPage() {
     }
   };
 
+  const handleSimulateTestError = async () => {
+    setTestingError(true);
+    try {
+      await reportCrash({
+        errorType: 'SimulatedWatchdogTestError',
+        errorMessage: 'Watchdog ve Çökme Takip Sistemi Canlı Doğrulama Testi (Otomatik Kayıt Başarılı)',
+        stackTrace: `Error: SimulatedWatchdogTestError: Watchdog canlı test çağrısı yapıldı\n    at handleSimulateTestError (http://localhost:3005/system/crashes:65:12)\n    at HTMLButtonElement.dispatch (react-dom.production.min.js:14:28)`,
+        pageUrl: window.location.pathname,
+        componentName: 'CrashTestingCenter',
+        severity: 'warning',
+        metadata: {
+          testTriggeredBy: 'UserAdmin',
+          timestamp: new Date().toISOString(),
+          platform: 'DVT-MarketPlace Watchdog 24/7'
+        }
+      });
+      toast.success("⚡ Test hatası simüle edildi ve veritabanı crash loguna anında kaydedildi!");
+      setTimeout(() => {
+        fetchCrashes();
+      }, 500);
+    } catch (err) {
+      toast.error("Test hatası kaydedilemedi.");
+    } finally {
+      setTestingError(false);
+    }
+  };
+
   const handleCopyStack = (stack: string) => {
     navigator.clipboard.writeText(stack);
     toast.success("Stack Trace panoya kopyalandı!");
@@ -74,27 +104,91 @@ export default function SystemCrashesPage() {
       {/* Top Banner */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-white p-4 sm:p-6 rounded-3xl border border-border shadow-xs">
         <div>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 flex-wrap">
             <h3 className="text-base sm:text-lg font-black text-dark flex items-center gap-2">
               <ShieldAlert className="w-5 h-5 text-red-500" />
               <span>Sistem Çökme & Hata Takip Merkezi</span>
             </h3>
-            <Badge variant="danger">İç Yazılım Telemetry</Badge>
+            <Badge variant="excellent">🟢 24/7 Watchdog Aktif</Badge>
+            <Badge variant="outline">Tüm Server & Client Takipte</Badge>
           </div>
           <p className="text-xs text-muted-foreground mt-0.5">
-            İstemci tarafı JS çökmeleri, Promise rejection'lar ve API hatalarının anlık izleme günlüğü
+            İstemci JS çalışma hataları, unhandled promise reddedilmeleri, React Error Boundary ve sunucu API çökmelerinin anlık yakalama ve kayıt günlüğü.
           </p>
         </div>
 
-        <div className="flex items-center gap-2">
-          <Button size="sm" variant="outline" onClick={handleExportJson} className="h-8 sm:h-9 text-xs gap-1.5 font-bold">
+        <div className="flex items-center gap-2 flex-wrap">
+          <Button 
+            size="sm" 
+            variant="outline" 
+            onClick={handleSimulateTestError} 
+            disabled={testingError}
+            className="h-8 sm:h-9 text-xs gap-1.5 font-bold border-amber-300 text-amber-800 hover:bg-amber-50 cursor-pointer"
+          >
+            <Zap className={`w-3.5 h-3.5 text-amber-600 ${testingError ? 'animate-spin' : ''}`} />
+            <span>{testingError ? 'Simüle Ediliyor...' : '⚡ Test Hatası Gönder'}</span>
+          </Button>
+
+          <Button size="sm" variant="outline" onClick={handleExportJson} className="h-8 sm:h-9 text-xs gap-1.5 font-bold cursor-pointer">
             <Download className="w-3.5 h-3.5" />
             <span>JSON İndir</span>
           </Button>
-          <Button size="sm" variant="outline" onClick={fetchCrashes} className="h-8 sm:h-9 text-xs gap-1.5 font-bold">
+
+          <Button size="sm" variant="outline" onClick={fetchCrashes} className="h-8 sm:h-9 text-xs gap-1.5 font-bold cursor-pointer">
             <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />
             <span>Yenile</span>
           </Button>
+        </div>
+      </div>
+
+      {/* System Architecture & Monitoring Engine Info Card */}
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-3 bg-white p-4 rounded-3xl border border-border shadow-xs">
+        <div className="flex items-start gap-2.5 p-2">
+          <div className="p-2 rounded-2xl bg-emerald-50 text-emerald-600 shrink-0">
+            <Activity className="w-4 h-4" />
+          </div>
+          <div>
+            <span className="text-[11px] font-black text-dark block">24/7 Aktif Dinleme</span>
+            <span className="text-[10px] text-gray-500 font-semibold leading-tight block mt-0.5">
+              İstemcideki tüm JS iş parçacıkları ve API çağrıları kesintisiz izlenir.
+            </span>
+          </div>
+        </div>
+
+        <div className="flex items-start gap-2.5 p-2">
+          <div className="p-2 rounded-2xl bg-sky-50 text-sky-600 shrink-0">
+            <Radio className="w-4 h-4" />
+          </div>
+          <div>
+            <span className="text-[11px] font-black text-dark block">Otomatik Yakalama</span>
+            <span className="text-[10px] text-gray-500 font-semibold leading-tight block mt-0.5">
+              `window.onerror` ve `unhandledrejection` anında tetiklenir.
+            </span>
+          </div>
+        </div>
+
+        <div className="flex items-start gap-2.5 p-2">
+          <div className="p-2 rounded-2xl bg-purple-50 text-purple-600 shrink-0">
+            <Database className="w-4 h-4" />
+          </div>
+          <div>
+            <span className="text-[11px] font-black text-dark block">Kalıcı DB Günlüğü</span>
+            <span className="text-[10px] text-gray-500 font-semibold leading-tight block mt-0.5">
+              Hatalar stack trace, URL ve cihaz bilgisiyle PostgreSQL'e yazılır.
+            </span>
+          </div>
+        </div>
+
+        <div className="flex items-start gap-2.5 p-2">
+          <div className="p-2 rounded-2xl bg-amber-50 text-amber-600 shrink-0">
+            <Server className="w-4 h-4" />
+          </div>
+          <div>
+            <span className="text-[11px] font-black text-dark block">Çökme İzolasyonu</span>
+            <span className="text-[10px] text-gray-500 font-semibold leading-tight block mt-0.5">
+              Bir modül hata alsa dahi tüm sistem ve diğer sayfalar kesintisiz çalışır.
+            </span>
+          </div>
         </div>
       </div>
 
@@ -103,7 +197,7 @@ export default function SystemCrashesPage() {
         <div className="bg-white p-4 rounded-3xl border border-border shadow-xs">
           <span className="text-[11px] font-bold text-gray-500 uppercase tracking-wide block">Toplam Çökme</span>
           <div className="text-2xl font-black text-dark tabular-nums mt-1">{stats.totalCrashes}</div>
-          <span className="text-[10px] text-gray-400 font-semibold block mt-0.5">Kayıt altına alınan</span>
+          <span className="text-[10px] text-gray-400 font-semibold block mt-0.5">Kayıt altına alınan olay</span>
         </div>
 
         <div className="bg-white p-4 rounded-3xl border border-border shadow-xs">
@@ -138,7 +232,7 @@ export default function SystemCrashesPage() {
               <button
                 key={st}
                 onClick={() => setStatusFilter(st)}
-                className={`px-3 py-1 rounded-xl transition-all ${
+                className={`px-3 py-1 rounded-xl transition-all cursor-pointer ${
                   statusFilter === st 
                     ? 'bg-primary text-white shadow-xs' 
                     : 'text-gray-600 hover:text-dark'
@@ -154,7 +248,7 @@ export default function SystemCrashesPage() {
               <button
                 key={sev}
                 onClick={() => setSeverityFilter(sev)}
-                className={`px-3 py-1 rounded-xl transition-all ${
+                className={`px-3 py-1 rounded-xl transition-all cursor-pointer ${
                   severityFilter === sev 
                     ? 'bg-dark text-white shadow-xs' 
                     : 'text-gray-600 hover:text-dark'
@@ -173,7 +267,12 @@ export default function SystemCrashesPage() {
 
       {/* Incidents Stream */}
       <div className="space-y-3">
-        {logs.length === 0 ? (
+        {loading ? (
+          <div className="py-20 text-center space-y-3 bg-white rounded-3xl border border-border shadow-xs">
+            <RefreshCw className="w-8 h-8 text-primary animate-spin mx-auto" />
+            <p className="text-xs text-gray-500 font-bold">Çökme kayıtları yükleniyor...</p>
+          </div>
+        ) : logs.length === 0 ? (
           <div className="bg-white p-12 text-center rounded-3xl border border-border shadow-xs space-y-3">
             <CheckCircle2 className="w-12 h-12 text-emerald-500 mx-auto" />
             <h4 className="text-base font-black text-dark">Harika! Kayıtlı çökme veya açık hata bulunamadı.</h4>
@@ -246,7 +345,7 @@ export default function SystemCrashesPage() {
                         e.stopPropagation();
                         handleToggleResolve(log.id, log.status);
                       }}
-                      className="h-8 text-xs font-bold gap-1 rounded-xl"
+                      className="h-8 text-xs font-bold gap-1 rounded-xl cursor-pointer"
                     >
                       {log.status === 'resolved' ? 'Tekrar Aç' : 'Çözüldü Yap'}
                     </Button>
@@ -270,7 +369,7 @@ export default function SystemCrashesPage() {
                           size="sm" 
                           variant="ghost" 
                           onClick={() => handleCopyStack(log.stackTrace)}
-                          className="h-7 text-xs font-bold gap-1 text-primary"
+                          className="h-7 text-xs font-bold gap-1 text-primary cursor-pointer"
                         >
                           <Copy className="w-3 h-3" />
                           <span>Kopyala</span>

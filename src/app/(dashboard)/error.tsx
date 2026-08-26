@@ -3,6 +3,7 @@ import React, { useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { AlertOctagon, RefreshCw, Home, ShieldAlert } from "lucide-react";
 import Link from "next/link";
+import { reportCrash } from "@/lib/telemetry";
 
 export default function DashboardError({
   error,
@@ -12,7 +13,15 @@ export default function DashboardError({
   reset: () => void;
 }) {
   useEffect(() => {
-    console.error("Dashboard route error caught by Next.js Error Boundary:", error);
+    reportCrash({
+      errorType: 'DashboardRouteError',
+      errorMessage: error.message || 'Panel modül çalışma hatası',
+      stackTrace: error.stack || (error.digest ? `Digest: ${error.digest}` : ''),
+      pageUrl: typeof window !== 'undefined' ? window.location.pathname : '/dashboard',
+      componentName: 'DashboardRouteErrorBoundary',
+      severity: 'error',
+      metadata: { digest: error.digest }
+    });
   }, [error]);
 
   return (
@@ -24,7 +33,7 @@ export default function DashboardError({
       <div className="space-y-1.5">
         <h3 className="text-lg font-black text-dark">Bu Sayfa Yüklenirken Bir Sorun Oluştu</h3>
         <p className="text-xs text-gray-500 leading-relaxed">
-          Diğer tüm sayfalar ve arka plan servisleri güvenle çalışmaya devam etmektedir. Sayfayı yeniden yükleyerek oturumunuza devam edebilirsiniz.
+          Hata otomatik olarak sistem günlüğüne kaydedildi. Diğer tüm sayfalar ve arka plan servisleri güvenle çalışmaya devam etmektedir.
         </p>
       </div>
 
@@ -32,7 +41,7 @@ export default function DashboardError({
         <Button
           size="sm"
           onClick={() => reset()}
-          className="text-xs font-bold gap-1.5 h-9 px-4 rounded-xl bg-primary hover:bg-primary-hover text-white shadow-xs"
+          className="text-xs font-bold gap-1.5 h-9 px-4 rounded-xl bg-primary hover:bg-primary-hover text-white shadow-xs cursor-pointer"
         >
           <RefreshCw className="w-3.5 h-3.5" />
           <span>Sayfayı Yeniden Dene</span>
@@ -42,7 +51,7 @@ export default function DashboardError({
           <Button
             size="sm"
             variant="outline"
-            className="text-xs font-bold gap-1.5 h-9 px-4 rounded-xl bg-white hover:bg-canvas text-dark border-border"
+            className="text-xs font-bold gap-1.5 h-9 px-4 rounded-xl bg-white hover:bg-canvas text-dark border-border cursor-pointer"
           >
             <Home className="w-3.5 h-3.5" />
             <span>Kontrol Paneline Dön</span>
