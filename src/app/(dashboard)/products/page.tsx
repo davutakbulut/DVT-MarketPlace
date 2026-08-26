@@ -248,18 +248,22 @@ export default function ProductsCatalogPage() {
                     return (
                       <tr key={p.id} className="hover:bg-canvas/50 transition-colors">
                         <td className="py-3 px-4 text-center">
-                          {p.imageUrl ? (
-                            <img 
-                              src={p.imageUrl} 
-                              alt={p.title} 
-                              className="w-10 h-10 object-cover rounded-xl border border-border shadow-2xs mx-auto"
-                              onError={(e) => { (e.target as any).style.display = 'none'; }}
-                            />
-                          ) : (
-                            <div className="w-10 h-10 rounded-xl bg-gray-100 border border-border flex items-center justify-center mx-auto text-gray-400">
-                              <Package className="w-5 h-5" />
-                            </div>
-                          )}
+                          <div className="w-10 h-10 rounded-xl border border-border/80 shadow-2xs overflow-hidden bg-white mx-auto relative flex items-center justify-center group/img">
+                            {p.imageUrl ? (
+                              <img 
+                                src={p.imageUrl} 
+                                alt={p.title} 
+                                className="w-full h-full object-cover transition-transform duration-300 group-hover/img:scale-125"
+                                onError={(e) => {
+                                  (e.target as any).src = 'https://images.unsplash.com/photo-1584308666744-24d5c474f2ae?w=100&auto=format&fit=crop&q=60';
+                                }}
+                              />
+                            ) : (
+                              <div className="w-full h-full bg-primary-tint-50 flex items-center justify-center text-primary">
+                                <Package className="w-4 h-4" />
+                              </div>
+                            )}
+                          </div>
                         </td>
                         <td className="py-3 px-4 table-sticky-first-col font-bold text-dark">
                           <div className="flex items-center gap-1.5">
