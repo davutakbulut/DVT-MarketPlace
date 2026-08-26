@@ -1,5 +1,5 @@
 "use client";
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import { formatCurrency, formatPercentage } from "@/lib/formatters";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -9,9 +9,10 @@ import {
   HelpCircle, RefreshCw, Send, CheckCircle2, AlertTriangle, 
   Clock, ArrowRight, Zap, Target, Package, Award, Sparkles,
   Layers, Check, ChevronRight, Eye, Info, Sliders, ArrowDownRight,
-  TrendingDown, Search, Filter, X, ZoomIn, ExternalLink
+  TrendingDown, Search, Filter, X, ZoomIn, ExternalLink, ShoppingBag, AlertCircle
 } from "lucide-react";
 import { calculateTrendyolShipping, BaremTier, DesiRate } from "@/lib/shippingCalculator";
+import { getMinimumOrderQuantity, TRENDYOL_MOQ_TIERS } from "@/lib/minimumOrderQuantity";
 import { useTenantStore } from "@/stores/useTenantStore";
 
 export default function ProductPricingPage() {
@@ -34,8 +35,11 @@ export default function ProductPricingPage() {
   // Pricing Mode: 'target_margin' (Hedef Kârdan Fiyat Bul) vs 'manual_price' (Fiyattan Kâr Hesapla)
   const [pricingMode, setPricingMode] = useState<'target_margin' | 'manual_price'>('target_margin');
 
+  // Breakdown View Mode: 'basket' (Minimum Sipariş Sepet Paketi) vs 'unit' (Birim Başına)
+  const [breakdownView, setBreakdownView] = useState<'unit' | 'basket'>('unit');
+
   // Form State
-  const [costPrice, setCostPrice] = useState<number>(50);
+  const [costPrice, setCostPrice] = useState<number>(1.00);
   const [targetMargin, setTargetMargin] = useState<number>(20);
   const [commissionRate, setCommissionRate] = useState<number>(16.15);
   const [vatRate, setVatRate] = useState<number>(10);
@@ -93,7 +97,7 @@ export default function ProductPricingPage() {
   const handleSelectProduct = (p: any) => {
     setSelectedProductId(p.id);
     setSelectedProductObj(p);
-    setCostPrice(parseFloat(p.costPrice || 50));
+    setCostPrice(parseFloat(p.costPrice || 1.00));
     setCommissionRate(parseFloat(p.commissionRate || 16.15));
     setVatRate(parseInt(p.vatRate || 10));
     setDesi(parseFloat(p.desi || 1.0));
@@ -104,65 +108,107 @@ export default function ProductPricingPage() {
     setShowProductModal(false);
   };
 
-  // Fixed Platform Service Fee (₺13.19 KDV Dahil)
+  // Fixed Platform Service Fee (₺13.19 KDV Dahil per order)
   const serviceFee = 13.19;
   const withholdingTaxRate = 0.01; // %1 Stopaj Kesintisi
   const effectiveMargin = targetMargin / 100;
   const effectiveCommission = commissionRate / 100;
   const effectiveExtraOp = (extraOperationRate || 0) / 100; // Dinamik Ekstra Operasyon Oranı
-
-  // 1. REVERSE PRICING CALCULATION WITH EXACT LINEARIZED VAT & WITHHOLDING & EXTRA OPERATION
   const kdvMultiplier = 1 + (vatRate / 100);
   const vatFraction = (vatRate / 100) / kdvMultiplier;
-  const costPriceExVatDiff = costPrice * (1 - vatFraction);
 
-  let calculatedTargetPrice = 0;
-  const denominator = 1 - effectiveCommission - withholdingTaxRate - vatFraction - effectiveMargin - effectiveExtraOp;
+  // =========================================================================
+  // 1. REVERSE PRICING CALCULATION WITH MINIMUM ORDER QUANTITY (MOQ)
+  // =========================================================================
+  const calculateReversePrice = () => {
+    const denominator = 1 - effectiveCommission - withholdingTaxRate - vatFraction - effectiveMargin - effectiveExtraOp;
+    if (denominator <= 0) return costPrice * 1.5;
 
-  if (denominator > 0) {
-    let currentGuess = (costPriceExVatDiff + 46.50 + serviceFee) / denominator;
-    for (let i = 0; i < 6; i++) {
-      const shipGuess = calculateTrendyolShipping(currentGuess, desi, carrier, leadTimeDays, baremTiers, desiRates);
-      currentGuess = (costPriceExVatDiff + shipGuess.appliedPriceIncVat + serviceFee) / denominator;
+    // Test tiers with their MOQ: 6, 4, 3, 2, 1
+    const candidateTiers = [
+      { minP: 0, maxP: 25.00, q: 6 },
+      { minP: 25.0001, maxP: 35.00, q: 4 },
+      { minP: 35.0001, maxP: 50.00, q: 3 },
+      { minP: 50.0001, maxP: 75.00, q: 2 },
+      { minP: 75.0001, maxP: Infinity, q: 1 },
+    ];
+
+    for (const t of candidateTiers) {
+      const basketCostExVat = (costPrice * t.q) * (1 - vatFraction);
+      let guessBasket = (basketCostExVat + 46.50 + serviceFee) / denominator;
+      for (let i = 0; i < 6; i++) {
+        const shipGuess = calculateTrendyolShipping(guessBasket, desi, carrier, leadTimeDays, baremTiers, desiRates);
+        guessBasket = (basketCostExVat + shipGuess.appliedPriceIncVat + serviceFee) / denominator;
+      }
+      const unitP = guessBasket / t.q;
+      if (unitP >= t.minP && (t.maxP === Infinity || unitP <= t.maxP)) {
+        return Math.round(unitP * 100) / 100;
+      }
     }
-    calculatedTargetPrice = Math.round(currentGuess * 100) / 100;
-  } else {
-    calculatedTargetPrice = costPrice * 1.5;
-  }
+
+    // Default 1-unit calculation fallback
+    const costExVat = costPrice * (1 - vatFraction);
+    let guess = (costExVat + 46.50 + serviceFee) / denominator;
+    for (let i = 0; i < 6; i++) {
+      const shipGuess = calculateTrendyolShipping(guess, desi, carrier, leadTimeDays, baremTiers, desiRates);
+      guess = (costExVat + shipGuess.appliedPriceIncVat + serviceFee) / denominator;
+    }
+    return Math.round(guess * 100) / 100;
+  };
+
+  const calculatedTargetPrice = calculateReversePrice();
 
   // 2. ACTIVE SALE PRICE FOR RENDERING & SIMULATION
   const activeSalePrice = pricingMode === 'target_margin' 
     ? calculatedTargetPrice 
     : (manualSalePrice > 0 ? manualSalePrice : calculatedTargetPrice);
 
-  // 3. EXACT SHIPPING COST FOR ACTIVE SALE PRICE (Using Official Engine)
-  const activeShipping = calculateTrendyolShipping(activeSalePrice, desi, carrier, leadTimeDays, baremTiers, desiRates);
+  // 3. MINIMUM ORDER QUANTITY (MOQ) FOR ACTIVE SALE PRICE
+  const activeMOQ = getMinimumOrderQuantity(activeSalePrice);
+
+  // 4. BASKET-LEVEL CALCULATIONS (Minimum Sipariş Sepeti)
+  const basketGrossAmount = activeSalePrice * activeMOQ;
+  const basketCostAmount = costPrice * activeMOQ;
+
+  // Exact Shipping Cost for the Minimum Order Basket
+  const activeShipping = calculateTrendyolShipping(basketGrossAmount, desi, carrier, leadTimeDays, baremTiers, desiRates);
   const effectiveShippingCost = activeShipping.appliedPriceIncVat;
 
-  // Cost Breakdown for Active Sale Price
-  const commissionAmount = activeSalePrice * effectiveCommission;
-  const withholdingAmount = activeSalePrice * withholdingTaxRate;
-  const extraOperationAmount = activeSalePrice * effectiveExtraOp;
+  // Basket Cost Breakdown
+  const basketCommission = basketGrossAmount * effectiveCommission;
+  const basketWithholding = basketGrossAmount * withholdingTaxRate;
+  const basketExtraOp = basketGrossAmount * effectiveExtraOp;
 
   // KDV Doğrusallaştırma
-  const saleVat = (activeSalePrice / kdvMultiplier) * (vatRate / 100);
-  const costVat = (costPrice / kdvMultiplier) * (vatRate / 100);
-  const netVatAmount = Math.max(0, saleVat - costVat);
+  const basketSaleVat = (basketGrossAmount / kdvMultiplier) * (vatRate / 100);
+  const basketCostVat = (basketCostAmount / kdvMultiplier) * (vatRate / 100);
+  const basketNetVat = Math.max(0, basketSaleVat - basketCostVat);
 
-  // Net Cash Profit & Margins
-  const netCashProfit = activeSalePrice - (costPrice + commissionAmount + effectiveShippingCost + serviceFee + withholdingAmount + netVatAmount + extraOperationAmount);
-  const achievedMarginPercent = activeSalePrice > 0 ? (netCashProfit / activeSalePrice) * 100 : 0;
-  const achievedMarkupPercent = costPrice > 0 ? (netCashProfit / costPrice) * 100 : 0;
+  // Basket Net Cash Profit & Margins
+  const basketNetProfit = basketGrossAmount - (basketCostAmount + basketCommission + effectiveShippingCost + serviceFee + basketWithholding + basketNetVat + basketExtraOp);
+  const unitNetProfit = basketNetProfit / activeMOQ;
 
-  // 4. BUYBOX SIMULATION
-  const buyboxShipping = calculateTrendyolShipping(competitorBuyboxPrice, desi, carrier, leadTimeDays, baremTiers, desiRates);
-  const buyboxCommission = competitorBuyboxPrice * effectiveCommission;
-  const buyboxWithholding = competitorBuyboxPrice * withholdingTaxRate;
-  const buyboxExtraOp = competitorBuyboxPrice * effectiveExtraOp;
-  const buyboxSaleVat = (competitorBuyboxPrice / kdvMultiplier) * (vatRate / 100);
-  const buyboxNetVat = Math.max(0, buyboxSaleVat - costVat);
-  const buyboxProfit = competitorBuyboxPrice - (costPrice + buyboxCommission + buyboxShipping.appliedPriceIncVat + serviceFee + buyboxWithholding + buyboxNetVat + buyboxExtraOp);
-  const buyboxMargin = competitorBuyboxPrice > 0 ? (buyboxProfit / competitorBuyboxPrice) * 100 : 0;
+  const achievedMarginPercent = basketGrossAmount > 0 ? (basketNetProfit / basketGrossAmount) * 100 : 0;
+  const achievedMarkupPercent = basketCostAmount > 0 ? (basketNetProfit / basketCostAmount) * 100 : 0;
+
+  // 5. BUYBOX SIMULATION (Considering MOQ of Competitor Price)
+  const buyboxMOQ = getMinimumOrderQuantity(competitorBuyboxPrice);
+  const buyboxBasketGross = competitorBuyboxPrice * buyboxMOQ;
+  const buyboxBasketCost = costPrice * buyboxMOQ;
+  const buyboxShipping = calculateTrendyolShipping(buyboxBasketGross, desi, carrier, leadTimeDays, baremTiers, desiRates);
+  const buyboxCommission = buyboxBasketGross * effectiveCommission;
+  const buyboxWithholding = buyboxBasketGross * withholdingTaxRate;
+  const buyboxExtraOp = buyboxBasketGross * effectiveExtraOp;
+  const buyboxSaleVat = (buyboxBasketGross / kdvMultiplier) * (vatRate / 100);
+  const buyboxCostVat = (buyboxBasketCost / kdvMultiplier) * (vatRate / 100);
+  const buyboxNetVat = Math.max(0, buyboxSaleVat - buyboxCostVat);
+  const buyboxBasketProfit = buyboxBasketGross - (buyboxBasketCost + buyboxCommission + buyboxShipping.appliedPriceIncVat + serviceFee + buyboxWithholding + buyboxNetVat + buyboxExtraOp);
+  const buyboxUnitProfit = buyboxBasketProfit / buyboxMOQ;
+  const buyboxMargin = buyboxBasketGross > 0 ? (buyboxBasketProfit / buyboxBasketGross) * 100 : 0;
+
+  // Stock sufficiency check
+  const stockCount = selectedProductObj ? Number(selectedProductObj.stockQuantity || 0) : 100;
+  const isStockInsufficientForMOQ = stockCount < activeMOQ;
 
   const handlePushPriceToTrendyol = async () => {
     setSyncingPrice(true);
@@ -210,11 +256,11 @@ export default function ProductPricingPage() {
       <div className="flex items-start sm:items-center justify-between gap-3 bg-white p-4 sm:p-6 rounded-3xl border border-border shadow-xs">
         <div className="space-y-1">
           <div className="flex items-center gap-2 flex-wrap">
-            <h3 className="text-base sm:text-lg font-black text-dark">Trendyol Kargo Barem Desteği & Fiyatlandırma Motoru</h3>
-            <Badge variant="excellent" className="text-[10px] sm:text-xs">10 Ağustos 2026 Resmi Tarife</Badge>
+            <h3 className="text-base sm:text-lg font-black text-dark">Trendyol Fiyatlandırma & Minimum Sipariş Motoru</h3>
+            <Badge variant="excellent" className="text-[10px] sm:text-xs">10 Ağustos 2026 Resmi Barem & MOQ</Badge>
           </div>
           <p className="text-xs text-muted-foreground">
-            1 Gün Termin / Hızlı Teslimat avantajlı baremleri, 1 günden fazla standart baremler ve 350₺ üzeri desi tarifesi
+            Ürün fiyatına göre zorunlu <strong>Minimum Sipariş Adedi</strong>, 1 Gün Termin Kargo Baremleri ve net sepet kârlılık optimizasyonu.
           </p>
         </div>
 
@@ -308,6 +354,132 @@ export default function ProductPricingPage() {
         )}
       </div>
 
+      {/* ========================================================================= */}
+      {/* 🚀 TRENDYOL MINIMUM SIPARIS ADEDI CARD (MATCHING USER SCREENSHOT) */}
+      {/* ========================================================================= */}
+      <div className="bg-white p-5 sm:p-6 rounded-3xl border border-border shadow-xs space-y-4">
+        <div className="space-y-1">
+          <div className="flex items-center justify-between flex-wrap gap-2">
+            <h4 className="text-sm sm:text-base font-black text-dark flex items-center gap-2">
+              <ShoppingBag className="w-4 h-4 text-primary" />
+              <span>Minimum Sipariş Adedi</span>
+            </h4>
+            <span className="text-xs font-bold text-primary hover:underline cursor-pointer">
+              Minimum Sipariş Adedi Ayarları
+            </span>
+          </div>
+          <p className="text-xs text-gray-600 leading-relaxed">
+            Minimum Sipariş Adedi, bir ürünün müşteri tarafından alınması gereken minimum sayıyı belirtir. Müşteri ürünü sipariş içerisinde bu adetten daha az sayıda alamaz. Ürün fiyat baremine göre minimum sipariş adetleri aşağıda belirtilmiştir. <strong>Ürün stoğu Minimum Sipariş Adedi değerinden düşük ise ürünün stoğu tükendi olarak değerlendirilecektir.</strong>
+          </p>
+        </div>
+
+        {/* 4 + 1 BAREM TIERS GRID (EXACTLY AS IN SCREENSHOT) */}
+        <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-5 gap-2.5 sm:gap-3">
+          {/* Tier 1: 0 - 25 TL */}
+          <div className={`p-3.5 rounded-2xl border text-center transition-all ${
+            activeSalePrice <= 25.00
+              ? 'border-primary bg-primary-tint-50/50 ring-2 ring-primary/30 shadow-xs'
+              : 'border-border bg-slate-50/70 text-gray-600'
+          }`}>
+            <span className="text-xs sm:text-sm font-black text-dark block">0₺ - 25₺</span>
+            <span className="text-[10px] text-gray-500 font-semibold block mt-0.5">Minimum Satış Adedi</span>
+            <span className={`text-xl sm:text-2xl font-black block mt-1 ${activeSalePrice <= 25.00 ? 'text-primary' : 'text-gray-700'}`}>
+              6
+            </span>
+            {activeSalePrice <= 25.00 && (
+              <span className="text-[9px] font-black uppercase text-primary bg-white px-2 py-0.5 rounded-full border border-primary/20 inline-block mt-1">
+                ✓ Aktif Kural
+              </span>
+            )}
+          </div>
+
+          {/* Tier 2: 25 - 35 TL */}
+          <div className={`p-3.5 rounded-2xl border text-center transition-all ${
+            activeSalePrice > 25.00 && activeSalePrice <= 35.00
+              ? 'border-primary bg-primary-tint-50/50 ring-2 ring-primary/30 shadow-xs'
+              : 'border-border bg-slate-50/70 text-gray-600'
+          }`}>
+            <span className="text-xs sm:text-sm font-black text-dark block">25₺ - 35₺</span>
+            <span className="text-[10px] text-gray-500 font-semibold block mt-0.5">Minimum Satış Adedi</span>
+            <span className={`text-xl sm:text-2xl font-black block mt-1 ${activeSalePrice > 25.00 && activeSalePrice <= 35.00 ? 'text-primary' : 'text-gray-700'}`}>
+              4
+            </span>
+            {activeSalePrice > 25.00 && activeSalePrice <= 35.00 && (
+              <span className="text-[9px] font-black uppercase text-primary bg-white px-2 py-0.5 rounded-full border border-primary/20 inline-block mt-1">
+                ✓ Aktif Kural
+              </span>
+            )}
+          </div>
+
+          {/* Tier 3: 35 - 50 TL */}
+          <div className={`p-3.5 rounded-2xl border text-center transition-all ${
+            activeSalePrice > 35.00 && activeSalePrice <= 50.00
+              ? 'border-primary bg-primary-tint-50/50 ring-2 ring-primary/30 shadow-xs'
+              : 'border-border bg-slate-50/70 text-gray-600'
+          }`}>
+            <span className="text-xs sm:text-sm font-black text-dark block">35₺ - 50₺</span>
+            <span className="text-[10px] text-gray-500 font-semibold block mt-0.5">Minimum Satış Adedi</span>
+            <span className={`text-xl sm:text-2xl font-black block mt-1 ${activeSalePrice > 35.00 && activeSalePrice <= 50.00 ? 'text-primary' : 'text-gray-700'}`}>
+              3
+            </span>
+            {activeSalePrice > 35.00 && activeSalePrice <= 50.00 && (
+              <span className="text-[9px] font-black uppercase text-primary bg-white px-2 py-0.5 rounded-full border border-primary/20 inline-block mt-1">
+                ✓ Aktif Kural
+              </span>
+            )}
+          </div>
+
+          {/* Tier 4: 50 - 75 TL */}
+          <div className={`p-3.5 rounded-2xl border text-center transition-all ${
+            activeSalePrice > 50.00 && activeSalePrice <= 75.00
+              ? 'border-primary bg-primary-tint-50/50 ring-2 ring-primary/30 shadow-xs'
+              : 'border-border bg-slate-50/70 text-gray-600'
+          }`}>
+            <span className="text-xs sm:text-sm font-black text-dark block">50₺ - 75₺</span>
+            <span className="text-[10px] text-gray-500 font-semibold block mt-0.5">Minimum Satış Adedi</span>
+            <span className={`text-xl sm:text-2xl font-black block mt-1 ${activeSalePrice > 50.00 && activeSalePrice <= 75.00 ? 'text-primary' : 'text-gray-700'}`}>
+              2
+            </span>
+            {activeSalePrice > 50.00 && activeSalePrice <= 75.00 && (
+              <span className="text-[9px] font-black uppercase text-primary bg-white px-2 py-0.5 rounded-full border border-primary/20 inline-block mt-1">
+                ✓ Aktif Kural
+              </span>
+            )}
+          </div>
+
+          {/* Tier 5: 75 TL ve Üzeri */}
+          <div className={`p-3.5 rounded-2xl border text-center transition-all col-span-2 sm:col-span-4 lg:col-span-1 ${
+            activeSalePrice > 75.00
+              ? 'border-emerald-500 bg-emerald-50/60 ring-2 ring-emerald-500/30 shadow-xs'
+              : 'border-border bg-slate-50/70 text-gray-600'
+          }`}>
+            <span className="text-xs sm:text-sm font-black text-dark block">75₺ ve Üzeri</span>
+            <span className="text-[10px] text-gray-500 font-semibold block mt-0.5">Minimum Satış Adedi</span>
+            <span className={`text-xl sm:text-2xl font-black block mt-1 ${activeSalePrice > 75.00 ? 'text-emerald-700' : 'text-gray-700'}`}>
+              1
+            </span>
+            {activeSalePrice > 75.00 && (
+              <span className="text-[9px] font-black uppercase text-emerald-800 bg-white px-2 py-0.5 rounded-full border border-emerald-300 inline-block mt-1">
+                ✓ Tekli Satılabilir
+              </span>
+            )}
+          </div>
+        </div>
+
+        {/* INSUFFICIENT STOCK WARNING BANNER IF APPLICABLE */}
+        {isStockInsufficientForMOQ && (
+          <div className="p-3.5 rounded-2xl bg-amber-50 border border-amber-300 flex items-start gap-2.5 text-xs text-amber-900 animate-in fade-in duration-200">
+            <AlertTriangle className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
+            <div>
+              <strong className="block font-bold">⚠️ Trendyol Yetersiz Stok Uyarısı:</strong>
+              <span>
+                Ürününüzün mevcut stoğu (<strong>{stockCount} Adet</strong>), belirlenen fiyat için zorunlu minimum sipariş adedinden (<strong>{activeMOQ} Adet</strong>) az olduğu için Trendyol bu ürünü otomatik olarak <strong>"TÜKENDİ"</strong> sayacak ve satışa kapatacaktır. Lütfen stok miktarınızı en az {activeMOQ} adede yükseltin.
+              </span>
+            </div>
+          </div>
+        )}
+      </div>
+
       {/* MODE TOGGLE BUTTONS - ULTRA-COMPACT HORIZONTAL ROW LAYOUT */}
       <div className="grid grid-cols-2 gap-2 sm:gap-3">
         <button
@@ -329,7 +501,7 @@ export default function ProductPricingPage() {
             <span className={`text-[10px] sm:text-[11px] block leading-tight truncate mt-0.5 ${
               pricingMode === 'target_margin' ? 'text-white/85' : 'text-gray-500'
             }`}>
-              Marj gir ➔ Fiyat bul
+              Marj gir ➔ Fiyat bul (MOQ Dahil)
             </span>
           </div>
         </button>
@@ -353,7 +525,7 @@ export default function ProductPricingPage() {
             <span className={`text-[10px] sm:text-[11px] block leading-tight truncate mt-0.5 ${
               pricingMode === 'manual_price' ? 'text-white/85' : 'text-gray-500'
             }`}>
-              Fiyat gir ➔ Net kârı gör
+              Fiyat gir ➔ Net kârı & sepeti gör
             </span>
           </div>
         </button>
@@ -366,7 +538,7 @@ export default function ProductPricingPage() {
         <div className="lg:col-span-6 bg-white p-4 sm:p-6 rounded-3xl border border-border shadow-xs space-y-5">
           <h4 className="text-xs sm:text-sm font-black text-dark flex items-center gap-2 pb-2 border-b border-border">
             <Calculator className="w-4 h-4 text-primary" />
-            <span>Fiyatlandırma & Kargo Parametreleri</span>
+            <span>Fiyatlandırma & Maliyet Parametreleri</span>
           </h4>
 
           <div className="space-y-4 text-xs">
@@ -380,7 +552,7 @@ export default function ProductPricingPage() {
                     <Target className="w-4 h-4 text-emerald-600" />
                     <span>Hedef Net Kâr Marjı (%) *</span>
                   </label>
-                  <Badge variant="excellent" className="text-[10px]">Ters Fiyatlama Aktif</Badge>
+                  <Badge variant="excellent" className="text-[10px]">Ters Fiyatlama & MOQ Aktif</Badge>
                 </div>
                 
                 <div className="relative">
@@ -394,109 +566,104 @@ export default function ProductPricingPage() {
                   <span className="absolute left-3 top-2.5 font-bold text-emerald-600 text-sm">%</span>
                 </div>
                 <span className="text-[11px] text-emerald-700 font-semibold block">
-                  Belirlediğiniz %{targetMargin} kâr marjını elde etmek için gereken Trendyol satış fiyatı sağda anlık hesaplanır.
+                  Belirlediğiniz %{targetMargin} kâr marjını elde etmek için gereken Trendyol birim satış fiyatı sağda anlık hesaplanır.
                 </span>
               </div>
             ) : (
               /* 2. MANUEL SATIŞ FİYATI MODÜLÜ */
-              <div className="p-4 rounded-2xl border border-primary bg-primary-tint-50/50 ring-2 ring-primary/20 animate-in fade-in zoom-in-95 space-y-2">
+              <div className="p-4 rounded-2xl border border-primary/40 bg-primary-tint-50/50 ring-2 ring-primary/20 animate-in fade-in zoom-in-95 space-y-2">
                 <div className="flex items-center justify-between">
                   <label className="font-black text-primary flex items-center gap-1.5 text-xs">
-                    <Sliders className="w-4 h-4 text-primary" />
-                    <span>Satış Fiyatı (₺ KDV Dahil) *</span>
+                    <DollarSign className="w-4 h-4 text-primary" />
+                    <span>Belirlenen Birim Satış Fiyatı (₺) *</span>
                   </label>
-                  <Badge variant="default" className="text-[10px]">Kâr Simülasyonu Aktif</Badge>
+                  <Badge className="text-[10px] bg-primary text-white">Minimum {activeMOQ} Adet Satılır</Badge>
                 </div>
-
+                
                 <div className="relative">
                   <input
                     type="number"
                     step="0.5"
-                    value={manualSalePrice || ''}
-                    onChange={(e) => setManualSalePrice(parseFloat(e.target.value) || 0)}
-                    className="w-full pl-8 pr-3 py-2.5 rounded-xl border border-primary font-black text-dark text-sm bg-white focus:ring-2 focus:ring-primary shadow-xs"
+                    value={manualSalePrice}
+                    onChange={(e) => setManualSalePrice(Math.max(0, parseFloat(e.target.value) || 0))}
+                    className="w-full pl-8 pr-3 py-2.5 rounded-xl border border-primary font-black text-primary text-sm bg-white focus:ring-2 focus:ring-primary shadow-xs"
                   />
                   <span className="absolute left-3 top-2.5 font-bold text-primary text-sm">₺</span>
                 </div>
-                <span className="text-[11px] text-gray-600 block">
-                  ₺{manualSalePrice} satış fiyatında Trendyol kesintileri düşüldükten sonra cebinize kalacak net kâr sağda listelenir.
-                </span>
+                <div className="flex items-center justify-between text-[11px] text-gray-600 font-semibold">
+                  <span>Minimum Sipariş Sepet Tutarı:</span>
+                  <strong className="text-primary font-black">₺{basketGrossAmount.toFixed(2)} ({activeMOQ} Adet)</strong>
+                </div>
               </div>
             )}
 
-            {/* Alış Maliyeti & KDV Oranı */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            {/* Parameter Fields Grid */}
+            <div className="grid grid-cols-2 gap-3">
+              {/* Birim Alış Maliyeti */}
               <div>
-                <label className="font-bold text-dark block mb-1">Birim Alış Maliyeti (₺ KDV Dahil) *</label>
-                <div className="relative">
-                  <input
-                    type="number"
-                    step="0.5"
-                    value={costPrice}
-                    onChange={(e) => setCostPrice(Math.max(0, parseFloat(e.target.value) || 0))}
-                    className="w-full pl-7 pr-3 py-2 rounded-xl border border-border font-bold text-dark focus:ring-2 focus:ring-primary"
-                  />
-                  <span className="absolute left-2.5 top-2 font-bold text-gray-400">₺</span>
-                </div>
+                <label className="font-bold text-gray-700 block mb-1">Birim Alış Maliyeti (₺)</label>
+                <input
+                  type="number"
+                  step="0.5"
+                  value={costPrice}
+                  onChange={(e) => setCostPrice(Math.max(0, parseFloat(e.target.value) || 0))}
+                  className="w-full px-3 py-2 rounded-xl border border-border font-bold text-dark bg-white focus:ring-2 focus:ring-primary"
+                />
               </div>
 
+              {/* Komisyon Oranı */}
               <div>
-                <label className="font-bold text-dark block mb-1">Ürün KDV Oranı (%) *</label>
+                <label className="font-bold text-gray-700 block mb-1">Komisyon Oranı (%)</label>
+                <input
+                  type="number"
+                  step="0.1"
+                  value={commissionRate}
+                  onChange={(e) => setCommissionRate(Math.max(0, parseFloat(e.target.value) || 0))}
+                  className="w-full px-3 py-2 rounded-xl border border-border font-bold text-dark bg-white focus:ring-2 focus:ring-primary"
+                />
+              </div>
+
+              {/* KDV Oranı */}
+              <div>
+                <label className="font-bold text-gray-700 block mb-1">KDV Oranı (%)</label>
                 <select
                   value={vatRate}
-                  onChange={(e) => setVatRate(parseInt(e.target.value))}
-                  className="w-full px-3 py-2 rounded-xl border border-border font-bold text-dark bg-white focus:ring-2 focus:ring-primary"
+                  onChange={(e) => setVatRate(parseInt(e.target.value) || 10)}
+                  className="w-full px-3 py-2 rounded-xl border border-border font-bold text-dark bg-white focus:ring-2 focus:ring-primary cursor-pointer"
                 >
-                  <option value={1}>%1 KDV</option>
-                  <option value={10}>%10 KDV (Medikal & Temel)</option>
-                  <option value={20}>%20 KDV (Genel Standart)</option>
+                  <option value={1}>%1 (Temel Gıda / Tıbbi)</option>
+                  <option value={10}>%10 (Medikal & İlaç)</option>
+                  <option value={20}>%20 (Genel Standart)</option>
                 </select>
               </div>
-            </div>
 
-            {/* Komisyon Oranı & Desi */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              {/* Paket Desisi */}
               <div>
-                <label className="font-bold text-dark block mb-1">Pazaryeri Komisyon Oranı (%) *</label>
-                <div className="relative">
-                  <input
-                    type="number"
-                    step="0.5"
-                    value={commissionRate}
-                    onChange={(e) => setCommissionRate(Math.max(0, parseFloat(e.target.value) || 0))}
-                    className="w-full pl-7 pr-3 py-2 rounded-xl border border-border font-bold text-dark focus:ring-2 focus:ring-primary"
-                  />
-                  <span className="absolute left-2.5 top-2 font-bold text-gray-400">%</span>
-                </div>
-              </div>
-
-              <div>
-                <label className="font-bold text-dark block mb-1">Paket Desi (350₺ Üzerinde Geçerli) *</label>
+                <label className="font-bold text-gray-700 block mb-1">Ürün / Paket Desisi</label>
                 <input
                   type="number"
                   step="0.5"
                   value={desi}
                   onChange={(e) => setDesi(Math.max(0.5, parseFloat(e.target.value) || 1))}
-                  className="w-full px-3 py-2 rounded-xl border border-border font-bold text-dark focus:ring-2 focus:ring-primary"
+                  className="w-full px-3 py-2 rounded-xl border border-border font-bold text-dark bg-white focus:ring-2 focus:ring-primary"
                 />
               </div>
             </div>
 
-            {/* Kargo Şirketi & Termin Süresi */}
-            <div className="space-y-3">
+            {/* Kargo & Taşıyıcı Seçici */}
+            <div className="space-y-3 pt-2 border-t border-border">
               <div>
-                <label className="font-bold text-dark block mb-1">Kargo Firması (Resmi Barem Destekli) *</label>
+                <label className="font-bold text-gray-700 block mb-1">Anlaşmalı Kargo Taşıyıcısı</label>
                 <select
                   value={carrier}
                   onChange={(e) => setCarrier(e.target.value)}
-                  className="w-full px-3 py-2 rounded-xl border border-border font-bold text-dark bg-white focus:ring-2 focus:ring-primary"
+                  className="w-full px-3 py-2 rounded-xl border border-border font-bold text-dark bg-white focus:ring-2 focus:ring-primary cursor-pointer"
                 >
-                  <option value="TEX">Trendyol Express (TEX) - En Avantajlı</option>
-                  <option value="PTT">PTT Kargo - En Avantajlı</option>
-                  <option value="Aras">Aras Kargo</option>
-                  <option value="Sürat">Sürat Kargo</option>
-                  <option value="Kolay Gelsin">Kolay Gelsin</option>
-                  <option value="DHL eCommerce">DHL eCommerce</option>
+                  <option value="TEX">Trendyol Express (TEX)</option>
+                  <option value="ARAS">Aras Kargo</option>
+                  <option value="SURAT">Sürat Kargo</option>
+                  <option value="MNG">MNG Kargo</option>
+                  <option value="PTT">PTT Kargo</option>
                   <option value="YK">Yurtiçi Kargo (YK)</option>
                 </select>
               </div>
@@ -555,21 +722,62 @@ export default function ProductPricingPage() {
           
           {/* Main Price & Net Profit Card */}
           <div className="bg-white p-5 sm:p-6 rounded-3xl border border-border shadow-xs space-y-4">
+            
+            {/* View Mode Switch: Birim Başına vs Minimum Sepet Paketi */}
+            <div className="flex items-center justify-between gap-2 p-1 bg-canvas rounded-2xl border border-border">
+              <button
+                type="button"
+                onClick={() => setBreakdownView('unit')}
+                className={`flex-1 py-1.5 text-xs font-bold rounded-xl transition-all ${
+                  breakdownView === 'unit'
+                    ? 'bg-white text-dark shadow-xs'
+                    : 'text-gray-500 hover:text-dark'
+                }`}
+              >
+                Birim Başına (1 Adet)
+              </button>
+              <button
+                type="button"
+                onClick={() => setBreakdownView('basket')}
+                className={`flex-1 py-1.5 text-xs font-bold rounded-xl transition-all ${
+                  breakdownView === 'basket'
+                    ? 'bg-white text-primary font-black shadow-xs'
+                    : 'text-gray-500 hover:text-dark'
+                }`}
+              >
+                Minimum Sepet ({activeMOQ} Adet)
+              </button>
+            </div>
+
             <div className="flex items-center justify-between pb-3 border-b border-border">
               <div>
                 <span className="text-[11px] font-bold text-muted-foreground uppercase tracking-wide block">
-                  {pricingMode === 'target_margin' ? '🎯 Hedef Marja Göre Hesaplanan Satış Fiyatı' : '🏷️ Belirlenen Satış Fiyatı'}
+                  {breakdownView === 'unit' 
+                    ? (pricingMode === 'target_margin' ? '🎯 Birim Satış Fiyatı' : '🏷️ Birim Satış Fiyatı')
+                    : '📦 Minimum Sepet Satış Tutarı'}
                 </span>
                 <div className="text-3xl font-black text-primary tabular-nums mt-1">
-                  {formatCurrency(activeSalePrice)}
+                  {formatCurrency(breakdownView === 'unit' ? activeSalePrice : basketGrossAmount)}
                 </div>
+                {activeMOQ > 1 && (
+                  <span className="text-[11px] text-gray-500 font-semibold block mt-0.5">
+                    {breakdownView === 'unit' 
+                      ? `Minimum Sipariş: ${activeMOQ} Adet (Sepet: ₺${basketGrossAmount.toFixed(2)})`
+                      : `Birim Fiyat: ₺${activeSalePrice.toFixed(2)} × ${activeMOQ} Adet`}
+                  </span>
+                )}
               </div>
 
               <div className="text-right">
-                <span className="text-[11px] font-bold text-emerald-800 uppercase tracking-wide block">Net Nakit Kâr</span>
-                <div className={`text-2xl font-black tabular-nums mt-1 ${netCashProfit >= 0 ? 'text-emerald-700' : 'text-red-600'}`}>
-                  {formatCurrency(netCashProfit)}
+                <span className="text-[11px] font-bold text-emerald-800 uppercase tracking-wide block">
+                  {breakdownView === 'unit' ? 'Birim Net Nakit Kâr' : 'Sepet Net Nakit Kârı'}
+                </span>
+                <div className={`text-2xl font-black tabular-nums mt-1 ${unitNetProfit >= 0 ? 'text-emerald-700' : 'text-red-600'}`}>
+                  {formatCurrency(breakdownView === 'unit' ? unitNetProfit : basketNetProfit)}
                 </div>
+                <span className="text-[11px] text-emerald-700 font-bold block mt-0.5">
+                  Marj: %{achievedMarginPercent.toFixed(1)}
+                </span>
               </div>
             </div>
 
@@ -579,7 +787,7 @@ export default function ProductPricingPage() {
                 Net Marj: <strong className="text-emerald-700">%{achievedMarginPercent.toFixed(1)}</strong>
               </span>
               <span className="px-2.5 py-1 rounded-xl bg-canvas border border-border text-dark">
-                Maliyet Üzeri Kâr: <strong className="text-primary">%{achievedMarkupPercent.toFixed(1)}</strong>
+                Maliyet Üzeri: <strong className="text-primary">%{achievedMarkupPercent.toFixed(1)}</strong>
               </span>
               <span className={`px-2.5 py-1 rounded-xl text-[11px] border ${
                 activeShipping.isBaremSupported 
@@ -592,15 +800,19 @@ export default function ProductPricingPage() {
               </span>
             </div>
 
-            {/* Dynamic Shipping Explanation Box */}
+            {/* Dynamic Shipping Explanation Box (Calculated on Basket Total) */}
             <div className="p-3.5 rounded-2xl bg-canvas border border-border flex items-start gap-2.5 text-xs text-gray-600">
               <Info className="w-4 h-4 text-primary shrink-0 mt-0.5" />
               <div>
-                <span className="font-bold text-dark block">Kargo Barem Hesaplama Bilgisi:</span>
-                <span className="text-[11px] text-gray-600 leading-relaxed block mt-0.5">{activeShipping.explanation}</span>
-                {activeShipping.savingsAmount > 0 && (
-                  <span className="text-[11px] text-emerald-700 font-bold block mt-1">
-                    🎉 1 Gün Termin tanımladığınız için bu siparişte ₺{activeShipping.savingsAmount.toFixed(2)} kargo avantajınız var!
+                <span className="font-bold text-dark block">
+                  Kargo Baremi (₺{basketGrossAmount.toFixed(2)} Sepet Tutarına Göre):
+                </span>
+                <span className="text-[11px] text-gray-600 leading-relaxed block mt-0.5">
+                  {activeShipping.explanation}
+                </span>
+                {activeMOQ > 1 && (
+                  <span className="text-[11px] text-primary font-bold block mt-1">
+                    💡 Minimum Sipariş Adedi ({activeMOQ} Adet) sayesinde tek bir kargo ücreti ({formatCurrency(effectiveShippingCost)}) tüm sepete bölünerek ürün kârlılığı korunur!
                   </span>
                 )}
               </div>
@@ -609,43 +821,54 @@ export default function ProductPricingPage() {
             {/* Financial Waterfall Cost Breakdown */}
             <div className="space-y-2 pt-2 border-t border-border text-xs">
               <div className="flex items-center justify-between py-1 text-gray-600">
-                <span>1. Birim Alış Maliyeti (COGS)</span>
-                <span className="font-bold text-red-700 tabular-nums">-₺{costPrice.toFixed(2)}</span>
+                <span>1. Alış Maliyeti (COGS)</span>
+                <span className="font-bold text-red-700 tabular-nums">
+                  -₺{(breakdownView === 'unit' ? costPrice : basketCostAmount).toFixed(2)}
+                </span>
               </div>
 
               <div className="flex items-center justify-between py-1 text-gray-600">
                 <span>2. Trendyol Komisyonu (%{commissionRate})</span>
-                <span className="font-bold text-gray-800 tabular-nums">-₺{commissionAmount.toFixed(2)}</span>
+                <span className="font-bold text-gray-800 tabular-nums">
+                  -₺{(breakdownView === 'unit' ? (basketCommission / activeMOQ) : basketCommission).toFixed(2)}
+                </span>
               </div>
 
               <div className="flex items-center justify-between py-1 text-gray-600">
                 <span className="flex items-center gap-1">
                   <span>3. Kargo Gideri ({carrier}, {activeShipping.isBaremSupported ? activeShipping.tierName : `${desi} Desi`})</span>
-                  {activeShipping.advantageStatus === 'advantageous_1day' && (
-                    <span className="text-[9px] text-emerald-700 font-bold bg-emerald-50 px-1 rounded">Avantajlı</span>
-                  )}
                 </span>
-                <span className="font-bold text-primary tabular-nums">-₺{effectiveShippingCost.toFixed(2)}</span>
+                <span className="font-bold text-primary tabular-nums">
+                  -₺{(breakdownView === 'unit' ? (effectiveShippingCost / activeMOQ) : effectiveShippingCost).toFixed(2)}
+                </span>
               </div>
 
               <div className="flex items-center justify-between py-1 text-gray-600">
-                <span>4. Hizmet Bedeli Kesintisi (Sabit)</span>
-                <span className="font-bold text-gray-800 tabular-nums">-₺{serviceFee.toFixed(2)}</span>
+                <span>4. Hizmet Bedeli Kesintisi (13.19₺ / sipariş)</span>
+                <span className="font-bold text-gray-800 tabular-nums">
+                  -₺{(breakdownView === 'unit' ? (serviceFee / activeMOQ) : serviceFee).toFixed(2)}
+                </span>
               </div>
 
               <div className="flex items-center justify-between py-1 text-gray-600">
                 <span>5. Stopaj Kesintisi (%1)</span>
-                <span className="font-bold text-gray-800 tabular-nums">-₺{withholdingAmount.toFixed(2)}</span>
+                <span className="font-bold text-gray-800 tabular-nums">
+                  -₺{(breakdownView === 'unit' ? (basketWithholding / activeMOQ) : basketWithholding).toFixed(2)}
+                </span>
               </div>
 
               <div className="flex items-center justify-between py-1 text-gray-600">
                 <span>6. Ödenecek Net KDV Farkı</span>
-                <span className="font-bold text-gray-800 tabular-nums">-₺{netVatAmount.toFixed(2)}</span>
+                <span className="font-bold text-gray-800 tabular-nums">
+                  -₺{(breakdownView === 'unit' ? (basketNetVat / activeMOQ) : basketNetVat).toFixed(2)}
+                </span>
               </div>
 
               <div className="flex items-center justify-between py-1 text-gray-600">
                 <span>7. Ekstra Operasyon Gideri (%{extraOperationRate})</span>
-                <span className="font-bold text-gray-800 tabular-nums">-₺{extraOperationAmount.toFixed(2)}</span>
+                <span className="font-bold text-gray-800 tabular-nums">
+                  -₺{(breakdownView === 'unit' ? (basketExtraOp / activeMOQ) : basketExtraOp).toFixed(2)}
+                </span>
               </div>
             </div>
 
@@ -653,10 +876,10 @@ export default function ProductPricingPage() {
             <Button
               onClick={handlePushPriceToTrendyol}
               disabled={syncingPrice}
-              className="w-full h-10 text-xs font-black gap-2 bg-primary hover:bg-primary-hover text-white shadow-xs rounded-2xl"
+              className="w-full h-10 text-xs font-black gap-2 bg-primary hover:bg-primary-hover text-white shadow-xs rounded-2xl cursor-pointer"
             >
               <Send className="w-4 h-4" />
-              <span>{syncingPrice ? "Trendyol'a İletiliyor..." : `Fiyatı Kaydet & Trendyol'a İlet (₺${activeSalePrice.toFixed(2)})`}</span>
+              <span>{syncingPrice ? "Trendyol'a İletiliyor..." : `Fiyatı Kaydet & Trendyol'a İlet (Birim: ₺${activeSalePrice.toFixed(2)})`}</span>
             </Button>
           </div>
 
@@ -667,14 +890,14 @@ export default function ProductPricingPage() {
                 <Target className="w-4 h-4 text-primary" />
                 <span>Buybox Rekabet Fiyat Simülatörü</span>
               </h5>
-              <Badge variant={buyboxProfit < 0 ? "danger" : (buyboxMargin >= 10 ? "excellent" : "warning")}>
-                {buyboxProfit < 0 ? "⚠️ Zararına Satış Uyarısı" : (buyboxMargin >= 10 ? "✓ Kârlı Rekabet" : "Düşük Kâr Uyarısı")}
+              <Badge variant={buyboxUnitProfit < 0 ? "danger" : (buyboxMargin >= 10 ? "excellent" : "warning")}>
+                {buyboxUnitProfit < 0 ? "⚠️ Zararına Satış Uyarısı" : (buyboxMargin >= 10 ? "✓ Kârlı Rekabet" : "Düşük Kâr Uyarısı")}
               </Badge>
             </div>
 
             <div className="grid grid-cols-2 gap-3 text-xs">
               <div>
-                <label className="font-bold text-gray-600 block mb-1">Hedef BuyBox Fiyatı (₺)</label>
+                <label className="font-bold text-gray-600 block mb-1">Hedef BuyBox Birim Fiyatı (₺)</label>
                 <input
                   type="number"
                   step="0.5"
@@ -682,14 +905,19 @@ export default function ProductPricingPage() {
                   onChange={(e) => setCompetitorBuyboxPrice(parseFloat(e.target.value) || 0)}
                   className="w-full px-3 py-1.5 rounded-xl border border-border font-bold text-dark"
                 />
+                <span className="text-[10px] text-gray-500 font-semibold block mt-1">
+                  MOQ: {buyboxMOQ} Adet (Sepet: ₺{buyboxBasketGross.toFixed(2)})
+                </span>
               </div>
 
-              <div className="p-2 rounded-xl bg-canvas border border-border">
-                <span className="text-[10px] text-gray-500 font-bold block">Buybox Net Kârı</span>
-                <span className={`text-base font-black tabular-nums block ${buyboxProfit >= 0 ? 'text-emerald-700' : 'text-red-600'}`}>
-                  {formatCurrency(buyboxProfit)}
+              <div className="p-2.5 rounded-xl bg-canvas border border-border">
+                <span className="text-[10px] text-gray-500 font-bold block">Birim Net Kâr</span>
+                <span className={`text-base font-black tabular-nums block ${buyboxUnitProfit >= 0 ? 'text-emerald-700' : 'text-red-600'}`}>
+                  {formatCurrency(buyboxUnitProfit)}
                 </span>
-                <span className="text-[10px] text-gray-500 font-semibold">Marj: %{buyboxMargin.toFixed(1)}</span>
+                <span className="text-[10px] text-gray-500 font-semibold block mt-0.5">
+                  Sepet Kârı: {formatCurrency(buyboxBasketProfit)} (%{buyboxMargin.toFixed(1)})
+                </span>
               </div>
             </div>
           </div>
@@ -717,7 +945,7 @@ export default function ProductPricingPage() {
 
               <button
                 onClick={() => setShowProductModal(false)}
-                className="p-2 rounded-2xl hover:bg-canvas text-gray-400 hover:text-dark transition-colors"
+                className="p-2 rounded-2xl hover:bg-canvas text-gray-400 hover:text-dark transition-colors cursor-pointer"
               >
                 <X className="w-5 h-5" />
               </button>
@@ -846,7 +1074,7 @@ export default function ProductPricingPage() {
 
                           {/* Cost Price */}
                           <td className="py-2.5 px-3 text-right font-bold text-red-700 tabular-nums">
-                            ₺{parseFloat(p.costPrice || 50).toFixed(2)}
+                            ₺{parseFloat(p.costPrice || 1.00).toFixed(2)}
                           </td>
 
                           {/* Commission Rate */}
@@ -860,7 +1088,7 @@ export default function ProductPricingPage() {
                               size="sm"
                               variant={isSelected ? "outline" : "default"}
                               onClick={() => handleSelectProduct(p)}
-                              className={`h-7 text-xs font-bold gap-1 rounded-xl ${
+                              className={`h-7 text-xs font-bold gap-1 rounded-xl cursor-pointer ${
                                 isSelected ? 'border-primary text-primary bg-primary/5' : 'bg-primary hover:bg-primary-hover text-white'
                               }`}
                             >
@@ -879,7 +1107,7 @@ export default function ProductPricingPage() {
             {/* Modal Footer */}
             <div className="p-3.5 border-t border-border bg-canvas/40 flex items-center justify-between text-xs text-gray-500">
               <span>Toplam <strong>{dbProducts.length}</strong> katalog ürünü listelendi. Görsellere tıklayarak büyütebilirsiniz.</span>
-              <Button size="sm" variant="outline" onClick={() => setShowProductModal(false)} className="h-8 text-xs font-bold">
+              <Button size="sm" variant="outline" onClick={() => setShowProductModal(false)} className="h-8 text-xs font-bold cursor-pointer">
                 Kapat
               </Button>
             </div>
@@ -897,7 +1125,7 @@ export default function ProductPricingPage() {
           <div className="relative max-w-2xl max-h-[85vh] bg-white p-4 rounded-3xl border border-white/20 shadow-2xl flex flex-col items-center justify-center">
             <button
               onClick={() => setZoomImageUrl(null)}
-              className="absolute top-3 right-3 p-2 rounded-full bg-black/60 text-white hover:bg-black transition-colors"
+              className="absolute top-3 right-3 p-2 rounded-full bg-black/60 text-white hover:bg-black transition-colors cursor-pointer"
             >
               <X className="w-5 h-5" />
             </button>
