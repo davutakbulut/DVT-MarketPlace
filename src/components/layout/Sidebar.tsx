@@ -22,6 +22,7 @@ import {
   ChevronRight,
   Store,
   Users,
+  ShieldAlert,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { BrandLogo } from '@/components/common/BrandLogo';
@@ -49,6 +50,8 @@ const navItems = [
   { href: '/customers', label: 'Müşterilerim', icon: Users },
   { href: '/alerts', label: 'Uyarı Listesi', icon: AlertOctagon, badgeCount: 3 },
   { href: '/stores', label: 'Mağazalarım & Yeni Bağla', icon: Store },
+    { href: '/system/analytics', label: 'Sayfa Analytics & Isı Haritası', icon: Activity, badge: 'Canlı' },
+  { href: '/system/crashes', label: 'Çökme & Hata Takibi', icon: ShieldAlert, badge: 'Yeni' },
   { href: '/settings', label: 'Ayarlar', icon: Settings },
 ];
 

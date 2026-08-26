@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import "./globals.css";
+import { TelemetryTracker } from "@/components/common/TelemetryTracker";
 
 export const viewport: Viewport = {
   width: "device-width",
@@ -40,6 +41,7 @@ export default function RootLayout({
         <link rel="apple-touch-icon" href="/icon.svg" />
       </head>
       <body className="antialiased font-sans bg-canvas text-dark selection:bg-primary-tint-200">
+        <TelemetryTracker />
         {children}
       </body>
     </html>

@@ -18,3 +18,25 @@ export const formatPercentage = (percent: number): string => {
 export const formatNumber = (val: number): string => {
   return new Intl.NumberFormat("tr-TR").format(val);
 };
+
+export const formatDateTime = (dateStr: string | Date): string => {
+  if (!dateStr) return "-";
+  const d = typeof dateStr === 'string' ? new Date(dateStr) : dateStr;
+  return new Intl.DateTimeFormat("tr-TR", {
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit"
+  }).format(d);
+};
+
+export const formatDate = (dateStr: string | Date): string => {
+  if (!dateStr) return "-";
+  const d = typeof dateStr === 'string' ? new Date(dateStr) : dateStr;
+  return new Intl.DateTimeFormat("tr-TR", {
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric"
+  }).format(d);
+};
