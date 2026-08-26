@@ -96,15 +96,19 @@ export default function ProductPricingPage() {
   const effectiveMargin = targetMargin / 100;
   const effectiveCommission = commissionRate / 100;
 
-  // 1. REVERSE PRICING CALCULATION (Target Margin % -> Required Sale Price)
+  // 1. REVERSE PRICING CALCULATION WITH EXACT LINEARIZED VAT & WITHHOLDING
+  const kdvMultiplier = 1 + (vatRate / 100);
+  const vatFraction = (vatRate / 100) / kdvMultiplier;
+  const costPriceExVatDiff = costPrice * (1 - vatFraction);
+
   let calculatedTargetPrice = 0;
-  const denominator = 1 - effectiveCommission - withholdingTaxRate - effectiveMargin;
+  const denominator = 1 - effectiveCommission - withholdingTaxRate - vatFraction - effectiveMargin;
 
   if (denominator > 0) {
-    let currentGuess = (costPrice + 46.50 + serviceFee) / denominator;
-    for (let i = 0; i < 4; i++) {
+    let currentGuess = (costPriceExVatDiff + 46.50 + serviceFee) / denominator;
+    for (let i = 0; i < 6; i++) {
       const shipGuess = calculateTrendyolShipping(currentGuess, desi, carrier, leadTimeDays, baremTiers, desiRates);
-      currentGuess = (costPrice + shipGuess.appliedPriceIncVat + serviceFee) / denominator;
+      currentGuess = (costPriceExVatDiff + shipGuess.appliedPriceIncVat + serviceFee) / denominator;
     }
     calculatedTargetPrice = Math.round(currentGuess * 100) / 100;
   } else {
@@ -125,7 +129,6 @@ export default function ProductPricingPage() {
   const withholdingAmount = activeSalePrice * withholdingTaxRate;
 
   // KDV Doğrusallaştırma
-  const kdvMultiplier = 1 + (vatRate / 100);
   const saleVat = (activeSalePrice / kdvMultiplier) * (vatRate / 100);
   const costVat = (costPrice / kdvMultiplier) * (vatRate / 100);
   const netVatAmount = Math.max(0, saleVat - costVat);
@@ -526,7 +529,7 @@ export default function ProductPricingPage() {
             <div className="flex items-center justify-between pb-3 border-b border-border">
               <div>
                 <span className="text-[11px] font-bold text-muted-foreground uppercase tracking-wide block">
-                  {pricingMode === 'target_margin' ? '🎯 Hedef Marja Göre Olması Gereken Fiyat' : '🏷️ Belirlenen Satış Fiyatı'}
+                  {pricingMode === 'target_margin' ? '🎯 Hedef Marja Göre Hesaplanan Satış Fiyatı' : '🏷️ Belirlenen Satış Fiyatı'}
                 </span>
                 <div className="text-3xl font-black text-primary tabular-nums mt-1">
                   {formatCurrency(activeSalePrice)}
@@ -630,8 +633,8 @@ export default function ProductPricingPage() {
                 <Target className="w-4 h-4 text-primary" />
                 <span>Buybox Rekabet Fiyat Simülatörü</span>
               </h5>
-              <Badge variant={buyboxMargin >= 10 ? "excellent" : "secondary"}>
-                {buyboxMargin >= 10 ? "Kârlı Rekabet" : "Düşük Kâr Uyarısı"}
+              <Badge variant={buyboxProfit < 0 ? "danger" : (buyboxMargin >= 10 ? "excellent" : "warning")}>
+                {buyboxProfit < 0 ? "⚠️ Zararına Satış Uyarısı" : (buyboxMargin >= 10 ? "✓ Kârlı Rekabet" : "Düşük Kâr Uyarısı")}
               </Badge>
             </div>
 
