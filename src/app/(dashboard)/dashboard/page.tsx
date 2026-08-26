@@ -12,6 +12,7 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { OrderDetailModal } from "@/components/orders/OrderDetailModal";
+import { DateRangePicker, DateFilterValue } from "@/components/common/DateRangePicker";
 import {
   ResponsiveContainer, AreaChart, Area, BarChart, Bar,
   PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend
@@ -20,7 +21,7 @@ import {
 export default function DashboardPage() {
   const [data, setData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
-  const [period, setPeriod] = useState("all");
+  const [dateFilter, setDateFilter] = useState<DateFilterValue>({ period: "all" });
   const [selectedStore, setSelectedStore] = useState("all");
   const [selectedOrderId, setSelectedOrderId] = useState<string | null>(null);
   const [mounted, setMounted] = useState(false);
@@ -32,7 +33,10 @@ export default function DashboardPage() {
   const fetchDashboard = async () => {
     setLoading(true);
     try {
-      const url = `/api/dashboard?period=${period}&storeId=${selectedStore}`;
+      let url = `/api/dashboard?period=${dateFilter.period}&storeId=${selectedStore}`;
+      if (dateFilter.startDate && dateFilter.endDate) {
+        url += `&startDate=${dateFilter.startDate}&endDate=${dateFilter.endDate}`;
+      }
       const res = await fetch(url);
       const json = await res.json();
       setData(json);
@@ -45,7 +49,7 @@ export default function DashboardPage() {
 
   useEffect(() => {
     fetchDashboard();
-  }, [period, selectedStore]);
+  }, [dateFilter, selectedStore]);
 
   const d = data || {};
   const monthlyTrends = d.monthlyTrends || [];
@@ -55,7 +59,6 @@ export default function DashboardPage() {
   const hourlyDistribution = d.hourlyDistribution || [];
   const stores = d.stores || [];
 
-  // Financial Cost Breakdown Data for Donut Chart
   const grossRev = parseFloat(d.invoicedRevenue || 1);
   const costBreakdownData = [
     { name: "Net Nakit Kâr", value: parseFloat(d.netProfit || 0), color: "#10B981" },
@@ -66,7 +69,6 @@ export default function DashboardPage() {
     { name: "Vergi & Stopaj", value: parseFloat(d.taxesTotal || 0), color: "#64748B" },
   ].filter(x => x.value > 0);
 
-  // Hourly Bar Data Formatting
   const hourlyChartData = Array.from({ length: 24 }).map((_, h) => {
     const hData = hourlyDistribution.find((x: any) => x.hour === h) || { orderCount: 0, revenue: 0, profit: 0 };
     return {
@@ -79,7 +81,7 @@ export default function DashboardPage() {
 
   return (
     <div className="space-y-4 sm:space-y-6 max-w-7xl">
-      {/* Top Banner with Period & Store Filter */}
+      {/* Top Banner with DateRangePicker & Store Filter */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-white p-4 sm:p-6 rounded-3xl border border-border shadow-xs">
         <div>
           <div className="flex items-center gap-2">
@@ -93,26 +95,14 @@ export default function DashboardPage() {
 
         {/* Filters */}
         <div className="flex items-center gap-2 flex-wrap sm:flex-nowrap">
-          {/* Period Selector */}
-          <select
-            value={period}
-            onChange={(e) => setPeriod(e.target.value)}
-            className="px-3 py-1.5 rounded-xl border border-border text-xs font-bold text-dark bg-white focus:ring-2 focus:ring-primary shadow-xs"
-          >
-            <option value="all">📅 Tüm Dönem (4 Ay - 2026)</option>
-            <option value="2026-08">Ağustos 2026</option>
-            <option value="2026-07">Temmuz 2026</option>
-            <option value="2026-06">Haziran 2026</option>
-            <option value="2026-05">Mayıs 2026</option>
-            <option value="last30">Son 30 Gün</option>
-            <option value="thisWeek">Son 7 Gün</option>
-          </select>
+          {/* Universal DateRangePicker */}
+          <DateRangePicker value={dateFilter} onChange={setDateFilter} />
 
           {/* Store Selector */}
           <select
             value={selectedStore}
             onChange={(e) => setSelectedStore(e.target.value)}
-            className="px-3 py-1.5 rounded-xl border border-border text-xs font-bold text-dark bg-white focus:ring-2 focus:ring-primary shadow-xs"
+            className="px-3 py-1.5 rounded-xl border border-border text-xs font-bold text-dark bg-white focus:ring-2 focus:ring-primary shadow-xs cursor-pointer"
           >
             <option value="all">🏪 Tüm Mağazalar</option>
             {stores.map((s: any) => (

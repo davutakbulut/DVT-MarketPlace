@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { query } from '@/lib/db';
+import { buildDateConditions } from '@/lib/dateFilterHelper';
 
 export async function GET(request: Request) {
   try {
@@ -10,7 +11,7 @@ export async function GET(request: Request) {
     const limit = parseInt(searchParams.get('limit') || '50');
     const offset = parseInt(searchParams.get('offset') || '0');
 
-    let conditions = ['1=1'];
+    let conditions: string[] = [];
     let params: any[] = [];
     let pIdx = 1;
 
@@ -38,7 +39,15 @@ export async function GET(request: Request) {
       pIdx++;
     }
 
-    const whereClause = conditions.join(' AND ');
+    // Apply Date Filter Helper
+    const dateHelper = buildDateConditions(searchParams, 'o.order_date', pIdx);
+    if (dateHelper.whereClause && dateHelper.whereClause !== '1=1') {
+      conditions.push(dateHelper.whereClause);
+      params.push(...dateHelper.params);
+      pIdx = dateHelper.nextIndex;
+    }
+
+    const whereClause = conditions.length > 0 ? conditions.join(' AND ') : '1=1';
 
     // Aggregate summary stats
     const statsQuery = `

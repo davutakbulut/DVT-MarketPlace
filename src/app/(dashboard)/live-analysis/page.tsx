@@ -10,6 +10,7 @@ import {
   Layers, Edit3, Check, X, TrendingUp, PieChart as PieIcon, BarChart3
 } from "lucide-react";
 import { OrderDetailModal } from "@/components/orders/OrderDetailModal";
+import { DateRangePicker, DateFilterValue } from "@/components/common/DateRangePicker";
 import {
   ResponsiveContainer, AreaChart, Area, BarChart, Bar,
   PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend
@@ -22,6 +23,7 @@ export default function LiveAnalysisPage() {
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [carrierFilter, setCarrierFilter] = useState("all");
+  const [dateFilter, setDateFilter] = useState<DateFilterValue>({ period: "all" });
   const [showCharts, setShowCharts] = useState(true);
   const [mounted, setMounted] = useState(false);
 
@@ -41,7 +43,10 @@ export default function LiveAnalysisPage() {
   const fetchOrders = async () => {
     setLoading(true);
     try {
-      const url = `/api/orders?search=${encodeURIComponent(search)}&status=${statusFilter}&carrier=${carrierFilter}&limit=100`;
+      let url = `/api/orders?search=${encodeURIComponent(search)}&status=${statusFilter}&carrier=${carrierFilter}&period=${dateFilter.period}&limit=100`;
+      if (dateFilter.startDate && dateFilter.endDate) {
+        url += `&startDate=${dateFilter.startDate}&endDate=${dateFilter.endDate}`;
+      }
       const res = await fetch(url);
       const data = await res.json();
       setOrders(data.orders || []);
@@ -55,7 +60,7 @@ export default function LiveAnalysisPage() {
 
   useEffect(() => {
     fetchOrders();
-  }, [statusFilter, carrierFilter]);
+  }, [statusFilter, carrierFilter, dateFilter]);
 
   const handleSearchSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -88,7 +93,6 @@ export default function LiveAnalysisPage() {
     }
   };
 
-  // Cumulative Trend Data for Recent Orders
   let runningRev = 0;
   let runningProfit = 0;
   const cumulativeData = [...orders].reverse().map((o, idx) => {
@@ -103,7 +107,6 @@ export default function LiveAnalysisPage() {
     };
   });
 
-  // Margin Brackets Data for Donut Chart
   const highMarginCount = orders.filter(o => parseFloat(o.marginPercent) >= 20).length;
   const normalMarginCount = orders.filter(o => parseFloat(o.marginPercent) >= 5 && parseFloat(o.marginPercent) < 20).length;
   const lowMarginCount = orders.filter(o => parseFloat(o.marginPercent) >= 0 && parseFloat(o.marginPercent) < 5).length;
@@ -133,7 +136,7 @@ export default function LiveAnalysisPage() {
           </p>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-wrap">
           <Button 
             size="sm" 
             variant="outline"
@@ -162,19 +165,19 @@ export default function LiveAnalysisPage() {
       {/* Summary KPI Cards */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
         <div className="bg-white p-4 sm:p-5 rounded-3xl border border-border shadow-xs">
-          <span className="text-[11px] font-bold text-muted-foreground uppercase tracking-wide block">Toplam Sipariş</span>
+          <span className="text-[11px] font-bold text-muted-foreground uppercase tracking-wide block">Filtrelenen Sipariş</span>
           <div className="text-2xl font-black text-dark tabular-nums mt-1">{summary.totalOrders || 0} Adet</div>
-          <span className="text-[11px] text-gray-500 font-semibold mt-1 block">4 Aylık Canlı Veri</span>
+          <span className="text-[11px] text-gray-500 font-semibold mt-1 block">Canlı Veri</span>
         </div>
 
         <div className="bg-white p-4 sm:p-5 rounded-3xl border border-border shadow-xs">
-          <span className="text-[11px] font-bold text-muted-foreground uppercase tracking-wide block">Toplam Ciro</span>
+          <span className="text-[11px] font-bold text-muted-foreground uppercase tracking-wide block">Filtrelenen Ciro</span>
           <div className="text-2xl font-black text-primary tabular-nums mt-1">{formatCurrency(parseFloat(summary.totalInvoicedRevenue || 0))}</div>
           <span className="text-[11px] text-gray-500 font-semibold mt-1 block">Faturalanan Tutar</span>
         </div>
 
         <div className="bg-white p-4 sm:p-5 rounded-3xl border border-border shadow-xs">
-          <span className="text-[11px] font-bold text-muted-foreground uppercase tracking-wide block">Toplam Net Kâr</span>
+          <span className="text-[11px] font-bold text-muted-foreground uppercase tracking-wide block">Filtrelenen Net Kâr</span>
           <div className="text-2xl font-black text-emerald-700 tabular-nums mt-1">{formatCurrency(parseFloat(summary.totalNetProfit || 0))}</div>
           <span className="text-[11px] text-emerald-700 font-bold mt-1 block">Tüm Kesintiler Sonrası</span>
         </div>
@@ -186,11 +189,10 @@ export default function LiveAnalysisPage() {
         </div>
       </div>
 
-      {/* LIVE CHARTS ROW: Cumulative Profit Stream + Margin Health Pie Chart */}
+      {/* LIVE CHARTS ROW */}
       {showCharts && (
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 sm:gap-6 animate-in fade-in">
           
-          {/* Cumulative Profit Stream Area Chart (8 Cols) */}
           <div className="lg:col-span-8 bg-white p-4 sm:p-6 rounded-3xl border border-border shadow-xs space-y-4">
             <div className="flex items-center justify-between pb-3 border-b border-border">
               <div>
@@ -198,7 +200,7 @@ export default function LiveAnalysisPage() {
                   <TrendingUp className="w-4 h-4 text-emerald-600" />
                   Sipariş Akışı Kümülatif Kâr & Ciro Eğrisi
                 </h4>
-                <p className="text-[11px] text-gray-500">Son 100 sipariş boyunca kümülatif net kâr birikimi</p>
+                <p className="text-[11px] text-gray-500">Seçilen dönem siparişleri boyunca kümülatif net kâr birikimi</p>
               </div>
               <div className="flex items-center gap-3 text-xs font-bold">
                 <div className="flex items-center gap-1.5">
@@ -233,7 +235,6 @@ export default function LiveAnalysisPage() {
             </div>
           </div>
 
-          {/* Margin Health Donut Chart (4 Cols) */}
           <div className="lg:col-span-4 bg-white p-4 sm:p-6 rounded-3xl border border-border shadow-xs space-y-3 flex flex-col justify-between">
             <div>
               <h4 className="text-xs sm:text-sm font-bold text-dark flex items-center gap-2 pb-2 border-b border-border">
@@ -285,7 +286,7 @@ export default function LiveAnalysisPage() {
       {/* Order Status Tabs */}
       <div className="flex items-center bg-canvas p-1 rounded-2xl border border-border overflow-x-auto gap-1">
         {[
-          { id: 'all', label: 'Tüm Siparişler (2.366)' },
+          { id: 'all', label: 'Tüm Durumlar' },
           { id: 'Teslim Edildi', label: '✓ Teslim Edildi' },
           { id: 'Kargoda', label: '🚚 Kargoda / Taşımada' },
           { id: 'İade', label: '↩️ İade / İptal' },
@@ -304,7 +305,7 @@ export default function LiveAnalysisPage() {
         ))}
       </div>
 
-      {/* Search & Filter Bar */}
+      {/* Search & Date Filter Bar */}
       <div className="bg-white p-4 rounded-2xl sm:rounded-3xl border border-border shadow-xs flex flex-col sm:flex-row items-center justify-between gap-3">
         <form onSubmit={handleSearchSubmit} className="relative w-full sm:w-80">
           <Search className="w-4 h-4 text-muted-foreground absolute left-3 top-2.5" />
@@ -317,11 +318,14 @@ export default function LiveAnalysisPage() {
           />
         </form>
 
-        <div className="flex items-center gap-2 w-full sm:w-auto">
+        <div className="flex items-center gap-2 flex-wrap sm:flex-nowrap w-full sm:w-auto">
+          {/* Universal DateRangePicker */}
+          <DateRangePicker value={dateFilter} onChange={setDateFilter} />
+
           <select
             value={carrierFilter}
             onChange={(e) => setCarrierFilter(e.target.value)}
-            className="px-3 py-2 rounded-xl border border-border text-xs font-bold text-dark bg-white"
+            className="px-3 py-1.5 rounded-xl border border-border text-xs font-bold text-dark bg-white shadow-xs cursor-pointer"
           >
             <option value="all">Tüm Kargolar</option>
             <option value="Trendyol Express">Trendyol Express</option>

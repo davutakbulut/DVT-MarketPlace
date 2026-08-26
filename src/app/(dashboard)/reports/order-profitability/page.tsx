@@ -10,6 +10,7 @@ import {
   ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, Search
 } from "lucide-react";
 import { OrderDetailModal } from "@/components/orders/OrderDetailModal";
+import { DateRangePicker, DateFilterValue } from "@/components/common/DateRangePicker";
 
 export default function OrderProfitabilityReportPage() {
   const [reportType, setReportType] = useState<'order' | 'product' | 'category' | 'returns' | 'shipping'>('order');
@@ -21,13 +22,17 @@ export default function OrderProfitabilityReportPage() {
     totalPages: 1,
   });
   const [search, setSearch] = useState("");
+  const [dateFilter, setDateFilter] = useState<DateFilterValue>({ period: "all" });
   const [loading, setLoading] = useState(true);
   const [selectedOrderId, setSelectedOrderId] = useState<string | null>(null);
 
   const fetchReport = async () => {
     setLoading(true);
     try {
-      const url = `/api/reports?type=${reportType}&page=${pagination.page}&pageSize=${pagination.pageSize}&search=${encodeURIComponent(search)}`;
+      let url = `/api/reports?type=${reportType}&page=${pagination.page}&pageSize=${pagination.pageSize}&search=${encodeURIComponent(search)}&period=${dateFilter.period}`;
+      if (dateFilter.startDate && dateFilter.endDate) {
+        url += `&startDate=${dateFilter.startDate}&endDate=${dateFilter.endDate}`;
+      }
       const res = await fetch(url);
       const json = await res.json();
       setReportData(json.data || []);
@@ -43,7 +48,7 @@ export default function OrderProfitabilityReportPage() {
 
   useEffect(() => {
     fetchReport();
-  }, [reportType, pagination.page, pagination.pageSize]);
+  }, [reportType, pagination.page, pagination.pageSize, dateFilter]);
 
   const handleSearchSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -139,7 +144,7 @@ export default function OrderProfitabilityReportPage() {
         ))}
       </div>
 
-      {/* Search Bar and Page Size Selector */}
+      {/* Search Bar, Universal DateRangePicker and Page Size Selector */}
       <div className="bg-white p-4 rounded-2xl sm:rounded-3xl border border-border shadow-xs flex flex-col sm:flex-row items-center justify-between gap-3">
         <form onSubmit={handleSearchSubmit} className="relative w-full sm:w-80">
           <Search className="w-4 h-4 text-muted-foreground absolute left-3 top-2.5" />
@@ -152,17 +157,15 @@ export default function OrderProfitabilityReportPage() {
           />
         </form>
 
-        <div className="flex items-center gap-3 text-xs font-bold text-dark w-full sm:w-auto justify-between sm:justify-end">
-          <span className="text-muted-foreground text-[11px]">
-            Toplam <strong className="text-dark">{pagination.totalCount}</strong> kayıt
-          </span>
+        <div className="flex items-center gap-2.5 flex-wrap sm:flex-nowrap w-full sm:w-auto justify-between sm:justify-end">
+          {/* Universal DateRangePicker */}
+          <DateRangePicker value={dateFilter} onChange={setDateFilter} />
 
           <div className="flex items-center gap-1.5">
-            <span className="text-gray-500 text-[11px]">Sayfa Başına:</span>
             <select
               value={pagination.pageSize}
               onChange={(e) => handlePageSizeChange(parseInt(e.target.value))}
-              className="px-2.5 py-1.5 rounded-xl border border-border text-xs font-bold text-dark bg-white focus:ring-2 focus:ring-primary"
+              className="px-2.5 py-1.5 rounded-xl border border-border text-xs font-bold text-dark bg-white focus:ring-2 focus:ring-primary shadow-xs cursor-pointer"
             >
               <option value={25}>25 Kayıt</option>
               <option value={50}>50 Kayıt</option>
@@ -370,7 +373,6 @@ export default function OrderProfitabilityReportPage() {
                 <ChevronLeft className="w-4 h-4" />
               </Button>
 
-              {/* Dynamic Page Number Buttons */}
               {Array.from({ length: Math.min(5, pagination.totalPages) }).map((_, i) => {
                 let pageNum = pagination.page;
                 if (pagination.page <= 3) {

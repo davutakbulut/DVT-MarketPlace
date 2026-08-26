@@ -1,33 +1,31 @@
 import { NextResponse } from 'next/server';
 import { query } from '@/lib/db';
+import { buildDateConditions } from '@/lib/dateFilterHelper';
 
 export async function GET(request: Request) {
   try {
     const { searchParams } = new URL(request.url);
     const storeId = searchParams.get('storeId');
-    const period = searchParams.get('period') || 'all'; // 'all', '2026-05', '2026-06', '2026-07', '2026-08', 'last30', 'thisWeek'
 
-    let conditions = ['1=1'];
+    let conditions: string[] = [];
     let params: any[] = [];
     let pIdx = 1;
 
     if (storeId && storeId !== 'all') {
-      conditions.push(`o.store_id = $${pIdx}`);
+      conditions.push(`o.store_id::text = $${pIdx}`);
       params.push(storeId);
       pIdx++;
     }
 
-    if (period === '2026-05' || period === '2026-06' || period === '2026-07' || period === '2026-08') {
-      conditions.push(`TO_CHAR(o.order_date, 'YYYY-MM') = $${pIdx}`);
-      params.push(period);
-      pIdx++;
-    } else if (period === 'last30') {
-      conditions.push(`o.order_date >= (SELECT MAX(order_date) - INTERVAL '30 days' FROM orders)`);
-    } else if (period === 'thisWeek') {
-      conditions.push(`o.order_date >= (SELECT MAX(order_date) - INTERVAL '7 days' FROM orders)`);
+    // Apply Date Conditions
+    const dateHelper = buildDateConditions(searchParams, 'o.order_date', pIdx);
+    if (dateHelper.whereClause && dateHelper.whereClause !== '1=1') {
+      conditions.push(dateHelper.whereClause);
+      params.push(...dateHelper.params);
+      pIdx = dateHelper.nextIndex;
     }
 
-    const whereClause = conditions.join(' AND ');
+    const whereClause = conditions.length > 0 ? conditions.join(' AND ') : '1=1';
 
     // Overall Totals for Selected Period
     const orderAgg = await query(`
@@ -53,7 +51,7 @@ export async function GET(request: Request) {
     const netProfitMargin = paid > 0 ? (netProfit / paid) * 100 : 0;
     const netProfitMarkup = cogs > 0 ? (netProfit / cogs) * 100 : 0;
 
-    // Monthly breakdown
+    // Monthly breakdown (All 4 Months)
     const monthlyTrends = await query(`
       SELECT 
         TO_CHAR(o.order_date, 'YYYY-MM') as "monthKey",
@@ -131,13 +129,10 @@ export async function GET(request: Request) {
       LIMIT 8
     `, params);
 
-    // Stores list for Store Dropdown
-    const stores = await query(`
-      SELECT id, store_name as "storeName", marketplace FROM stores ORDER BY created_at ASC
-    `);
+    // Stores list
+    const stores = await query(`SELECT id, store_name as "storeName", marketplace FROM stores ORDER BY created_at ASC`);
 
     return NextResponse.json({
-      selectedPeriod: period,
       grossRevenue: gross,
       invoicedRevenue: paid,
       grossProfit: gross - cogs,
