@@ -7,7 +7,9 @@ import {
   Activity,
   Calculator,
   Percent,
-  Layers, Megaphone,
+  Layers,
+  Truck,
+  Megaphone,
   Sparkles,
   Award,
   FileCheck2,
@@ -25,10 +27,12 @@ const navItems = [
   { href: '/live-analysis', label: 'Canlı Analiz', icon: Activity, badge: 'Canlı' },
   { href: '/product-pricing', label: 'Ürün Fiyatlandırma', icon: Calculator },
   { href: '/profit-margin-list', label: 'Kâr Marjı Listesi', icon: Percent },
+  { href: '/marketing/ads', label: 'Reklamlarım', icon: Megaphone },
   {
-    label: 'Pazaryeri Tarifeleri',
-    icon: Layers, Megaphone,
+    label: 'Kargo & Tarifeler',
+    icon: Truck,
     children: [
+      { href: '/tariffs/desi', label: 'Kargo Desi Fiyatları (0-500)' },
       { href: '/tariffs/commission', label: 'Ürün Komisyon Tarifesi' },
       { href: '/tariffs/plus', label: 'Plus Komisyon Tarifesi' },
       { href: '/tariffs/badges', label: 'Avantajlı Ürün Etiketi' },
@@ -93,7 +97,7 @@ export function Sidebar({ mobileOpen, onMobileClose }: { mobileOpen: boolean; on
                     )}
                     <div className="mt-1 space-y-1">
                       {item.children.map((child) => {
-                        const active = pathname.startsWith(child.href);
+                        const active = pathname === child.href || (child.href !== '/dashboard' && pathname.startsWith(child.href));
                         return (
                           <Link
                             key={child.href}
