@@ -119,7 +119,7 @@ export function Sidebar({ mobileOpen, onMobileClose }: { mobileOpen: boolean; on
           {/* Desktop Collapse Toggle */}
           <button
             onClick={() => setCollapsed(!collapsed)}
-            className="hidden lg:flex p-1.5 rounded-xl text-muted-foreground hover:bg-canvas hover:text-dark transition-colors"
+            className="hidden lg:flex p-1.5 rounded-xl text-muted-foreground hover:bg-canvas hover:text-dark transition-colors cursor-pointer"
           >
             {collapsed ? <ChevronRight className="w-4 h-4" /> : <ChevronLeft className="w-4 h-4" />}
           </button>
@@ -136,36 +136,6 @@ export function Sidebar({ mobileOpen, onMobileClose }: { mobileOpen: boolean; on
 
         {/* Navigation List */}
         <div className="flex-1 overflow-y-auto px-3 py-3 space-y-1.5 custom-scrollbar">
-          {/* Super Admin Quick Link */}
-          <div className="pb-2">
-            <Link
-              href="/super-admin"
-              onClick={onMobileClose}
-              className={cn(
-                "flex items-center justify-between p-2.5 rounded-2xl bg-gradient-to-r from-slate-950 via-[#101626] to-slate-950 text-white border border-indigo-500/40 hover:border-indigo-400 shadow-md group transition-all",
-                collapsed && !mobileOpen ? "justify-center p-2" : ""
-              )}
-              title="Süper Admin Paneli (Tüm Veriler)"
-            >
-              <div className="flex items-center gap-2.5 min-w-0">
-                <div className="w-7 h-7 rounded-xl bg-indigo-600 flex items-center justify-center text-white shrink-0 group-hover:scale-110 transition-transform shadow-xs">
-                  <Crown className="w-3.5 h-3.5 text-amber-300" />
-                </div>
-                {(!collapsed || mobileOpen) && (
-                  <div className="min-w-0">
-                    <div className="text-xs font-black text-white flex items-center gap-1">
-                      Süper Admin Paneli
-                    </div>
-                    <div className="text-[9px] text-indigo-300 font-mono">Tüm Veriler & Komuta</div>
-                  </div>
-                )}
-              </div>
-              {(!collapsed || mobileOpen) && (
-                <ChevronRight className="w-4 h-4 text-indigo-300 group-hover:translate-x-0.5 transition-transform" />
-              )}
-            </Link>
-          </div>
-
           {navItems.map((item, idx) => {
             if (item.children) {
               const GroupIcon = item.icon;
@@ -188,7 +158,7 @@ export function Sidebar({ mobileOpen, onMobileClose }: { mobileOpen: boolean; on
                         href={child.href}
                         onClick={onMobileClose}
                         className={cn(
-                          'flex items-center gap-3 px-3 py-2 rounded-xl text-xs font-semibold transition-all',
+                          'flex items-center gap-3 px-3 py-2 rounded-xl text-xs font-semibold transition-all cursor-pointer',
                           isActive
                             ? 'bg-primary text-white shadow-xs font-bold'
                             : 'text-gray-600 hover:bg-canvas hover:text-dark'
@@ -213,7 +183,7 @@ export function Sidebar({ mobileOpen, onMobileClose }: { mobileOpen: boolean; on
                 href={item.href!}
                 onClick={onMobileClose}
                 className={cn(
-                  'flex items-center justify-between px-3 py-2 rounded-xl text-xs font-semibold transition-all',
+                  'flex items-center justify-between px-3 py-2 rounded-xl text-xs font-semibold transition-all cursor-pointer',
                   isActive
                     ? 'bg-primary text-white shadow-xs font-bold'
                     : 'text-gray-600 hover:bg-canvas hover:text-dark'
@@ -247,6 +217,36 @@ export function Sidebar({ mobileOpen, onMobileClose }: { mobileOpen: boolean; on
               </Link>
             );
           })}
+
+          {/* Super Admin Quick Link At The Bottom */}
+          <div className="pt-3 pb-1 border-t border-border/60 mt-3">
+            <Link
+              href="/super-admin"
+              onClick={onMobileClose}
+              className={cn(
+                "flex items-center justify-between p-2.5 rounded-2xl bg-gradient-to-r from-slate-950 via-[#101626] to-slate-950 text-white border border-indigo-500/40 hover:border-indigo-400 shadow-md group transition-all cursor-pointer",
+                collapsed && !mobileOpen ? "justify-center p-2" : ""
+              )}
+              title="Süper Admin Paneli (Tüm Veriler & Komuta)"
+            >
+              <div className="flex items-center gap-2.5 min-w-0">
+                <div className="w-7 h-7 rounded-xl bg-indigo-600 flex items-center justify-center text-white shrink-0 group-hover:scale-110 transition-transform shadow-xs">
+                  <Crown className="w-3.5 h-3.5 text-amber-300" />
+                </div>
+                {(!collapsed || mobileOpen) && (
+                  <div className="min-w-0">
+                    <div className="text-xs font-black text-white flex items-center gap-1">
+                      Süper Admin Paneli
+                    </div>
+                    <div className="text-[9px] text-indigo-300 font-mono">Tüm Veriler & Komuta</div>
+                  </div>
+                )}
+              </div>
+              {(!collapsed || mobileOpen) && (
+                <ChevronRight className="w-4 h-4 text-indigo-300 group-hover:translate-x-0.5 transition-transform" />
+              )}
+            </Link>
+          </div>
         </div>
 
         {/* Footer info in sidebar */}
