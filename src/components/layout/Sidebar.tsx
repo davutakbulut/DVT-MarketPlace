@@ -7,7 +7,7 @@ import {
   Activity,
   Calculator,
   Percent,
-  Layers,
+  Layers, Megaphone,
   Sparkles,
   Award,
   FileCheck2,
@@ -27,7 +27,7 @@ const navItems = [
   { href: '/profit-margin-list', label: 'Kâr Marjı Listesi', icon: Percent },
   {
     label: 'Pazaryeri Tarifeleri',
-    icon: Layers,
+    icon: Layers, Megaphone,
     children: [
       { href: '/tariffs/commission', label: 'Ürün Komisyon Tarifesi' },
       { href: '/tariffs/plus', label: 'Plus Komisyon Tarifesi' },
