@@ -156,6 +156,46 @@ export async function runNotificationScanner(): Promise<ScanResult> {
       }
     }
 
+        // 5. RULE 5: High Value Returns and Cancellations Scan
+    const returnsCancellations = await query(`
+      SELECT 
+        o.id,
+        o.marketplace_order_number,
+        o.customer_name,
+        o.order_status,
+        o.total_sale_price,
+        o.return_reason,
+        o.order_date
+      FROM orders o
+      WHERE o.order_status IN ('Cancelled', 'Returned') OR o.return_reason IS NOT NULL
+      ORDER BY o.order_date DESC
+      LIMIT 10
+    `);
+
+    for (const ret of returnsCancellations) {
+      const isReturn = ret.order_status === 'Returned' || !!ret.return_reason;
+      const title = isReturn 
+        ? `🔄 Yeni İade Talebi: #${ret.marketplace_order_number}`
+        : `❌ İptal Edilen Sipariş: #${ret.marketplace_order_number}`;
+      
+      const existing = await query(
+        `SELECT id FROM system_notifications WHERE title = $1 LIMIT 1`,
+        [title]
+      );
+      if (existing.length === 0) {
+        await query(
+          `INSERT INTO system_notifications (title, message, type, category, action_url)
+           VALUES ($1, $2, 'warning', 'order', '/returns-cancellations')`,
+          [
+            title,
+            `Müşteri: ${ret.customer_name || 'Bilinmiyor'} - Tutar: ₺${parseFloat(ret.total_sale_price || 0).toFixed(2)}. Neden: ${ret.return_reason || 'Kullanıcı talebi / İptal'}`
+          ]
+        );
+        result.totalNewNotifications++;
+        result.details.push(`${isReturn ? 'İade' : 'İptal'} Bildirimi: #${ret.marketplace_order_number}`);
+      }
+    }
+
     return result;
   } catch (error: any) {
     console.error('Notification scanner error:', error);
