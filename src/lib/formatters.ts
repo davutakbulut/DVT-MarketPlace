@@ -1,22 +1,26 @@
-export const formatCurrency = (amount: number, currency: string = "TRY"): string => {
+export const formatCurrency = (amount: number, currency: string = "TRY", decimals: number = 2): string => {
   const symbol = currency === "TRY" ? "₺" : currency === "USD" ? "$" : "€";
   const formattedNumber = new Intl.NumberFormat("tr-TR", {
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  }).format(Math.abs(amount));
+    minimumFractionDigits: decimals,
+    maximumFractionDigits: decimals,
+  }).format(Math.abs(amount || 0));
 
-  return amount < 0 ? `-${symbol}${formattedNumber}` : `${symbol}${formattedNumber}`;
+  return (amount || 0) < 0 ? `-${symbol}${formattedNumber}` : `${symbol}${formattedNumber}`;
+};
+
+export const formatCurrencyNoCents = (amount: number, currency: string = "TRY"): string => {
+  return formatCurrency(amount, currency, 0);
 };
 
 export const formatPercentage = (percent: number): string => {
   return `%${new Intl.NumberFormat("tr-TR", {
     minimumFractionDigits: 2,
     maximumFractionDigits: 2,
-  }).format(percent)}`;
+  }).format(percent || 0)}`;
 };
 
 export const formatNumber = (val: number): string => {
-  return new Intl.NumberFormat("tr-TR").format(val);
+  return new Intl.NumberFormat("tr-TR").format(val || 0);
 };
 
 export const formatDateTime = (dateStr: string | Date): string => {

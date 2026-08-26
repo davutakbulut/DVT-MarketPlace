@@ -1,6 +1,6 @@
 "use client";
 import React, { useState, useEffect } from "react";
-import { formatCurrency, formatPercentage } from "@/lib/formatters";
+import { formatCurrency, formatCurrencyNoCents, formatPercentage } from "@/lib/formatters";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
@@ -177,13 +177,13 @@ export default function LiveAnalysisPage() {
 
         <div className="bg-white p-4 sm:p-5 rounded-3xl border border-border shadow-xs">
           <span className="text-[11px] font-bold text-muted-foreground uppercase tracking-wide block">Filtrelenen Ciro</span>
-          <div className="text-2xl font-black text-primary tabular-nums mt-1">{formatCurrency(parseFloat(summary.totalInvoicedRevenue || 0))}</div>
+          <div className="text-2xl font-black text-primary tabular-nums mt-1">{formatCurrencyNoCents(parseFloat(summary.totalInvoicedRevenue || 0))}</div>
           <span className="text-[11px] text-gray-500 font-semibold mt-1 block">Faturalanan Tutar</span>
         </div>
 
         <div className="bg-white p-4 sm:p-5 rounded-3xl border border-border shadow-xs">
           <span className="text-[11px] font-bold text-muted-foreground uppercase tracking-wide block">Filtrelenen Net Kâr</span>
-          <div className="text-2xl font-black text-emerald-700 tabular-nums mt-1">{formatCurrency(parseFloat(summary.totalNetProfit || 0))}</div>
+          <div className="text-2xl font-black text-emerald-700 tabular-nums mt-1">{formatCurrencyNoCents(parseFloat(summary.totalNetProfit || 0))}</div>
           <span className="text-[11px] text-emerald-700 font-bold mt-1 block">Tüm Kesintiler Sonrası</span>
         </div>
 
@@ -230,7 +230,7 @@ export default function LiveAnalysisPage() {
                     <YAxis stroke="#9CA3AF" fontSize={11} tickLine={false} tickFormatter={(v) => `₺${v >= 1000 ? (v/1000).toFixed(0) + 'k' : v}`} />
                     <Tooltip 
                       contentStyle={{ backgroundColor: "#FFFFFF", borderRadius: "1rem", border: "1px solid #E5E7EB" }}
-                      formatter={(val: any) => [formatCurrency(parseFloat(val || 0)), "Kümülatif Net Kâr"]}
+                      formatter={(val: any) => [formatCurrencyNoCents(parseFloat(val || 0)), "Kümülatif Net Kâr"]}
                       labelFormatter={(l) => `Sipariş Sırası: ${l}`}
                     />
                     <Area type="monotone" dataKey="kumulatifKar" stroke="#10B981" strokeWidth={3} fillOpacity={1} fill="url(#colorKumulatifKar)" />
@@ -389,12 +389,12 @@ export default function LiveAnalysisPage() {
                           <div>{o.cargoProvider || 'Trendyol Express'}</div>
                           <span className="text-[10px] text-gray-400 font-mono">{o.calculatedDesi || 1} Desi</span>
                         </td>
-                        <td className="py-3 px-4 font-black text-primary tabular-nums">₺{parseFloat(o.grossAmount || 0).toFixed(2)}</td>
-                        <td className="py-3 px-4 text-gray-600 tabular-nums">₺{parseFloat(o.commission || 0).toFixed(2)}</td>
-                        <td className="py-3 px-4 text-gray-600 tabular-nums">₺{parseFloat(o.shippingCost || 0).toFixed(2)}</td>
-                        <td className="py-3 px-4 text-gray-600 tabular-nums">₺{parseFloat(o.cogs || 0).toFixed(2)}</td>
+                        <td className="py-3 px-4 font-black text-primary tabular-nums">{formatCurrencyNoCents(parseFloat(o.grossAmount || 0))}</td>
+                        <td className="py-3 px-4 text-gray-600 tabular-nums">{formatCurrencyNoCents(parseFloat(o.commission || 0))}</td>
+                        <td className="py-3 px-4 text-gray-600 tabular-nums">{formatCurrencyNoCents(parseFloat(o.shippingCost || 0))}</td>
+                        <td className="py-3 px-4 text-gray-600 tabular-nums">{formatCurrencyNoCents(parseFloat(o.cogs || 0))}</td>
                         <td className={`py-3 px-4 font-black tabular-nums ${isProfitable ? 'text-emerald-700' : 'text-red-600'}`}>
-                          ₺{parseFloat(o.netProfit || 0).toFixed(2)}
+                          {formatCurrencyNoCents(parseFloat(o.netProfit || 0))}
                         </td>
                         <td className="py-3 px-4 font-bold tabular-nums">
                           <Badge variant={isProfitable ? 'excellent' : 'secondary'}>
@@ -453,18 +453,18 @@ export default function LiveAnalysisPage() {
                     <div className="grid grid-cols-3 gap-2 bg-canvas/60 p-2.5 rounded-2xl border border-border/80 text-[11px]">
                       <div>
                         <span className="text-[10px] text-gray-400 block font-semibold">Ciro</span>
-                        <span className="font-black text-primary tabular-nums">₺{parseFloat(o.grossAmount || 0).toFixed(2)}</span>
+                        <span className="font-black text-primary tabular-nums">{formatCurrencyNoCents(parseFloat(o.grossAmount || 0))}</span>
                       </div>
                       <div>
                         <span className="text-[10px] text-gray-400 block font-semibold">Giderler (Kargo+Kom)</span>
                         <span className="font-bold text-gray-700 tabular-nums">
-                          ₺{(parseFloat(o.shippingCost || 0) + parseFloat(o.commission || 0)).toFixed(2)}
+                          {formatCurrencyNoCents(parseFloat(o.shippingCost || 0) + parseFloat(o.commission || 0))}
                         </span>
                       </div>
                       <div>
                         <span className="text-[10px] text-gray-400 block font-semibold">Net Kâr</span>
                         <span className={`font-black tabular-nums ${isProfitable ? 'text-emerald-700' : 'text-red-600'}`}>
-                          ₺{parseFloat(o.netProfit || 0).toFixed(2)}
+                          {formatCurrencyNoCents(parseFloat(o.netProfit || 0))}
                         </span>
                       </div>
                     </div>
