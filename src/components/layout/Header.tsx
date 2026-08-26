@@ -5,7 +5,7 @@ import { CountrySelector } from './CountrySelector';
 import { DateRangePicker } from './DateRangePicker';
 import { NotificationCenter } from './NotificationCenter';
 import { VirtualTourModal } from './VirtualTourModal';
-import { Menu, Compass, User, LogOut, ShieldCheck, Database } from 'lucide-react';
+import { Menu, Compass, User, LogOut, ShieldCheck } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
@@ -49,10 +49,7 @@ export function Header({ onMobileMenuToggle }: { onMobileMenuToggle: () => void 
 
       {/* Right: Live DB Status, Date picker, Virtual Tour, Notifications, Profile */}
       <div className="flex items-center gap-1.5 sm:gap-2.5">
-        <div className="hidden xl:flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-800 text-[11px] font-bold">
-          <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-          <span>Canlı PostgreSQL Aktif</span>
-        </div>
+
 
         <div className="flex items-center">
           <DateRangePicker />
