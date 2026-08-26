@@ -10,7 +10,8 @@ import {
   Clock, ArrowRight, Zap, Target, Package, Award, Sparkles,
   Layers, Check, ChevronRight, ChevronDown, ChevronUp, Eye, Info, Sliders, ArrowDownRight,
   TrendingDown, Search, Filter, X, ZoomIn, ExternalLink, ShoppingBag, 
-  AlertCircle, Undo2, Receipt, Box, Settings, Coins, Edit3, ArrowUpRight
+  AlertCircle, Undo2, Receipt, Box, Settings, Coins, Edit3, ArrowUpRight,
+  ArrowUpDown, ArrowUp, ArrowDown
 } from "lucide-react";
 import { calculateTrendyolShipping, BaremTier, DesiRate } from "@/lib/shippingCalculator";
 import { getMinimumOrderQuantity, TRENDYOL_MOQ_TIERS } from "@/lib/minimumOrderQuantity";
@@ -32,7 +33,18 @@ export default function ProductPricingPage() {
   const [modalSearch, setModalSearch] = useState("");
   const [modalBrandFilter, setModalBrandFilter] = useState("all");
   const [modalStockFilter, setModalStockFilter] = useState<"all" | "in_stock" | "out_of_stock">("all");
+  const [modalSortKey, setModalSortKey] = useState<'title' | 'brand' | 'barcode' | 'stockQuantity' | 'salePrice' | 'costPrice' | 'commissionRate'>('title');
+  const [modalSortDir, setModalSortDir] = useState<'asc' | 'desc'>('asc');
   const [zoomImageUrl, setZoomImageUrl] = useState<string | null>(null);
+
+  const handleModalSort = (key: 'title' | 'brand' | 'barcode' | 'stockQuantity' | 'salePrice' | 'costPrice' | 'commissionRate') => {
+    if (modalSortKey === key) {
+      setModalSortDir(prev => prev === 'asc' ? 'desc' : 'asc');
+    } else {
+      setModalSortKey(key);
+      setModalSortDir(key === 'stockQuantity' || key === 'salePrice' || key === 'costPrice' || key === 'commissionRate' ? 'desc' : 'asc');
+    }
+  };
 
   // Pricing Mode: 'target_margin' (Hedef Kârdan Fiyat Bul) vs 'manual_price' (Fiyattan Kâr Hesapla)
   const [pricingMode, setPricingMode] = useState<'target_margin' | 'manual_price'>('target_margin');
@@ -306,22 +318,41 @@ export default function ProductPricingPage() {
     }
   };
 
-  // Filter products for the Modal Picker
+  // Filter and Sort products for the Modal Picker
   const brandsList = Array.from(new Set(dbProducts.map(p => p.brand).filter(Boolean)));
-  const filteredModalProducts = dbProducts.filter((p) => {
-    const s = modalSearch.toLowerCase();
-    const matchesSearch = !s || 
-      (p.title || '').toLowerCase().includes(s) ||
-      (p.barcode || '').toLowerCase().includes(s) ||
-      (p.modelCode || '').toLowerCase().includes(s) ||
-      (p.brand || '').toLowerCase().includes(s);
+  const filteredModalProducts = useMemo(() => {
+    const filtered = dbProducts.filter((p) => {
+      const s = modalSearch.toLowerCase();
+      const matchesSearch = !s || 
+        (p.title || '').toLowerCase().includes(s) ||
+        (p.barcode || '').toLowerCase().includes(s) ||
+        (p.modelCode || '').toLowerCase().includes(s) ||
+        (p.brand || '').toLowerCase().includes(s);
 
-    const matchesBrand = modalBrandFilter === 'all' || p.brand === modalBrandFilter;
-    const matchesStock = modalStockFilter === 'all' || 
-      (modalStockFilter === 'in_stock' ? (p.stockQuantity > 0) : (p.stockQuantity === 0));
+      const matchesBrand = modalBrandFilter === 'all' || p.brand === modalBrandFilter;
+      const matchesStock = modalStockFilter === 'all' || 
+        (modalStockFilter === 'in_stock' ? (p.stockQuantity > 0) : (p.stockQuantity === 0));
 
-    return matchesSearch && matchesBrand && matchesStock;
-  });
+      return matchesSearch && matchesBrand && matchesStock;
+    });
+
+    return filtered.sort((a, b) => {
+      let aVal = a[modalSortKey];
+      let bVal = b[modalSortKey];
+
+      if (modalSortKey === 'salePrice' || modalSortKey === 'costPrice' || modalSortKey === 'stockQuantity' || modalSortKey === 'commissionRate') {
+        aVal = parseFloat(aVal || 0);
+        bVal = parseFloat(bVal || 0);
+      } else {
+        aVal = (aVal || '').toString().toLowerCase();
+        bVal = (bVal || '').toString().toLowerCase();
+      }
+
+      if (aVal < bVal) return modalSortDir === 'asc' ? -1 : 1;
+      if (aVal > bVal) return modalSortDir === 'asc' ? 1 : -1;
+      return 0;
+    });
+  }, [dbProducts, modalSearch, modalBrandFilter, modalStockFilter, modalSortKey, modalSortDir]);
 
   return (
     <div className="space-y-4 sm:space-y-6 max-w-7xl">
@@ -1640,12 +1671,97 @@ export default function ProductPricingPage() {
                   <thead>
                     <tr className="border-b border-border text-gray-500 font-black">
                       <th className="pb-2.5 px-3 w-16 text-center">Görsel</th>
-                      <th className="pb-2.5 px-3">Ürün Başlığı & Model</th>
-                      <th className="pb-2.5 px-3">Barkod & Marka</th>
-                      <th className="pb-2.5 px-3 text-center">Stok</th>
-                      <th className="pb-2.5 px-3 text-right">Satış Fiyatı</th>
-                      <th className="pb-2.5 px-3 text-right">Maliyet</th>
-                      <th className="pb-2.5 px-3 text-right">Komisyon</th>
+                      
+                      <th 
+                        onClick={() => handleModalSort('title')} 
+                        className="pb-2.5 px-3 cursor-pointer hover:text-primary transition-colors select-none group"
+                        title="Başlığa göre sırala"
+                      >
+                        <div className="flex items-center gap-1.5">
+                          <span className={modalSortKey === 'title' ? 'text-primary font-black' : ''}>Ürün Başlığı & Model</span>
+                          {modalSortKey === 'title' ? (
+                            modalSortDir === 'asc' ? <ArrowUp className="w-3.5 h-3.5 text-primary" /> : <ArrowDown className="w-3.5 h-3.5 text-primary" />
+                          ) : (
+                            <ArrowUpDown className="w-3.5 h-3.5 text-gray-300 group-hover:text-primary transition-colors" />
+                          )}
+                        </div>
+                      </th>
+
+                      <th 
+                        onClick={() => handleModalSort('brand')} 
+                        className="pb-2.5 px-3 cursor-pointer hover:text-primary transition-colors select-none group"
+                        title="Marka / Barkoda göre sırala"
+                      >
+                        <div className="flex items-center gap-1.5">
+                          <span className={modalSortKey === 'brand' || modalSortKey === 'barcode' ? 'text-primary font-black' : ''}>Barkod & Marka</span>
+                          {modalSortKey === 'brand' || modalSortKey === 'barcode' ? (
+                            modalSortDir === 'asc' ? <ArrowUp className="w-3.5 h-3.5 text-primary" /> : <ArrowDown className="w-3.5 h-3.5 text-primary" />
+                          ) : (
+                            <ArrowUpDown className="w-3.5 h-3.5 text-gray-300 group-hover:text-primary transition-colors" />
+                          )}
+                        </div>
+                      </th>
+
+                      <th 
+                        onClick={() => handleModalSort('stockQuantity')} 
+                        className="pb-2.5 px-3 text-center cursor-pointer hover:text-primary transition-colors select-none group"
+                        title="Stok miktarına göre sırala"
+                      >
+                        <div className="flex items-center justify-center gap-1.5">
+                          <span className={modalSortKey === 'stockQuantity' ? 'text-primary font-black' : ''}>Stok</span>
+                          {modalSortKey === 'stockQuantity' ? (
+                            modalSortDir === 'asc' ? <ArrowUp className="w-3.5 h-3.5 text-primary" /> : <ArrowDown className="w-3.5 h-3.5 text-primary" />
+                          ) : (
+                            <ArrowUpDown className="w-3.5 h-3.5 text-gray-300 group-hover:text-primary transition-colors" />
+                          )}
+                        </div>
+                      </th>
+
+                      <th 
+                        onClick={() => handleModalSort('salePrice')} 
+                        className="pb-2.5 px-3 text-right cursor-pointer hover:text-primary transition-colors select-none group"
+                        title="Satış fiyatına göre sırala"
+                      >
+                        <div className="flex items-center justify-end gap-1.5">
+                          <span className={modalSortKey === 'salePrice' ? 'text-primary font-black' : ''}>Satış Fiyatı</span>
+                          {modalSortKey === 'salePrice' ? (
+                            modalSortDir === 'asc' ? <ArrowUp className="w-3.5 h-3.5 text-primary" /> : <ArrowDown className="w-3.5 h-3.5 text-primary" />
+                          ) : (
+                            <ArrowUpDown className="w-3.5 h-3.5 text-gray-300 group-hover:text-primary transition-colors" />
+                          )}
+                        </div>
+                      </th>
+
+                      <th 
+                        onClick={() => handleModalSort('costPrice')} 
+                        className="pb-2.5 px-3 text-right cursor-pointer hover:text-primary transition-colors select-none group"
+                        title="Alış maliyetine göre sırala"
+                      >
+                        <div className="flex items-center justify-end gap-1.5">
+                          <span className={modalSortKey === 'costPrice' ? 'text-primary font-black' : ''}>Maliyet</span>
+                          {modalSortKey === 'costPrice' ? (
+                            modalSortDir === 'asc' ? <ArrowUp className="w-3.5 h-3.5 text-primary" /> : <ArrowDown className="w-3.5 h-3.5 text-primary" />
+                          ) : (
+                            <ArrowUpDown className="w-3.5 h-3.5 text-gray-300 group-hover:text-primary transition-colors" />
+                          )}
+                        </div>
+                      </th>
+
+                      <th 
+                        onClick={() => handleModalSort('commissionRate')} 
+                        className="pb-2.5 px-3 text-right cursor-pointer hover:text-primary transition-colors select-none group"
+                        title="Komisyon oranına göre sırala"
+                      >
+                        <div className="flex items-center justify-end gap-1.5">
+                          <span className={modalSortKey === 'commissionRate' ? 'text-primary font-black' : ''}>Komisyon</span>
+                          {modalSortKey === 'commissionRate' ? (
+                            modalSortDir === 'asc' ? <ArrowUp className="w-3.5 h-3.5 text-primary" /> : <ArrowDown className="w-3.5 h-3.5 text-primary" />
+                          ) : (
+                            <ArrowUpDown className="w-3.5 h-3.5 text-gray-300 group-hover:text-primary transition-colors" />
+                          )}
+                        </div>
+                      </th>
+
                       <th className="pb-2.5 px-3 text-right">İşlem</th>
                     </tr>
                   </thead>
