@@ -335,7 +335,7 @@ export async function POST(request: Request) {
     if (costPrice !== undefined && prod.barcode) {
       await query(`
         UPDATE order_items 
-        SET unit_cost_price = $1, updated_at = NOW() 
+        SET unit_cost_price = $1 
         WHERE barcode = $2
       `, [costPrice, prod.barcode]);
     }

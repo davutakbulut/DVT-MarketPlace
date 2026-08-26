@@ -1,5 +1,8 @@
 /**
- * Universal Date Filter Helper for Supabase PostgreSQL Queries
+ * Universal Date Filter Helper for Supabase / PostgreSQL Queries
+ * Ensures exact boundary filtering for days:
+ * Start of day: 00:00:01
+ * End of day: 23:59:59.999
  */
 
 export function buildDateConditions(
@@ -15,46 +18,60 @@ export function buildDateConditions(
   let params: any[] = [];
   let idx = startParamIndex;
 
-  // Custom Start & End Date
+  // Custom Start & End Date (or standard range from useDateStore)
   if (startDate && endDate) {
-    conditions.push(`${dateColumn} >= $${idx}::timestamp AND ${dateColumn} <= ($${idx + 1}::date + TIME '23:59:59')`);
-    params.push(startDate, endDate);
+    conditions.push(
+      `${dateColumn} >= ($${idx} || ' 00:00:01')::timestamptz AND ${dateColumn} <= ($${idx + 1} || ' 23:59:59.999')::timestamptz`
+    );
+    params.push(startDate.trim().slice(0, 10), endDate.trim().slice(0, 10));
     idx += 2;
     return { whereClause: conditions.join(' AND '), params, nextIndex: idx };
   } else if (startDate) {
-    conditions.push(`${dateColumn} >= $${idx}::timestamp`);
-    params.push(startDate);
+    conditions.push(`${dateColumn} >= ($${idx} || ' 00:00:01')::timestamptz`);
+    params.push(startDate.trim().slice(0, 10));
     idx++;
     return { whereClause: conditions.join(' AND '), params, nextIndex: idx };
   } else if (endDate) {
-    conditions.push(`${dateColumn} <= ($${idx}::date + TIME '23:59:59')`);
-    params.push(endDate);
+    conditions.push(`${dateColumn} <= ($${idx} || ' 23:59:59.999')::timestamptz`);
+    params.push(endDate.trim().slice(0, 10));
     idx++;
     return { whereClause: conditions.join(' AND '), params, nextIndex: idx };
   }
 
-  // Presets
+  // Presets Fallback when exact dates are not passed
   if (period) {
-    if (period === '2026-05' || period === '2026-06' || period === '2026-07' || period === '2026-08') {
+    if (period === 'today' || period === 'bugun') {
+      conditions.push(
+        `${dateColumn} >= (CURRENT_DATE || ' 00:00:01')::timestamptz AND ${dateColumn} <= (CURRENT_DATE || ' 23:59:59.999')::timestamptz`
+      );
+    } else if (period === 'yesterday' || period === 'dun') {
+      conditions.push(
+        `${dateColumn} >= ((CURRENT_DATE - INTERVAL '1 day')::date || ' 00:00:01')::timestamptz AND ${dateColumn} <= ((CURRENT_DATE - INTERVAL '1 day')::date || ' 23:59:59.999')::timestamptz`
+      );
+    } else if (period === 'last_7_days' || period === 'thisWeek' || period === 'buHafta') {
+      conditions.push(
+        `${dateColumn} >= ((CURRENT_DATE - INTERVAL '6 days')::date || ' 00:00:01')::timestamptz AND ${dateColumn} <= (CURRENT_DATE || ' 23:59:59.999')::timestamptz`
+      );
+    } else if (period === 'last_15_days') {
+      conditions.push(
+        `${dateColumn} >= ((CURRENT_DATE - INTERVAL '14 days')::date || ' 00:00:01')::timestamptz AND ${dateColumn} <= (CURRENT_DATE || ' 23:59:59.999')::timestamptz`
+      );
+    } else if (period === 'last_30_days' || period === 'last30') {
+      conditions.push(
+        `${dateColumn} >= ((CURRENT_DATE - INTERVAL '29 days')::date || ' 00:00:01')::timestamptz AND ${dateColumn} <= (CURRENT_DATE || ' 23:59:59.999')::timestamptz`
+      );
+    } else if (period === 'this_month' || period === 'thisMonth' || period === 'buAy') {
+      conditions.push(
+        `${dateColumn} >= (DATE_TRUNC('month', CURRENT_DATE)::date || ' 00:00:01')::timestamptz AND ${dateColumn} <= ((DATE_TRUNC('month', CURRENT_DATE) + INTERVAL '1 month - 1 day')::date || ' 23:59:59.999')::timestamptz`
+      );
+    } else if (period === 'last_month' || period === 'lastMonth' || period === 'gecenAy') {
+      conditions.push(
+        `${dateColumn} >= ((DATE_TRUNC('month', CURRENT_DATE) - INTERVAL '1 month')::date || ' 00:00:01')::timestamptz AND ${dateColumn} <= ((DATE_TRUNC('month', CURRENT_DATE) - INTERVAL '1 day')::date || ' 23:59:59.999')::timestamptz`
+      );
+    } else if (period.startsWith('2026-') || period.startsWith('2025-')) {
       conditions.push(`TO_CHAR(${dateColumn}, 'YYYY-MM') = $${idx}`);
       params.push(period);
       idx++;
-    } else if (period === 'today' || period === 'bugun') {
-      conditions.push(`DATE(${dateColumn}) = '2026-08-26'`);
-    } else if (period === 'yesterday' || period === 'dun') {
-      conditions.push(`DATE(${dateColumn}) = '2026-08-25'`);
-    } else if (period === 'thisWeek' || period === 'buHafta') {
-      conditions.push(`${dateColumn} >= '2026-08-19 00:00:00' AND ${dateColumn} <= '2026-08-26 23:59:59'`);
-    } else if (period === 'thisMonth' || period === 'buAy') {
-      conditions.push(`TO_CHAR(${dateColumn}, 'YYYY-MM') = '2026-08'`);
-    } else if (period === 'lastMonth' || period === 'gecenAy') {
-      conditions.push(`TO_CHAR(${dateColumn}, 'YYYY-MM') = '2026-07'`);
-    } else if (period === 'last30') {
-      conditions.push(`${dateColumn} >= '2026-07-27 00:00:00' AND ${dateColumn} <= '2026-08-26 23:59:59'`);
-    } else if (period === 'last60') {
-      conditions.push(`${dateColumn} >= '2026-06-27 00:00:00' AND ${dateColumn} <= '2026-08-26 23:59:59'`);
-    } else if (period === 'last90') {
-      conditions.push(`${dateColumn} >= '2026-05-27 00:00:00' AND ${dateColumn} <= '2026-08-26 23:59:59'`);
     }
   }
 
