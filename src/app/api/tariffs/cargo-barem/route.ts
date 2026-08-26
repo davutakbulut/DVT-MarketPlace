@@ -25,9 +25,20 @@ export async function GET() {
       ORDER BY carrier_name ASC, min_desi ASC
     `);
 
+    const desiMatrices = await query(`
+      SELECT 
+        carrier_name as "carrierName",
+        desi,
+        price_ex_vat as "priceExVat"
+      FROM carrier_desi_matrices
+      WHERE marketplace = 'trendyol' AND is_active = true
+      ORDER BY carrier_name ASC, desi ASC
+    `);
+
     return NextResponse.json({
       tiers,
-      desiRates
+      desiRates,
+      desiMatrices
     });
   } catch (error: any) {
     console.error('Cargo barem fetch error:', error);

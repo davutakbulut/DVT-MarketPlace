@@ -13,7 +13,7 @@ import {
   AlertCircle, Undo2, Receipt, Box, Settings, Coins, Edit3, ArrowUpRight,
   ArrowUpDown, ArrowUp, ArrowDown
 } from "lucide-react";
-import { calculateTrendyolShipping, BaremTier, DesiRate } from "@/lib/shippingCalculator";
+import { calculateTrendyolShipping, BaremTier, DesiRate, DesiMatrixItem } from "@/lib/shippingCalculator";
 import { getMinimumOrderQuantity, TRENDYOL_MOQ_TIERS } from "@/lib/minimumOrderQuantity";
 import { useTenantStore } from "@/stores/useTenantStore";
 
@@ -24,6 +24,7 @@ export default function ProductPricingPage() {
   const [dbProducts, setDbProducts] = useState<any[]>([]);
   const [baremTiers, setBaremTiers] = useState<BaremTier[]>([]);
   const [desiRates, setDesiRates] = useState<DesiRate[]>([]);
+  const [desiMatrices, setDesiMatrices] = useState<DesiMatrixItem[]>([]);
   const [selectedProductId, setSelectedProductId] = useState<string>("");
   const [selectedProductObj, setSelectedProductObj] = useState<any>(null);
   const [loading, setLoading] = useState(true);
@@ -119,8 +120,10 @@ export default function ProductPricingPage() {
       const bData = await bRes.json();
       const tiers = bData.tiers || (Array.isArray(bData) ? bData : []);
       const dRates = bData.desiRates || [];
+      const dMatrices = bData.desiMatrices || [];
       setBaremTiers(tiers);
       setDesiRates(dRates);
+      setDesiMatrices(dMatrices);
 
       if (pList.length > 0 && !selectedProductId) {
         handleSelectProduct(pList[0]);
@@ -167,8 +170,8 @@ export default function ProductPricingPage() {
     const basketGross = unitPrice * q;
     const basketCost = costPrice * q;
 
-    // Shipping calculation for this basket amount
-    const shippingObj = calculateTrendyolShipping(basketGross, desi, carrier, leadTimeDays, baremTiers, desiRates);
+    // Shipping calculation for this basket amount (Barem under 350 TL, Desi Matrix above 350 TL)
+    const shippingObj = calculateTrendyolShipping(basketGross, desi, carrier, leadTimeDays, baremTiers, desiRates, desiMatrices);
     const ship = shippingObj.appliedPriceIncVat;
 
     const comm = basketGross * (commissionRate / 100);
@@ -1436,8 +1439,8 @@ export default function ProductPricingPage() {
                 </p>
               </div>
 
-              {/* İKİ BAREM KATEGORİSİ TABLOLARI (GÖRSEL 1 & GÖRSEL 2) */}
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+              {/* ÜÇ BAREM / DESİ KATEGORİSİ TABLOLARI */}
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                 
                 {/* 1. Barem: 0 TL - 199,99 TL */}
                 <div className={`p-3.5 rounded-2xl border ${
@@ -1446,7 +1449,7 @@ export default function ProductPricingPage() {
                   <div className="flex items-center justify-between pb-2 border-b border-border mb-2">
                     <h5 className="font-black text-dark text-xs flex items-center gap-1.5">
                       <span className="w-2 h-2 rounded-full bg-emerald-500"></span>
-                      <span>0 TL - 199,99 TL Arası Gönderiler</span>
+                      <span>0 TL - 199,99 TL Arası</span>
                     </h5>
                     {currentSim.basketGross < 200 && (
                       <Badge className="text-[10px] bg-primary text-white">Sepetiniz Bu Baremde</Badge>
@@ -1458,45 +1461,45 @@ export default function ProductPricingPage() {
                       <thead>
                         <tr className="text-gray-500 border-b border-border">
                           <th className="pb-1.5 font-bold">Kargo Firması</th>
-                          <th className="pb-1.5 font-bold text-emerald-700">1 Gün Termin (Hızlı)</th>
-                          <th className="pb-1.5 font-bold text-amber-800">Standart (+1 Gün)</th>
+                          <th className="pb-1.5 font-bold text-emerald-700">1 Gün (Hızlı)</th>
+                          <th className="pb-1.5 font-bold text-amber-800">Standart</th>
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-border/60">
                         <tr className={carrier === 'TEX' ? 'bg-primary-tint-100/50 font-bold' : ''}>
-                          <td className="py-1">TEX (Trendyol Express)</td>
-                          <td className="py-1 font-black text-emerald-700">38.74 TL + KDV (₺46.49)</td>
-                          <td className="py-1 text-gray-700">73.33 TL + KDV (₺88.00)</td>
+                          <td className="py-1">TEX</td>
+                          <td className="py-1 font-black text-emerald-700">₺46.49</td>
+                          <td className="py-1 text-gray-700">₺88.00</td>
                         </tr>
                         <tr className={carrier === 'PTT' ? 'bg-primary-tint-100/50 font-bold' : ''}>
-                          <td className="py-1">PTT Kargo</td>
-                          <td className="py-1 font-black text-emerald-700">38.74 TL + KDV (₺46.49)</td>
-                          <td className="py-1 text-gray-700">73.33 TL + KDV (₺88.00)</td>
+                          <td className="py-1">PTT</td>
+                          <td className="py-1 font-black text-emerald-700">₺46.49</td>
+                          <td className="py-1 text-gray-700">₺88.00</td>
                         </tr>
                         <tr className={carrier === 'ARAS' ? 'bg-primary-tint-100/50 font-bold' : ''}>
-                          <td className="py-1">Aras Kargo</td>
-                          <td className="py-1 font-black text-emerald-700">48.33 TL + KDV (₺58.00)</td>
-                          <td className="py-1 text-gray-700">80.83 TL + KDV (₺97.00)</td>
+                          <td className="py-1">Aras</td>
+                          <td className="py-1 font-black text-emerald-700">₺58.00</td>
+                          <td className="py-1 text-gray-700">₺97.00</td>
                         </tr>
                         <tr className={carrier === 'SURAT' ? 'bg-primary-tint-100/50 font-bold' : ''}>
-                          <td className="py-1">Sürat Kargo</td>
-                          <td className="py-1 font-black text-emerald-700">54.58 TL + KDV (₺65.50)</td>
-                          <td className="py-1 text-gray-700">87.08 TL + KDV (₺104.50)</td>
+                          <td className="py-1">Sürat</td>
+                          <td className="py-1 font-black text-emerald-700">₺65.50</td>
+                          <td className="py-1 text-gray-700">₺104.50</td>
                         </tr>
                         <tr className={carrier === 'KOLAY_GELSIN' ? 'bg-primary-tint-100/50 font-bold' : ''}>
                           <td className="py-1">Kolay Gelsin</td>
-                          <td className="py-1 font-black text-emerald-700">55.83 TL + KDV (₺67.00)</td>
-                          <td className="py-1 text-gray-700">88.33 TL + KDV (₺106.00)</td>
+                          <td className="py-1 font-black text-emerald-700">₺67.00</td>
+                          <td className="py-1 text-gray-700">₺106.00</td>
                         </tr>
                         <tr className={carrier === 'DHL' ? 'bg-primary-tint-100/50 font-bold' : ''}>
-                          <td className="py-1">DHL eCommerce</td>
-                          <td className="py-1 font-black text-emerald-700">57.08 TL + KDV (₺68.50)</td>
-                          <td className="py-1 text-gray-700">89.58 TL + KDV (₺107.50)</td>
+                          <td className="py-1">DHL</td>
+                          <td className="py-1 font-black text-emerald-700">₺68.50</td>
+                          <td className="py-1 text-gray-700">₺107.50</td>
                         </tr>
                         <tr className={carrier === 'YK' ? 'bg-primary-tint-100/50 font-bold' : ''}>
-                          <td className="py-1">Yurtiçi Kargo (YK)</td>
-                          <td className="py-1 font-black text-emerald-700">83.33 TL + KDV (₺100.00)</td>
-                          <td className="py-1 text-gray-700">114.16 TL + KDV (₺137.00)</td>
+                          <td className="py-1">Yurtiçi (YK)</td>
+                          <td className="py-1 font-black text-emerald-700">₺100.00</td>
+                          <td className="py-1 text-gray-700">₺137.00</td>
                         </tr>
                       </tbody>
                     </table>
@@ -1510,7 +1513,7 @@ export default function ProductPricingPage() {
                   <div className="flex items-center justify-between pb-2 border-b border-border mb-2">
                     <h5 className="font-black text-dark text-xs flex items-center gap-1.5">
                       <span className="w-2 h-2 rounded-full bg-blue-500"></span>
-                      <span>200 TL - 349,99 TL Arası Gönderiler</span>
+                      <span>200 TL - 349,99 TL Arası</span>
                     </h5>
                     {currentSim.basketGross >= 200 && currentSim.basketGross < 350 && (
                       <Badge className="text-[10px] bg-blue-600 text-white">Sepetiniz Bu Baremde</Badge>
@@ -1522,48 +1525,81 @@ export default function ProductPricingPage() {
                       <thead>
                         <tr className="text-gray-500 border-b border-border">
                           <th className="pb-1.5 font-bold">Kargo Firması</th>
-                          <th className="pb-1.5 font-bold text-emerald-700">1 Gün Termin (Hızlı)</th>
-                          <th className="pb-1.5 font-bold text-amber-800">Standart (+1 Gün)</th>
+                          <th className="pb-1.5 font-bold text-emerald-700">1 Gün (Hızlı)</th>
+                          <th className="pb-1.5 font-bold text-amber-800">Standart</th>
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-border/60">
                         <tr className={carrier === 'TEX' ? 'bg-primary-tint-100/50 font-bold' : ''}>
-                          <td className="py-1">TEX (Trendyol Express)</td>
-                          <td className="py-1 font-black text-emerald-700">70.41 TL + KDV (₺84.49)</td>
-                          <td className="py-1 text-gray-700">78.74 TL + KDV (₺94.49)</td>
+                          <td className="py-1">TEX</td>
+                          <td className="py-1 font-black text-emerald-700">₺84.49</td>
+                          <td className="py-1 text-gray-700">₺94.49</td>
                         </tr>
                         <tr className={carrier === 'PTT' ? 'bg-primary-tint-100/50 font-bold' : ''}>
-                          <td className="py-1">PTT Kargo</td>
-                          <td className="py-1 font-black text-emerald-700">70.41 TL + KDV (₺84.49)</td>
-                          <td className="py-1 text-gray-700">78.74 TL + KDV (₺94.49)</td>
+                          <td className="py-1">PTT</td>
+                          <td className="py-1 font-black text-emerald-700">₺84.49</td>
+                          <td className="py-1 text-gray-700">₺94.49</td>
                         </tr>
                         <tr className={carrier === 'ARAS' ? 'bg-primary-tint-100/50 font-bold' : ''}>
-                          <td className="py-1">Aras Kargo</td>
-                          <td className="py-1 font-black text-emerald-700">79.16 TL + KDV (₺94.99)</td>
-                          <td className="py-1 text-gray-700">86.24 TL + KDV (₺103.49)</td>
+                          <td className="py-1">Aras</td>
+                          <td className="py-1 font-black text-emerald-700">₺94.99</td>
+                          <td className="py-1 text-gray-700">₺103.49</td>
                         </tr>
                         <tr className={carrier === 'SURAT' ? 'bg-primary-tint-100/50 font-bold' : ''}>
-                          <td className="py-1">Sürat Kargo</td>
-                          <td className="py-1 font-black text-emerald-700">85.41 TL + KDV (₺102.49)</td>
-                          <td className="py-1 text-gray-700">92.49 TL + KDV (₺110.99)</td>
+                          <td className="py-1">Sürat</td>
+                          <td className="py-1 font-black text-emerald-700">₺102.49</td>
+                          <td className="py-1 text-gray-700">₺110.99</td>
                         </tr>
                         <tr className={carrier === 'KOLAY_GELSIN' ? 'bg-primary-tint-100/50 font-bold' : ''}>
                           <td className="py-1">Kolay Gelsin</td>
-                          <td className="py-1 font-black text-emerald-700">86.66 TL + KDV (₺103.99)</td>
-                          <td className="py-1 text-gray-700">93.74 TL + KDV (₺112.49)</td>
+                          <td className="py-1 font-black text-emerald-700">₺103.99</td>
+                          <td className="py-1 text-gray-700">₺112.49</td>
                         </tr>
                         <tr className={carrier === 'DHL' ? 'bg-primary-tint-100/50 font-bold' : ''}>
-                          <td className="py-1">DHL eCommerce</td>
-                          <td className="py-1 font-black text-emerald-700">87.91 TL + KDV (₺105.49)</td>
-                          <td className="py-1 text-gray-700">94.99 TL + KDV (₺113.99)</td>
+                          <td className="py-1">DHL</td>
+                          <td className="py-1 font-black text-emerald-700">₺105.49</td>
+                          <td className="py-1 text-gray-700">₺113.99</td>
                         </tr>
                         <tr className={carrier === 'YK' ? 'bg-primary-tint-100/50 font-bold' : ''}>
-                          <td className="py-1">Yurtiçi Kargo (YK)</td>
-                          <td className="py-1 font-black text-emerald-700">113.33 TL + KDV (₺136.00)</td>
-                          <td className="py-1 text-gray-700">119.16 TL + KDV (₺143.00)</td>
+                          <td className="py-1">Yurtiçi (YK)</td>
+                          <td className="py-1 font-black text-emerald-700">₺136.00</td>
+                          <td className="py-1 text-gray-700">₺143.00</td>
                         </tr>
                       </tbody>
                     </table>
+                  </div>
+                </div>
+
+                {/* 3. Barem Dışı: 350 TL ve Üzeri (Desi Matrisi) */}
+                <div className={`p-3.5 rounded-2xl border ${
+                  currentSim.basketGross >= 350 ? 'border-primary ring-2 ring-primary/20 bg-primary-tint-50/20' : 'border-border bg-canvas'
+                }`}>
+                  <div className="flex items-center justify-between pb-2 border-b border-border mb-2">
+                    <h5 className="font-black text-dark text-xs flex items-center gap-1.5">
+                      <span className="w-2 h-2 rounded-full bg-purple-500"></span>
+                      <span>350 TL ve Üzeri: Desi Matrisi Tarifesi</span>
+                    </h5>
+                    {currentSim.basketGross >= 350 && (
+                      <Badge className="text-[10px] bg-purple-600 text-white">Barem Dışı (Desi Tarifesi)</Badge>
+                    )}
+                  </div>
+
+                  <p className="text-[11px] text-gray-600 mb-2 leading-relaxed">
+                    Sepet tutarı 350 TL ve üzerinde olduğunda <strong>Barem Desteği sonlanır</strong> ve kargo firmasının resmi <strong>Desi Matrisi</strong> devreye girer.
+                  </p>
+
+                  <div className="p-3 rounded-xl bg-white border border-border space-y-2">
+                    <div className="flex items-center justify-between text-xs">
+                      <span className="text-gray-500 font-bold">Firma / Desi:</span>
+                      <span className="font-black text-dark">{carrier} • {desi} Desi</span>
+                    </div>
+                    <div className="flex items-center justify-between text-xs">
+                      <span className="text-gray-500 font-bold">Hesaplanan Kargo:</span>
+                      <span className="font-black text-primary text-sm">₺{currentSim.ship.toFixed(2)}</span>
+                    </div>
+                    <div className="pt-1.5 border-t border-border text-[10px] text-gray-500">
+                      {currentSim.shippingObj.explanation}
+                    </div>
                   </div>
                 </div>
 

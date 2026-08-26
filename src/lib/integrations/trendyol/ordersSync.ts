@@ -81,6 +81,12 @@ export async function syncTrendyolOrders(
      WHERE is_active = true`
   ).catch(() => [] as DesiRate[]);
 
+  const desiMatrixRows = await query<any>(
+    `SELECT carrier_name as "carrierName", desi, price_ex_vat as "priceExVat"
+     FROM carrier_desi_matrices
+     WHERE is_active = true`
+  ).catch(() => []);
+
   const client = new TrendyolClient({
     supplierId,
     apiKey,
@@ -324,7 +330,8 @@ export async function syncTrendyolOrders(
               carrierRaw,
               leadTimeDays,
               baremRows,
-              desiRows
+              desiRows,
+              desiMatrixRows
             );
 
             const totalShippingCost = status === 'Cancelled' ? 0 : shippingResult.appliedPriceIncVat;
