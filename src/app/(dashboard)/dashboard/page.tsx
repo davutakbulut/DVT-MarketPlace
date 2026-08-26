@@ -81,40 +81,34 @@ export default function DashboardPage() {
 
   return (
     <div className="space-y-4 sm:space-y-6 max-w-7xl">
-      {/* Top Banner with DateRangePicker & Store Filter */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-white p-4 sm:p-6 rounded-3xl border border-border shadow-xs">
-        <div>
-          <div className="flex items-center gap-2">
+      {/* Top Banner with Clean Responsive Layout */}
+      <div className="flex items-start sm:items-center justify-between gap-3 bg-white p-4 sm:p-6 rounded-3xl border border-border shadow-xs">
+        <div className="space-y-1">
+          <div className="flex items-center gap-2 flex-wrap">
             <h3 className="text-base sm:text-lg font-black text-dark">Trendyol Finansal Kontrol Paneli</h3>
-            <Badge variant="excellent">Canlı Analitik</Badge>
+            <Badge variant="excellent" className="text-[10px] sm:text-xs">Canlı Analitik</Badge>
           </div>
-          <p className="text-xs text-muted-foreground mt-0.5">
+          <p className="text-xs text-muted-foreground">
             2.366 sipariş, kargo baremi, komisyon kesintileri ve interaktif kârlılık grafikleri
           </p>
         </div>
 
-        {/* Filters */}
-        <div className="flex items-center gap-2 flex-wrap sm:flex-nowrap">
-          {/* Global Active Period Indicator */}
-          <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-canvas border border-border text-xs font-bold text-dark">
+        {/* Action Group: Global Period Indicator on Large Screens & Unified Refresh Button */}
+        <div className="flex items-center gap-2 shrink-0">
+          <div className="hidden lg:flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-canvas border border-border text-xs font-bold text-dark">
             <Calendar className="w-3.5 h-3.5 text-primary" />
             <span>Dönem: {label}</span>
           </div>
 
-          {/* Store Selector */}
-          <select
-            value={selectedStore}
-            onChange={(e) => setSelectedStore(e.target.value)}
-            className="px-3 py-1.5 rounded-xl border border-border text-xs font-bold text-dark bg-white focus:ring-2 focus:ring-primary shadow-xs cursor-pointer"
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={fetchDashboard}
+            className="h-8 sm:h-9 px-2.5 sm:px-3 rounded-2xl text-xs gap-1.5 font-bold bg-white hover:bg-canvas text-dark border-border shadow-xs cursor-pointer shrink-0"
+            title="Verileri Yenile"
           >
-            <option value="all">🏪 Tüm Mağazalar</option>
-            {stores.map((s: any) => (
-              <option key={s.id} value={s.id}>{s.storeName}</option>
-            ))}
-          </select>
-
-          <Button size="sm" variant="outline" onClick={fetchDashboard} className="h-8 sm:h-9 text-xs gap-1.5 font-bold">
-            <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />
+            <RefreshCw className={`w-3.5 h-3.5 text-primary ${loading ? 'animate-spin' : ''}`} />
+            <span className="hidden sm:inline">Yenile</span>
           </Button>
         </div>
       </div>
