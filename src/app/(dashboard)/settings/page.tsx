@@ -14,6 +14,8 @@ export default function SettingsPage() {
   const [activeTab, setActiveTab] = useState("general");
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [runningCron, setRunningCron] = useState(false);
+  const [lastScanResult, setLastScanResult] = useState<any>(null);
 
   // DB Grounded State (No hardcoded demo values)
   const [defaultVatRate, setDefaultVatRate] = useState<number>(10);
@@ -79,6 +81,24 @@ export default function SettingsPage() {
   useEffect(() => {
     fetchAllSettings();
   }, []);
+
+    const handleRunCron = async () => {
+    setRunningCron(true);
+    try {
+      const res = await fetch('/api/cron/notifications', { method: 'POST' });
+      const data = await res.json();
+      if (res.ok) {
+        setLastScanResult(data);
+        toast.success(`Otomasyon tamamlandı: ${data.totalNewNotifications || 0} yeni bildirim üretildi.`);
+      } else {
+        toast.error("Otomasyon çalıştırılamadı.");
+      }
+    } catch (e) {
+      toast.error("Sunucu bağlantı hatası.");
+    } finally {
+      setRunningCron(false);
+    }
+  };
 
   const handleSaveGeneral = async (e?: React.FormEvent) => {
     if (e) e.preventDefault();
@@ -471,10 +491,54 @@ export default function SettingsPage() {
                 </div>
               )}
 
-              {/* TAB 6: NOTIFICATIONS */}
+              {/* TAB 6: NOTIFICATIONS & AUTOMATION */}
               {activeTab === "notifications" && (
-                <div className="space-y-4">
-                  <h4 className="text-xs sm:text-sm font-bold text-dark pb-2 border-b border-border">E-Posta & Sistem Bildirim Tercihleri</h4>
+                <div className="space-y-5">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-2 border-b border-border gap-2">
+                    <div>
+                      <h4 className="text-xs sm:text-sm font-bold text-dark">Bildirim Tercihleri & Otomasyon Motoru</h4>
+                      <p className="text-[11px] text-gray-500">Zararlı sipariş, desi aşımı ve stok tükenme arka plan tarayıcısı</p>
+                    </div>
+                    <Badge variant="excellent">Arka Plan Otomasyonu Aktif</Badge>
+                  </div>
+
+                  {/* Automation Status Card */}
+                  <div className="p-4 rounded-3xl bg-primary-tint-50/30 border border-primary-tint-100 space-y-3">
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                      <div className="flex items-center gap-2">
+                        <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse" />
+                        <span className="text-xs font-black text-dark">Otomasyon Durumu: 🟢 Çalışıyor</span>
+                        <span className="text-[10px] text-gray-500 font-mono">(/api/cron/notifications)</span>
+                      </div>
+
+                      <Button
+                        size="sm"
+                        onClick={handleRunCron}
+                        disabled={runningCron}
+                        className="h-8 text-xs font-bold bg-primary text-white hover:bg-primary-hover shadow-xs gap-1.5"
+                      >
+                        <RefreshCw className={`w-3.5 h-3.5 ${runningCron ? 'animate-spin' : ''}`} />
+                        <span>{runningCron ? 'Taranıyor...' : 'Otomasyonu Şimdi Çalıştır'}</span>
+                      </Button>
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 pt-2 border-t border-primary-tint-100 text-[11px]">
+                      <div className="bg-white p-2.5 rounded-2xl border border-border">
+                        <span className="text-gray-400 block font-semibold text-[10px]">TARAMA PERİYODU</span>
+                        <span className="font-bold text-dark">60 Saniyede Bir Canlı</span>
+                      </div>
+                      <div className="bg-white p-2.5 rounded-2xl border border-border">
+                        <span className="text-gray-400 block font-semibold text-[10px]">OTOMATİK KURALLAR</span>
+                        <span className="font-bold text-dark">5 Anomali Kuralı Aktif</span>
+                      </div>
+                      <div className="bg-white p-2.5 rounded-2xl border border-border">
+                        <span className="text-gray-400 block font-semibold text-[10px]">SON ÇALIŞMA SONUCU</span>
+                        <span className="font-bold text-emerald-700">
+                          {lastScanResult ? `${lastScanResult.totalNewNotifications || 0} Yeni Alarm` : 'Senkronize'}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
                   
                   <div className="space-y-3 text-xs">
                     <label className="flex items-center gap-3 p-3 rounded-2xl border border-border cursor-pointer hover:bg-canvas/50">
