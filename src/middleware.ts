@@ -2,10 +2,17 @@ import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 
 export function middleware(request: NextRequest) {
-  const { pathname } = request.nextUrl;
+  const { pathname, search } = request.nextUrl;
   const session = request.cookies.get('dvt_session');
 
-  // Allow public routes
+  // 1. If user is already logged in and attempts to access auth pages (/login, /register, /forgot-password)
+  if (session && (pathname === '/login' || pathname === '/register' || pathname === '/forgot-password')) {
+    const returnUrl = request.nextUrl.searchParams.get('returnUrl') || '/dashboard';
+    const targetUrl = new URL(returnUrl, request.url);
+    return NextResponse.redirect(targetUrl);
+  }
+
+  // 2. Allow public static assets and API routes
   if (
     pathname === '/' ||
     pathname === '/login' ||
@@ -18,10 +25,11 @@ export function middleware(request: NextRequest) {
     return NextResponse.next();
   }
 
-  // If user is not logged in and tries to access dashboard routes, redirect to login
+  // 3. If user is not logged in and tries to access dashboard or protected routes, redirect to login with returnUrl
   if (!session) {
     const url = request.nextUrl.clone();
     url.pathname = '/login';
+    url.searchParams.set('returnUrl', pathname + search);
     return NextResponse.redirect(url);
   }
 

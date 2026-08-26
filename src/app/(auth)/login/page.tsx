@@ -1,27 +1,40 @@
 "use client";
-import React, { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
+import React, { useState, useEffect, Suspense } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
 import { ArrowLeft, Lock, Mail, ArrowRight } from 'lucide-react';
 import Link from 'next/link';
 import { BrandLogo } from '@/components/common/BrandLogo';
 
-export default function LoginPage() {
+function LoginContent() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const returnUrl = searchParams?.get('returnUrl') || '/dashboard';
+
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [rememberMe, setRememberMe] = useState(false);
   const [loading, setLoading] = useState(false);
 
-  // Restore remembered email on mount
+  // Restore remembered email on mount & check session
   useEffect(() => {
     const savedEmail = localStorage.getItem('dvt_remember_email');
     if (savedEmail) {
       setEmail(savedEmail);
       setRememberMe(true);
     }
-  }, []);
+
+    // Client-side session check: if logged in, redirect immediately to intended page
+    fetch('/api/auth/session')
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data) => {
+        if (data?.user) {
+          router.replace(returnUrl);
+        }
+      })
+      .catch(() => {});
+  }, [returnUrl, router]);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -49,7 +62,7 @@ export default function LoginPage() {
       }
 
       toast.success(`Hoş geldiniz, ${data.user.name}!`);
-      router.push('/dashboard');
+      router.push(returnUrl);
       router.refresh();
     } catch (err) {
       toast.error('Bağlantı hatası oluştu.');
@@ -81,6 +94,13 @@ export default function LoginPage() {
             Akıllı Pazaryeri Finansal Yönetim & Kârlılık Zekası
           </p>
         </div>
+
+        {/* Intended destination indicator */}
+        {returnUrl !== '/dashboard' && (
+          <div className="bg-primary/10 border border-primary/20 p-2.5 rounded-xl text-center text-xs font-bold text-primary">
+            🔒 Giriş yaptıktan sonra doğrudan gitmek istediğiniz sayfaya yönlendirileceksiniz.
+          </div>
+        )}
 
         {/* Login Form */}
         <form onSubmit={handleLogin} className="space-y-4">
@@ -134,7 +154,7 @@ export default function LoginPage() {
             </Link>
           </div>
 
-          <Button type="submit" disabled={loading} className="w-full h-11 rounded-2xl text-xs font-bold gap-2 bg-primary hover:bg-primary-hover text-white shadow-xs">
+          <Button type="submit" disabled={loading} className="w-full h-11 rounded-2xl text-xs font-bold gap-2 bg-primary hover:bg-primary-hover text-white shadow-xs cursor-pointer">
             <span>{loading ? 'Giriş Yapılıyor...' : 'Giriş Yap'}</span>
             <ArrowRight className="w-4 h-4" />
           </Button>
@@ -158,5 +178,13 @@ export default function LoginPage() {
         </div>
       </div>
     </div>
+  );
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense fallback={<div className="min-h-screen bg-canvas flex items-center justify-center text-xs text-gray-500 font-bold">Yükleniyor...</div>}>
+      <LoginContent />
+    </Suspense>
   );
 }
