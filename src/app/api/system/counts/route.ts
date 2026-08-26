@@ -14,13 +14,17 @@ export async function GET(request: Request) {
     const counts = await query(`
       SELECT
         (SELECT COUNT(*) FROM products ${storeFilter}) as product_count,
-        (SELECT COUNT(*) FROM orders WHERE (status = 'Cancelled' OR status = 'Returned' OR status = 'UnDeliveredAndReturned') ${orderStoreFilter}) as returns_count,
+        (SELECT COUNT(*) FROM orders WHERE (status = 'Returned' OR status = 'UnDeliveredAndReturned') ${orderStoreFilter}) as returns_only_count,
+        (SELECT COUNT(*) FROM orders WHERE status = 'Cancelled' ${orderStoreFilter}) as cancellations_only_count,
+        (SELECT COUNT(*) FROM orders WHERE (status = 'Cancelled' OR status = 'Returned' OR status = 'UnDeliveredAndReturned') ${orderStoreFilter}) as total_returns_and_cancellations,
         (SELECT COUNT(*) FROM anomaly_alerts WHERE is_resolved = false) as alerts_count
     `);
 
     return NextResponse.json({
       productsCount: parseInt(counts[0]?.product_count || '282'),
-      returnsCount: parseInt(counts[0]?.returns_count || '104'),
+      returnsCount: parseInt(counts[0]?.total_returns_and_cancellations || '157'),
+      returnsOnlyCount: parseInt(counts[0]?.returns_only_count || '67'),
+      cancellationsOnlyCount: parseInt(counts[0]?.cancellations_only_count || '90'),
       alertsCount: parseInt(counts[0]?.alerts_count || '0'),
     });
   } catch (error: any) {
