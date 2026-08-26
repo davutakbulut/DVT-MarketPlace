@@ -3,7 +3,7 @@ import { query } from '@/lib/db';
 
 export async function GET() {
   try {
-    const rows = await query(`
+    const tiers = await query(`
       SELECT 
         id, carrier_name as "carrierName", tier_name as "tierName",
         min_amount as "minAmount", max_amount as "maxAmount",
@@ -15,7 +15,20 @@ export async function GET() {
       ORDER BY min_amount ASC, carrier_name ASC
     `);
 
-    return NextResponse.json(rows);
+    const desiRates = await query(`
+      SELECT 
+        carrier_name as "carrierName",
+        min_desi as "minDesi",
+        max_desi as "maxDesi",
+        base_price as "basePrice"
+      FROM carrier_desi_rates
+      ORDER BY carrier_name ASC, min_desi ASC
+    `);
+
+    return NextResponse.json({
+      tiers,
+      desiRates
+    });
   } catch (error: any) {
     console.error('Cargo barem fetch error:', error);
     return NextResponse.json({ error: 'Barem tarifesi veritabanından çekilemedi.' }, { status: 500 });

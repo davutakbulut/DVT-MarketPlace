@@ -8,15 +8,18 @@ import {
   Calculator, TrendingUp, DollarSign, Truck, ShieldCheck, 
   HelpCircle, RefreshCw, Send, CheckCircle2, AlertTriangle, 
   Clock, ArrowRight, Zap, Target, Package, Award, Sparkles,
-  Layers, Check, ChevronRight, Eye
+  Layers, Check, ChevronRight, Eye, Info
 } from "lucide-react";
+import { calculateTrendyolShipping, BaremTier, DesiRate } from "@/lib/shippingCalculator";
 
 export default function ProductPricingPage() {
-  // DB Products
+  // DB Products & Tariffs
   const [dbProducts, setDbProducts] = useState<any[]>([]);
+  const [baremTiers, setBaremTiers] = useState<BaremTier[]>([]);
+  const [desiRates, setDesiRates] = useState<DesiRate[]>([]);
   const [selectedProductId, setSelectedProductId] = useState<string>("");
   const [selectedProductObj, setSelectedProductObj] = useState<any>(null);
-  const [loadingProducts, setLoadingProducts] = useState(true);
+  const [loading, setLoading] = useState(true);
 
   // Form State
   const [costPrice, setCostPrice] = useState<number>(50);
@@ -24,32 +27,42 @@ export default function ProductPricingPage() {
   const [commissionRate, setCommissionRate] = useState<number>(16.15);
   const [vatRate, setVatRate] = useState<number>(10);
   const [desi, setDesi] = useState<number>(1);
-  const [carrier, setCarrier] = useState<string>("Trendyol Express");
+  const [carrier, setCarrier] = useState<string>("TEX");
   const [leadTimeDays, setLeadTimeDays] = useState<number>(1); // 1, 2, 3 days
   const [manualSalePrice, setManualSalePrice] = useState<number>(0);
   const [competitorBuyboxPrice, setCompetitorBuyboxPrice] = useState<number>(149.90);
   const [syncingPrice, setSyncingPrice] = useState(false);
 
-  // Fetch real products from DB
-  const fetchProducts = async () => {
-    setLoadingProducts(true);
+  // Fetch real products and live cargo barem tiers from DB
+  const fetchAllData = async () => {
+    setLoading(true);
     try {
-      const res = await fetch('/api/products');
-      const data = await res.json();
-      const list = Array.isArray(data) ? data : (data.products || []);
-      setDbProducts(list);
-      if (list.length > 0 && !selectedProductId) {
-        handleSelectProduct(list[0]);
+      // 1. Products
+      const pRes = await fetch('/api/products');
+      const pData = await pRes.json();
+      const pList = Array.isArray(pData) ? pData : (pData.products || []);
+      setDbProducts(pList);
+
+      // 2. Cargo Barem & Desi Rates from DB
+      const bRes = await fetch('/api/tariffs/cargo-barem');
+      const bData = await bRes.json();
+      const tiers = bData.tiers || (Array.isArray(bData) ? bData : []);
+      const dRates = bData.desiRates || [];
+      setBaremTiers(tiers);
+      setDesiRates(dRates);
+
+      if (pList.length > 0 && !selectedProductId) {
+        handleSelectProduct(pList[0]);
       }
     } catch (e) {
-      toast.error("Ürünler veritabanından çekilemedi.");
+      toast.error("Veriler veritabanından çekilemedi.");
     } finally {
-      setLoadingProducts(false);
+      setLoading(false);
     }
   };
 
   useEffect(() => {
-    fetchProducts();
+    fetchAllData();
   }, []);
 
   const handleSelectProduct = (p: any) => {
@@ -65,54 +78,29 @@ export default function ProductPricingPage() {
     setLeadTimeDays(p.deliveryType === 'fast_delivery' ? 1 : 2);
   };
 
-  // Shipping Desi Rates Matrix (DB Grounded)
-  const carrierRates: Record<string, { base: number; perDesi: number }> = {
-    "Trendyol Express": { base: 38.74, perDesi: 4.20 },
-    "Aras Kargo": { base: 45.00, perDesi: 4.80 },
-    "PTT Kargo": { base: 36.50, perDesi: 3.90 },
-    "Sürat Kargo": { base: 42.00, perDesi: 4.40 },
-    "Yurtiçi Kargo": { base: 49.00, perDesi: 5.10 },
-    "Kolay Gelsin": { base: 46.00, perDesi: 4.50 },
-    "DHL eCommerce": { base: 48.00, perDesi: 4.70 },
-  };
-
-  // 1. CARGO BAREM SUPPORT & LEAD TIME CALCULATION
-  const currentCarrierRate = carrierRates[carrier] || carrierRates["Trendyol Express"];
-  const baseShippingCost = currentCarrierRate.base + (Math.max(1, desi) - 1) * currentCarrierRate.perDesi;
-
-  // Lead Time factor:
-  // 1 Day (Hızlı Teslimat) -> %5 Trendyol Kargo Barem Desteği İndirimi
-  // 2 Day (Standart) -> 1.0x
-  // 3 Day (Gecikmeli) -> +%5 Kargo Ek Maliyeti
-  const leadTimeFactor = leadTimeDays === 1 ? 0.95 : leadTimeDays === 2 ? 1.00 : 1.05;
-  const effectiveShippingCost = baseShippingCost * leadTimeFactor;
-
-  // Fixed Service Fee (₺13.19 KDV Dahil)
+  // Fixed Platform Service Fee (₺13.19 KDV Dahil)
   const serviceFee = 13.19;
   const withholdingTaxRate = 0.01; // %1 Stopaj Kesintisi
-
-  // 2. REVERSE PRICING CALCULATION (Cost + Target Margin -> Selling Price)
   const effectiveMargin = targetMargin / 100;
   const effectiveCommission = commissionRate / 100;
 
-  // Formula: SalePrice * (1 - Commission - Withholding - Margin) = Cost + EffectiveShipping + ServiceFee
+  // 1. CALCULATE ESTIMATED TARGET PRICE (Iterative Reverse Pricing using Grounded Shipping Engine)
+  // First estimate using 1-desi standard
+  let estPrice = (costPrice + 46.50 + serviceFee) / Math.max(0.1, 1 - effectiveCommission - withholdingTaxRate - effectiveMargin);
+  let estShipping = calculateTrendyolShipping(estPrice, desi, carrier, leadTimeDays, baremTiers, desiRates);
+  
+  // Re-calculate with exact shipping from engine
   const denominator = 1 - effectiveCommission - withholdingTaxRate - effectiveMargin;
   const calculatedTargetPrice = denominator > 0 
-    ? (costPrice + effectiveShippingCost + serviceFee) / denominator 
+    ? (costPrice + estShipping.finalShippingCostIncVat + serviceFee) / denominator 
     : costPrice * 1.5;
 
-  // 3. FORWARD PROFIT SIMULATION (Final Sale Price -> Net Cash Profit)
+  // 2. ACTIVE SALE PRICE FOR SIMULATION
   const activeSalePrice = manualSalePrice > 0 ? manualSalePrice : calculatedTargetPrice;
-  
-  // Barem Support Threshold Check
-  let baremStatusLabel = "Standart Barem";
-  if (activeSalePrice < 200) {
-    baremStatusLabel = "1. Kademe Barem Desteği (0 - 199.99 ₺)";
-  } else if (activeSalePrice < 350) {
-    baremStatusLabel = "2. Kademe Barem Desteği (200 - 349.99 ₺)";
-  } else {
-    baremStatusLabel = "Standart Desi Baremi (350+ ₺)";
-  }
+
+  // 3. EXACT SHIPPING COST FOR ACTIVE SALE PRICE (Using Official Engine)
+  const activeShipping = calculateTrendyolShipping(activeSalePrice, desi, carrier, leadTimeDays, baremTiers, desiRates);
+  const effectiveShippingCost = activeShipping.finalShippingCostIncVat;
 
   // Cost Breakdown for Active Sale Price
   const commissionAmount = activeSalePrice * effectiveCommission;
@@ -124,17 +112,18 @@ export default function ProductPricingPage() {
   const costVat = (costPrice / kdvMultiplier) * (vatRate / 100);
   const netVatAmount = Math.max(0, saleVat - costVat);
 
-  // Net Cash Profit
+  // Net Cash Profit & Margins
   const netCashProfit = activeSalePrice - (costPrice + commissionAmount + effectiveShippingCost + serviceFee + withholdingAmount + netVatAmount);
   const achievedMarginPercent = activeSalePrice > 0 ? (netCashProfit / activeSalePrice) * 100 : 0;
   const achievedMarkupPercent = costPrice > 0 ? (netCashProfit / costPrice) * 100 : 0;
 
   // 4. BUYBOX SIMULATION
+  const buyboxShipping = calculateTrendyolShipping(competitorBuyboxPrice, desi, carrier, leadTimeDays, baremTiers, desiRates);
   const buyboxCommission = competitorBuyboxPrice * effectiveCommission;
   const buyboxWithholding = competitorBuyboxPrice * withholdingTaxRate;
   const buyboxSaleVat = (competitorBuyboxPrice / kdvMultiplier) * (vatRate / 100);
   const buyboxNetVat = Math.max(0, buyboxSaleVat - costVat);
-  const buyboxProfit = competitorBuyboxPrice - (costPrice + buyboxCommission + effectiveShippingCost + serviceFee + buyboxWithholding + buyboxNetVat);
+  const buyboxProfit = competitorBuyboxPrice - (costPrice + buyboxCommission + buyboxShipping.finalShippingCostIncVat + serviceFee + buyboxWithholding + buyboxNetVat);
   const buyboxMargin = competitorBuyboxPrice > 0 ? (buyboxProfit / competitorBuyboxPrice) * 100 : 0;
 
   const handlePushPriceToTrendyol = async () => {
@@ -166,17 +155,17 @@ export default function ProductPricingPage() {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-white p-4 sm:p-6 rounded-3xl border border-border shadow-xs">
         <div>
           <div className="flex items-center gap-2">
-            <h3 className="text-base sm:text-lg font-black text-dark">Akıllı Ürün Fiyatlandırma & Kârlılık Simülatörü</h3>
-            <Badge variant="excellent">Canlı Kargo Barem Desteği</Badge>
+            <h3 className="text-base sm:text-lg font-black text-dark">Trendyol Akıllı Fiyatlandırma & Kargo Barem Motoru</h3>
+            <Badge variant="excellent">Veritabanı Barem & Desi Matrisi</Badge>
           </div>
           <p className="text-xs text-muted-foreground mt-0.5">
-            Hedef marjdan satış fiyatı bulma, son fiyata göre net kâr analizi, 1-2-3 gün termin süresi ve kargo barem desteği
+            Satış tutarına göre kademeli barem desteği (0-200₺ / 200-350₺), 350₺ üzeri desi tarifesi ve 1-2-3 gün termin süresi etkisi
           </p>
         </div>
 
-        <Button size="sm" variant="outline" onClick={fetchProducts} className="h-8 sm:h-9 text-xs gap-1.5 font-bold">
-          <RefreshCw className={`w-3.5 h-3.5 ${loadingProducts ? 'animate-spin' : ''}`} />
-          <span>Ürünleri Yenile</span>
+        <Button size="sm" variant="outline" onClick={fetchAllData} className="h-8 sm:h-9 text-xs gap-1.5 font-bold">
+          <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />
+          <span>Verileri Yenile</span>
         </Button>
       </div>
 
@@ -285,17 +274,17 @@ export default function ProductPricingPage() {
             {/* Kargo Şirketi & Desi */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div>
-                <label className="font-bold text-dark block mb-1">Kargo Firması *</label>
+                <label className="font-bold text-dark block mb-1">Kargo Firması (Veritabanı Tarifesi) *</label>
                 <select
                   value={carrier}
                   onChange={(e) => setCarrier(e.target.value)}
                   className="w-full px-3 py-2 rounded-xl border border-border font-bold text-dark bg-white focus:ring-2 focus:ring-primary"
                 >
-                  <option value="Trendyol Express">Trendyol Express (TEX)</option>
-                  <option value="Aras Kargo">Aras Kargo</option>
-                  <option value="PTT Kargo">PTT Kargo</option>
-                  <option value="Sürat Kargo">Sürat Kargo</option>
-                  <option value="Yurtiçi Kargo">Yurtiçi Kargo</option>
+                  <option value="TEX">Trendyol Express (TEX)</option>
+                  <option value="Aras">Aras Kargo</option>
+                  <option value="PTT">PTT Kargo</option>
+                  <option value="Sürat">Sürat Kargo</option>
+                  <option value="YK">Yurtiçi Kargo (YK)</option>
                   <option value="Kolay Gelsin">Kolay Gelsin</option>
                   <option value="DHL eCommerce">DHL eCommerce</option>
                 </select>
@@ -321,7 +310,7 @@ export default function ProductPricingPage() {
                   <span>Termin Süresi & Kargo Barem Desteği</span>
                 </span>
                 <span className="text-[10px] text-emerald-700 font-bold">
-                  {leadTimeDays === 1 ? '⚡ %5 Kargo Barem Bonusu' : leadTimeDays === 2 ? 'Standart' : 'Ek Maliyet Riski'}
+                  {leadTimeDays === 1 ? '⚡ %5 Hızlı Teslimat Bonusu' : leadTimeDays === 2 ? 'Standart Barem' : 'Ek Maliyet / Barem Kaybı'}
                 </span>
               </label>
 
@@ -401,9 +390,22 @@ export default function ProductPricingPage() {
               <span className="px-2.5 py-1 rounded-xl bg-canvas border border-border text-dark">
                 Maliyet Üzeri Kâr: <strong className="text-primary">%{achievedMarkupPercent.toFixed(1)}</strong>
               </span>
-              <span className="px-2.5 py-1 rounded-xl bg-sky-50 border border-sky-200 text-sky-800 text-[11px]">
-                {baremStatusLabel}
+              <span className={`px-2.5 py-1 rounded-xl text-[11px] border ${
+                activeShipping.isBaremSupported 
+                  ? 'bg-emerald-50 border-emerald-200 text-emerald-800' 
+                  : 'bg-amber-50 border-amber-200 text-amber-800'
+              }`}>
+                {activeShipping.isBaremSupported ? `✓ ${activeShipping.tierName} Barem Desteği` : `⚠️ ${activeShipping.tierName}`}
               </span>
+            </div>
+
+            {/* Dynamic Shipping Explanation Box */}
+            <div className="p-3 rounded-2xl bg-canvas border border-border flex items-start gap-2.5 text-xs text-gray-600">
+              <Info className="w-4 h-4 text-primary shrink-0 mt-0.5" />
+              <div>
+                <span className="font-bold text-dark block">Kargo Hesaplama Mantığı:</span>
+                <span className="text-[11px] text-gray-500 leading-relaxed">{activeShipping.explanation}</span>
+              </div>
             </div>
 
             {/* Financial Waterfall Cost Breakdown */}
@@ -420,10 +422,12 @@ export default function ProductPricingPage() {
 
               <div className="flex items-center justify-between py-1 text-gray-600">
                 <span className="flex items-center gap-1">
-                  <span>3. Kargo Gideri ({carrier}, {desi} Desi)</span>
-                  {leadTimeDays === 1 && <span className="text-[9px] text-emerald-700 font-bold bg-emerald-50 px-1 rounded">-%5 İndirimli</span>}
+                  <span>3. Kargo Gideri ({carrier}, {activeShipping.isBaremSupported ? 'Barem Desteği' : `${desi} Desi`})</span>
+                  {leadTimeDays === 1 && activeShipping.leadTimeDiscountAmount > 0 && (
+                    <span className="text-[9px] text-emerald-700 font-bold bg-emerald-50 px-1 rounded">-%5 İndirimli</span>
+                  )}
                 </span>
-                <span className="font-bold text-gray-800 tabular-nums">-₺{effectiveShippingCost.toFixed(2)}</span>
+                <span className="font-bold text-primary tabular-nums">-₺{effectiveShippingCost.toFixed(2)}</span>
               </div>
 
               <div className="flex items-center justify-between py-1 text-gray-600">
