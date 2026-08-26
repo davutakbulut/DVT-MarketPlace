@@ -10,7 +10,8 @@ export async function GET() {
         s.store_name as "storeName",
         s.seller_id as "sellerId",
         COALESCE(s.supplier_id, s.seller_id) as "supplierId",
-        COALESCE(s.api_key, '••••••••') as "apiKey",
+        s.api_key as "apiKey",
+        s.api_secret as "apiSecret",
         s.is_active as "isActive",
         COALESCE(s.sync_status, 'synced') as "syncStatus",
         s.sync_error_message as "syncErrorMessage",
@@ -88,7 +89,6 @@ export async function DELETE(request: Request) {
       return NextResponse.json({ error: 'Mağaza ID belirtilmedi.' }, { status: 400 });
     }
 
-    // Check store count
     const countRes = await query('SELECT COUNT(*) as count FROM stores');
     if (parseInt(countRes[0]?.count || '0') <= 1) {
       return NextResponse.json({ error: 'Sistemde en az 1 bağlı mağaza kalmalıdır.' }, { status: 400 });
@@ -108,7 +108,9 @@ export async function DELETE(request: Request) {
 
 export async function PUT(request: Request) {
   try {
-    const { id, action } = await request.json();
+    const body = await request.json();
+    const { id, action, storeName, sellerId, supplierId, apiKey, apiSecret, defaultCarrier, isActive } = body;
+    
     if (!id) {
       return NextResponse.json({ error: 'Mağaza ID belirtilmedi.' }, { status: 400 });
     }
@@ -126,8 +128,34 @@ export async function PUT(request: Request) {
       });
     }
 
-    return NextResponse.json({ success: true });
+    // Full store update
+    const currentStore = await query('SELECT extra_config FROM stores WHERE id = $1', [id]);
+    const prevConfig = currentStore[0]?.extra_config || {};
+    const updatedConfig = {
+      ...prevConfig,
+      defaultCarrier: defaultCarrier || prevConfig.defaultCarrier || 'TEX',
+      updatedAt: new Date().toISOString()
+    };
+
+    await query(`
+      UPDATE stores
+      SET store_name = COALESCE($1, store_name),
+          seller_id = COALESCE($2, seller_id),
+          supplier_id = COALESCE($3, supplier_id),
+          api_key = COALESCE($4, api_key),
+          api_secret = COALESCE($5, api_secret),
+          extra_config = $6,
+          is_active = COALESCE($7, is_active),
+          updated_at = now()
+      WHERE id = $8
+    `, [storeName, sellerId, supplierId || sellerId, apiKey, apiSecret, JSON.stringify(updatedConfig), isActive, id]);
+
+    return NextResponse.json({
+      success: true,
+      message: 'Mağaza bilgileri ve API anahtarları başarıyla güncellendi!'
+    });
   } catch (error: any) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    console.error('Store update error:', error);
+    return NextResponse.json({ error: 'Mağaza güncellenemedi: ' + error.message }, { status: 500 });
   }
 }

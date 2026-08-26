@@ -6,8 +6,9 @@ import { toast } from "sonner";
 import { 
   Settings, Key, Truck, Mail, Users, Layers, Save, RefreshCw, 
   Sparkles, CheckCircle2, ShieldCheck, Check, AlertTriangle, 
-  Percent, Receipt, Package, Download, Database, Lock, Eye, EyeOff
+  Percent, Receipt, Package, Download, Database, Store, ExternalLink
 } from "lucide-react";
+import Link from "next/link";
 
 export default function SettingsPage() {
   const [activeTab, setActiveTab] = useState("general");
@@ -24,38 +25,19 @@ export default function SettingsPage() {
   // Tab 2: Cargo Barem Tiers
   const [baremTiers, setBaremTiers] = useState<any[]>([]);
 
-  // Tab 4: Trendyol API Settings
-  const [tySupplierId, setTySupplierId] = useState("108452");
-  const [tyApiKey, setTyApiKey] = useState("");
-  const [tyApiSecret, setTyApiSecret] = useState("");
-  const [tyConnected, setTyConnected] = useState(false);
-
-  // Tab 5: Hepsiburada API Settings
-  const [hbMerchantId, setHbMerchantId] = useState("HB_MERCHANT_49102");
-  const [hbApiKey, setHbApiKey] = useState("");
-  const [hbApiSecret, setHbApiSecret] = useState("");
-  const [hbConnected, setHbConnected] = useState(false);
-
-  // Tab 6: Amazon TR API Settings
-  const [amzSellerId, setAmzSellerId] = useState("A2N...TR");
-  const [amzClientId, setAmzClientId] = useState("");
-  const [amzClientSecret, setAmzClientSecret] = useState("");
-  const [amzConnected, setAmzConnected] = useState(false);
-
-  // Tab 8: Users RBAC & Profit Masking
+  // Tab 5: Users RBAC & Profit Masking
   const [users, setUsers] = useState<any[]>([]);
 
-  // Tab 9: Notifications
+  // Tab 6: Notifications
   const [emailDailySummary, setEmailDailySummary] = useState(true);
   const [emailNegativeProfitAlert, setEmailNegativeProfitAlert] = useState(true);
-  const [emailDesiAlert, setEmailDesiAlert] = useState(true);
 
-  // Tab 11: Fixed Expenses
+  // Tab 8: Fixed Expenses
   const [packagingCost, setPackagingCost] = useState(5.00);
   const [invoiceFixedCost, setInvoiceFixedCost] = useState(1.50);
   const [extraOperationCost, setExtraOperationCost] = useState(0.00);
 
-  // Fetch all settings from Supabase
+  // Fetch settings from Supabase
   const fetchAllSettings = async () => {
     setLoading(true);
     try {
@@ -70,20 +52,6 @@ export default function SettingsPage() {
         setDefaultShippingCarrier(setData.general.defaultShippingCarrier || 'TEX');
         setEmailDailySummary(setData.general.emailDailySummaryEnabled !== false);
         setEmailNegativeProfitAlert(setData.general.emailNegativeProfitAlert !== false);
-      }
-
-      if (setData.trendyol) {
-        setTySupplierId(setData.trendyol.supplierId || "");
-        setTyApiKey(setData.trendyol.apiKey || "");
-        setTyApiSecret(setData.trendyol.apiSecret || "");
-        setTyConnected(setData.trendyol.isConnected || false);
-      }
-
-      if (setData.hepsiburada) {
-        setHbMerchantId(setData.hepsiburada.merchantId || "");
-        setHbApiKey(setData.hepsiburada.apiKey || "");
-        setHbApiSecret(setData.hepsiburada.apiSecret || "");
-        setHbConnected(setData.hepsiburada.isConnected || false);
       }
 
       // Fetch RBAC users
@@ -128,26 +96,6 @@ export default function SettingsPage() {
       }
     } catch (err) {
       toast.error("Kaydedilirken hata oluştu.");
-    } finally {
-      setSaving(false);
-    }
-  };
-
-  const handleSaveMarketplace = async (mp: string, supplierId: string, apiKey: string, apiSecret: string) => {
-    setSaving(true);
-    try {
-      const res = await fetch('/api/settings/marketplace', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ marketplace: mp, supplierId, apiKey, apiSecret }),
-      });
-      const data = await res.json();
-      if (res.ok) {
-        toast.success(`${mp.toUpperCase()} API anahtarları veritabanına kaydedildi!`);
-        fetchAllSettings();
-      }
-    } catch (err) {
-      toast.error("Kaydedilemedi.");
     } finally {
       setSaving(false);
     }
@@ -221,7 +169,7 @@ export default function SettingsPage() {
       });
 
       if (res.ok) {
-        toast.success("Kullanıcı kâr maskeleme yetkisi güncellendi!");
+        toast.success("Kullanıcı yetkisi güncellendi!");
         fetchAllSettings();
       }
     } catch (e) {
@@ -229,43 +177,49 @@ export default function SettingsPage() {
     }
   };
 
-  // 12 Sub Tabs
+  // Clean Tabs (API Key entry removed from Settings, moved to /stores)
   const tabs = [
-    { id: "general", label: "1. Genel Ayarlar", icon: Settings },
+    { id: "general", label: "1. Genel & Finansal Ayarlar", icon: Settings },
     { id: "cargo_barem", label: "2. Kargo Barem Destek", icon: Truck },
     { id: "desi_matrix", label: "3. 501 Desi Kargo Matrisi", icon: Layers },
-    { id: "trendyol", label: "4. Trendyol API", icon: Key },
-    { id: "hepsiburada", label: "5. Hepsiburada API", icon: Key },
-    { id: "amazon", label: "6. Amazon TR API", icon: Key },
-    { id: "service_fee", label: "7. Platform Hizmet Bedeli", icon: Receipt },
-    { id: "users", label: "8. Kullanıcılar & RBAC", icon: Users },
-    { id: "notifications", label: "9. Bildirim & E-Posta", icon: Mail },
-    { id: "tax_withholding", label: "10. Vergi & %1 Stopaj", icon: Percent },
-    { id: "fixed_expenses", label: "11. Sabit Gider Şablonları", icon: Package },
-    { id: "backup_logs", label: "12. Yedekleme & Loglar", icon: Database },
+    { id: "service_fee", label: "4. Platform Hizmet Bedeli", icon: Receipt },
+    { id: "users", label: "5. Kullanıcılar & RBAC", icon: Users },
+    { id: "notifications", label: "6. Bildirim & E-Posta", icon: Mail },
+    { id: "tax_withholding", label: "7. Vergi & %1 Stopaj", icon: Percent },
+    { id: "fixed_expenses", label: "8. Sabit Gider Şablonları", icon: Package },
+    { id: "backup_logs", label: "9. Yedekleme & Loglar", icon: Database },
   ];
 
   return (
     <div className="space-y-4 sm:space-y-6 max-w-7xl">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+      {/* Top Banner */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-white p-4 sm:p-6 rounded-3xl border border-border shadow-xs">
         <div>
           <div className="flex items-center gap-2">
-            <h3 className="text-base sm:text-lg font-black text-dark">Sistem ve Firma Ayarları (12 Alt Modül)</h3>
-            <Badge variant="excellent">Adım 18: Tam Entegrasyon</Badge>
+            <h3 className="text-base sm:text-lg font-black text-dark">Sistem ve Finansal Ayarlar</h3>
+            <Badge variant="excellent">Supabase Canlı DB</Badge>
           </div>
-          <p className="text-[11px] sm:text-xs text-muted-foreground">
-            Tüm firma, pazar yeri, vergi, kargo barem ve kullanıcı yetkilendirme parametreleri
+          <p className="text-[11px] sm:text-xs text-muted-foreground mt-0.5">
+            Vergi katsayıları, kargo barem tarifeleri, sabit giderler ve kullanıcı yetkilendirme parametreleri
           </p>
         </div>
 
-        <Button size="sm" variant="outline" onClick={fetchAllSettings} className="text-xs h-8 gap-1.5 self-start sm:self-auto">
-          <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />
-          <span>Ayarları Yenile</span>
-        </Button>
+        <div className="flex items-center gap-2">
+          <Link href="/stores">
+            <Button size="sm" className="text-xs h-8 sm:h-9 gap-1.5 font-bold bg-primary hover:bg-primary-hover text-white shadow-xs">
+              <Store className="w-3.5 h-3.5" />
+              <span>Mağazalarım & API Anahtarları ➔</span>
+            </Button>
+          </Link>
+
+          <Button size="sm" variant="outline" onClick={fetchAllSettings} className="text-xs h-8 sm:h-9 gap-1.5">
+            <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />
+          </Button>
+        </div>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-12 gap-4 sm:gap-6">
-        {/* Navigation 12 Tabs */}
+        {/* Navigation Tabs */}
         <div className="md:col-span-4 bg-white p-2 sm:p-3 rounded-2xl sm:rounded-3xl border border-border flex md:flex-col overflow-x-auto gap-1 shadow-xs max-h-[700px]">
           {tabs.map((t) => {
             const Icon = t.icon;
@@ -344,7 +298,7 @@ export default function SettingsPage() {
                 </div>
               </div>
 
-              <Button type="submit" disabled={saving} className="text-xs font-bold gap-2 shadow-xs">
+              <Button type="submit" disabled={saving} className="text-xs font-bold gap-2 shadow-xs bg-primary hover:bg-primary-hover text-white">
                 <Save className="w-4 h-4" />
                 <span>{saving ? "Kaydediliyor..." : "Genel Ayarları Kaydet"}</span>
               </Button>
@@ -419,11 +373,11 @@ export default function SettingsPage() {
                   <h4 className="text-xs sm:text-sm font-bold text-dark">501 Desi Kargo Fiyat Matrisi (0 - 500 Desi)</h4>
                   <p className="text-[11px] text-gray-500">10 Kargo partnerinin tüm kademelerini yönetin</p>
                 </div>
-                <a href="/tariffs/desi">
-                  <Button size="sm" className="text-xs font-bold gap-1.5">
+                <Link href="/tariffs/desi">
+                  <Button size="sm" className="text-xs font-bold gap-1.5 bg-primary hover:bg-primary-hover text-white">
                     Tam Ekran Matrise Git ➔
                   </Button>
-                </a>
+                </Link>
               </div>
               <p className="text-xs text-gray-600 leading-relaxed">
                 Tüm desi fiyatları <code>/tariffs/desi</code> ekranında canlı olarak düzenlenebilir, Excel formatında indirilebilir ve topluca yüklenebilir.
@@ -431,148 +385,7 @@ export default function SettingsPage() {
             </div>
           )}
 
-          {/* TAB 4: TRENDYOL API */}
-          {activeTab === "trendyol" && (
-            <div className="space-y-4">
-              <div className="flex items-center justify-between pb-2 border-b border-border">
-                <h4 className="text-xs sm:text-sm font-bold text-dark">Trendyol SAPI API Entegrasyonu</h4>
-                <Badge variant={tyConnected ? "excellent" : "secondary"}>{tyConnected ? "Bağlandı" : "Bağlı Değil"}</Badge>
-              </div>
-
-              <div className="space-y-3">
-                <div>
-                  <label className="text-xs font-bold text-dark block mb-1">Satıcı ID (Supplier ID)</label>
-                  <input
-                    type="text"
-                    value={tySupplierId}
-                    onChange={(e) => setTySupplierId(e.target.value)}
-                    className="w-full px-3 py-2 rounded-xl border border-border text-xs font-mono font-bold"
-                  />
-                </div>
-                <div>
-                  <label className="text-xs font-bold text-dark block mb-1">API Key</label>
-                  <input
-                    type="text"
-                    value={tyApiKey}
-                    onChange={(e) => setTyApiKey(e.target.value)}
-                    className="w-full px-3 py-2 rounded-xl border border-border text-xs font-mono"
-                    placeholder="ty_prod_key_..."
-                  />
-                </div>
-                <div>
-                  <label className="text-xs font-bold text-dark block mb-1">API Secret</label>
-                  <input
-                    type="password"
-                    value={tyApiSecret}
-                    onChange={(e) => setTyApiSecret(e.target.value)}
-                    className="w-full px-3 py-2 rounded-xl border border-border text-xs font-mono"
-                    placeholder="••••••••••••••••"
-                  />
-                </div>
-              </div>
-
-              <Button onClick={() => handleSaveMarketplace('trendyol', tySupplierId, tyApiKey, tyApiSecret)} className="text-xs font-bold gap-1.5 shadow-xs">
-                <Save className="w-3.5 h-3.5" />
-                <span>Trendyol Anahtarlarını Kaydet</span>
-              </Button>
-            </div>
-          )}
-
-          {/* TAB 5: HEPSİBURADA API */}
-          {activeTab === "hepsiburada" && (
-            <div className="space-y-4">
-              <div className="flex items-center justify-between pb-2 border-b border-border">
-                <h4 className="text-xs sm:text-sm font-bold text-dark">Hepsiburada API Entegrasyonu</h4>
-                <Badge variant={hbConnected ? "excellent" : "secondary"}>{hbConnected ? "Bağlandı" : "Bağlı Değil"}</Badge>
-              </div>
-
-              <div className="space-y-3">
-                <div>
-                  <label className="text-xs font-bold text-dark block mb-1">Merchant ID</label>
-                  <input
-                    type="text"
-                    value={hbMerchantId}
-                    onChange={(e) => setHbMerchantId(e.target.value)}
-                    className="w-full px-3 py-2 rounded-xl border border-border text-xs font-mono font-bold"
-                  />
-                </div>
-                <div>
-                  <label className="text-xs font-bold text-dark block mb-1">API Key</label>
-                  <input
-                    type="text"
-                    value={hbApiKey}
-                    onChange={(e) => setHbApiKey(e.target.value)}
-                    className="w-full px-3 py-2 rounded-xl border border-border text-xs font-mono"
-                    placeholder="hb_live_key_..."
-                  />
-                </div>
-                <div>
-                  <label className="text-xs font-bold text-dark block mb-1">API Secret</label>
-                  <input
-                    type="password"
-                    value={hbApiSecret}
-                    onChange={(e) => setHbApiSecret(e.target.value)}
-                    className="w-full px-3 py-2 rounded-xl border border-border text-xs font-mono"
-                    placeholder="••••••••••••••••"
-                  />
-                </div>
-              </div>
-
-              <Button onClick={() => handleSaveMarketplace('hepsiburada', hbMerchantId, hbApiKey, hbApiSecret)} className="text-xs font-bold gap-1.5 shadow-xs">
-                <Save className="w-3.5 h-3.5" />
-                <span>Hepsiburada Anahtarlarını Kaydet</span>
-              </Button>
-            </div>
-          )}
-
-          {/* TAB 6: AMAZON TR API */}
-          {activeTab === "amazon" && (
-            <div className="space-y-4">
-              <div className="flex items-center justify-between pb-2 border-b border-border">
-                <h4 className="text-xs sm:text-sm font-bold text-dark">Amazon TR SP-API Entegrasyonu</h4>
-                <Badge variant="secondary">Bağlı Değil</Badge>
-              </div>
-
-              <div className="space-y-3">
-                <div>
-                  <label className="text-xs font-bold text-dark block mb-1">Seller ID / Merchant Token</label>
-                  <input
-                    type="text"
-                    value={amzSellerId}
-                    onChange={(e) => setAmzSellerId(e.target.value)}
-                    className="w-full px-3 py-2 rounded-xl border border-border text-xs font-mono font-bold"
-                  />
-                </div>
-                <div>
-                  <label className="text-xs font-bold text-dark block mb-1">LWA Client ID</label>
-                  <input
-                    type="text"
-                    value={amzClientId}
-                    onChange={(e) => setAmzClientId(e.target.value)}
-                    className="w-full px-3 py-2 rounded-xl border border-border text-xs font-mono"
-                    placeholder="amzn1.application-oa2-client..."
-                  />
-                </div>
-                <div>
-                  <label className="text-xs font-bold text-dark block mb-1">LWA Client Secret</label>
-                  <input
-                    type="password"
-                    value={amzClientSecret}
-                    onChange={(e) => setAmzClientSecret(e.target.value)}
-                    className="w-full px-3 py-2 rounded-xl border border-border text-xs font-mono"
-                    placeholder="••••••••••••••••"
-                  />
-                </div>
-              </div>
-
-              <Button onClick={() => handleSaveMarketplace('amazon', amzSellerId, amzClientId, amzClientSecret)} className="text-xs font-bold gap-1.5 shadow-xs">
-                <Save className="w-3.5 h-3.5" />
-                <span>Amazon TR Anahtarlarını Kaydet</span>
-              </Button>
-            </div>
-          )}
-
-          {/* TAB 7: PLATFORM HİZMET BEDELLERİ */}
+          {/* TAB 4: PLATFORM HİZMET BEDELLERİ */}
           {activeTab === "service_fee" && (
             <div className="space-y-4">
               <h4 className="text-xs sm:text-sm font-bold text-dark pb-2 border-b border-border">Pazaryeri Hizmet Bedeli Yönetimi</h4>
@@ -589,14 +402,14 @@ export default function SettingsPage() {
                 />
               </div>
 
-              <Button onClick={handleSaveGeneral} className="text-xs font-bold gap-1.5 shadow-xs">
+              <Button onClick={handleSaveGeneral} className="text-xs font-bold gap-1.5 shadow-xs bg-primary hover:bg-primary-hover text-white">
                 <Save className="w-3.5 h-3.5" />
                 <span>Hizmet Bedelini Kaydet (₺{defaultServiceFee})</span>
               </Button>
             </div>
           )}
 
-          {/* TAB 8: USERS RBAC & KÂR MASKELEME */}
+          {/* TAB 5: USERS RBAC & KÂR MASKELEME */}
           {activeTab === "users" && (
             <div className="space-y-4">
               <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-2 border-b border-border gap-2">
@@ -662,7 +475,7 @@ export default function SettingsPage() {
             </div>
           )}
 
-          {/* TAB 9: NOTIFICATIONS */}
+          {/* TAB 6: NOTIFICATIONS */}
           {activeTab === "notifications" && (
             <div className="space-y-4">
               <h4 className="text-xs sm:text-sm font-bold text-dark pb-2 border-b border-border">E-Posta & Sistem Bildirim Tercihleri</h4>
@@ -695,14 +508,14 @@ export default function SettingsPage() {
                 </label>
               </div>
 
-              <Button onClick={handleSaveNotifications} disabled={saving} className="text-xs font-bold gap-1.5 shadow-xs">
+              <Button onClick={handleSaveNotifications} disabled={saving} className="text-xs font-bold gap-1.5 shadow-xs bg-primary hover:bg-primary-hover text-white">
                 <Save className="w-3.5 h-3.5" />
                 <span>Bildirim Tercihlerini Kaydet</span>
               </Button>
             </div>
           )}
 
-          {/* TAB 10: VERGİ & STOPAJ */}
+          {/* TAB 7: VERGİ & STOPAJ */}
           {activeTab === "tax_withholding" && (
             <div className="space-y-4">
               <h4 className="text-xs sm:text-sm font-bold text-dark pb-2 border-b border-border">Vergi Mevzuatı & Stopaj Parametreleri</h4>
@@ -719,14 +532,14 @@ export default function SettingsPage() {
                   <span className="text-[11px] text-gray-500 block mt-1">Trendyol ve Hepsiburada tarafından KDV hariç ciro üzerinden kesilen %1 stopaj.</span>
                 </div>
               </div>
-              <Button onClick={handleSaveGeneral} className="text-xs font-bold gap-1.5 shadow-xs">
+              <Button onClick={handleSaveGeneral} className="text-xs font-bold gap-1.5 shadow-xs bg-primary hover:bg-primary-hover text-white">
                 <Save className="w-3.5 h-3.5" />
                 <span>Vergi Ayarlarını Kaydet</span>
               </Button>
             </div>
           )}
 
-          {/* TAB 11: SABİT GİDERLER */}
+          {/* TAB 8: SABİT GİDERLER */}
           {activeTab === "fixed_expenses" && (
             <div className="space-y-4">
               <h4 className="text-xs sm:text-sm font-bold text-dark pb-2 border-b border-border">Sipariş Başı Sabit Operasyonel Giderler</h4>
@@ -762,14 +575,14 @@ export default function SettingsPage() {
                   />
                 </div>
               </div>
-              <Button onClick={() => toast.success("Sabit gider şablonu güncellendi!")} className="text-xs font-bold gap-1.5 shadow-xs">
+              <Button onClick={() => toast.success("Sabit gider şablonu güncellendi!")} className="text-xs font-bold gap-1.5 shadow-xs bg-primary hover:bg-primary-hover text-white">
                 <Save className="w-3.5 h-3.5" />
                 <span>Gider Şablonunu Kaydet</span>
               </Button>
             </div>
           )}
 
-          {/* TAB 12: YEDEKLEME & LOGLAR */}
+          {/* TAB 9: YEDEKLEME & LOGLAR */}
           {activeTab === "backup_logs" && (
             <div className="space-y-4">
               <h4 className="text-xs sm:text-sm font-bold text-dark pb-2 border-b border-border">Veritabanı Yedekleme & Sistem Logları</h4>
