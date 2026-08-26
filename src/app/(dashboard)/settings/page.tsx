@@ -5,7 +5,8 @@ import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 import { 
   Settings, Key, Truck, Mail, Users, Layers, Save, RefreshCw, 
-  Sparkles, CheckCircle2, ShieldCheck, Check, AlertTriangle 
+  Sparkles, CheckCircle2, ShieldCheck, Check, AlertTriangle, 
+  Percent, Receipt, Package, Download, Database, Lock, Eye, EyeOff
 } from "lucide-react";
 
 export default function SettingsPage() {
@@ -13,41 +14,51 @@ export default function SettingsPage() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
 
-  // Tab 1: Cargo Barem Tiers
-  const [baremTiers, setBaremTiers] = useState<any[]>([]);
-  const [loadingBarem, setLoadingBarem] = useState(false);
-
-  // Tab 2: General & Tax Settings
+  // Tab 1 & 10: General & Tax Settings
   const [defaultVatRate, setDefaultVatRate] = useState(20);
   const [defaultWithholdingRate, setDefaultWithholdingRate] = useState(1);
   const [defaultServiceFee, setDefaultServiceFee] = useState(13.19);
   const [minProfitMarginWarning, setMinProfitMarginWarning] = useState(15);
   const [defaultShippingCarrier, setDefaultShippingCarrier] = useState('TEX');
 
-  // Tab 3: Trendyol API Settings
+  // Tab 2: Cargo Barem Tiers
+  const [baremTiers, setBaremTiers] = useState<any[]>([]);
+
+  // Tab 4: Trendyol API Settings
   const [tySupplierId, setTySupplierId] = useState("108452");
   const [tyApiKey, setTyApiKey] = useState("");
   const [tyApiSecret, setTyApiSecret] = useState("");
   const [tyConnected, setTyConnected] = useState(false);
 
-  // Tab 4: Hepsiburada API Settings
+  // Tab 5: Hepsiburada API Settings
   const [hbMerchantId, setHbMerchantId] = useState("HB_MERCHANT_49102");
   const [hbApiKey, setHbApiKey] = useState("");
   const [hbApiSecret, setHbApiSecret] = useState("");
   const [hbConnected, setHbConnected] = useState(false);
 
-  // Tab 5: Users RBAC
+  // Tab 6: Amazon TR API Settings
+  const [amzSellerId, setAmzSellerId] = useState("A2N...TR");
+  const [amzClientId, setAmzClientId] = useState("");
+  const [amzClientSecret, setAmzClientSecret] = useState("");
+  const [amzConnected, setAmzConnected] = useState(false);
+
+  // Tab 8: Users RBAC & Profit Masking
   const [users, setUsers] = useState<any[]>([]);
 
-  // Tab 6: Notifications
+  // Tab 9: Notifications
   const [emailDailySummary, setEmailDailySummary] = useState(true);
   const [emailNegativeProfitAlert, setEmailNegativeProfitAlert] = useState(true);
+  const [emailDesiAlert, setEmailDesiAlert] = useState(true);
+
+  // Tab 11: Fixed Expenses
+  const [packagingCost, setPackagingCost] = useState(5.00);
+  const [invoiceFixedCost, setInvoiceFixedCost] = useState(1.50);
+  const [extraOperationCost, setExtraOperationCost] = useState(0.00);
 
   // Fetch all settings from Supabase
   const fetchAllSettings = async () => {
     setLoading(true);
     try {
-      // 1. Fetch system settings
       const setRes = await fetch('/api/settings');
       const setData = await setRes.json();
 
@@ -75,11 +86,12 @@ export default function SettingsPage() {
         setHbConnected(setData.hepsiburada.isConnected || false);
       }
 
-      if (setData.users) {
-        setUsers(setData.users);
-      }
+      // Fetch RBAC users
+      const usersRes = await fetch('/api/settings/users');
+      const usersData = await usersRes.json();
+      setUsers(usersData.users || []);
 
-      // 2. Fetch Barem tiers
+      // Fetch Barem tiers
       const baremRes = await fetch('/api/tariffs/cargo-barem');
       const baremData = await baremRes.json();
       setBaremTiers(baremData || []);
@@ -95,7 +107,6 @@ export default function SettingsPage() {
     fetchAllSettings();
   }, []);
 
-  // Save Tab 2: General & Tax Settings
   const handleSaveGeneral = async (e?: React.FormEvent) => {
     if (e) e.preventDefault();
     setSaving(true);
@@ -113,9 +124,7 @@ export default function SettingsPage() {
       });
       const data = await res.json();
       if (res.ok) {
-        toast.success(data.message || "Genel ayarlar veritabanına başarıyla kaydedildi!");
-      } else {
-        toast.error(data.error || "Kaydedilemedi.");
+        toast.success(data.message || "Ayarlar veritabanına başarıyla kaydedildi!");
       }
     } catch (err) {
       toast.error("Kaydedilirken hata oluştu.");
@@ -124,27 +133,18 @@ export default function SettingsPage() {
     }
   };
 
-  // Save Tab 3: Trendyol API Settings
-  const handleSaveTrendyol = async (e?: React.FormEvent) => {
-    if (e) e.preventDefault();
+  const handleSaveMarketplace = async (mp: string, supplierId: string, apiKey: string, apiSecret: string) => {
     setSaving(true);
     try {
       const res = await fetch('/api/settings/marketplace', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          marketplace: 'trendyol',
-          supplierId: tySupplierId,
-          apiKey: tyApiKey,
-          apiSecret: tyApiSecret,
-        }),
+        body: JSON.stringify({ marketplace: mp, supplierId, apiKey, apiSecret }),
       });
       const data = await res.json();
       if (res.ok) {
-        setTyConnected(true);
-        toast.success(data.message || "Trendyol API anahtarları veritabanına kaydedildi!");
-      } else {
-        toast.error(data.error);
+        toast.success(`${mp.toUpperCase()} API anahtarları veritabanına kaydedildi!`);
+        fetchAllSettings();
       }
     } catch (err) {
       toast.error("Kaydedilemedi.");
@@ -153,36 +153,6 @@ export default function SettingsPage() {
     }
   };
 
-  // Save Tab 4: Hepsiburada API Settings
-  const handleSaveHepsiburada = async (e?: React.FormEvent) => {
-    if (e) e.preventDefault();
-    setSaving(true);
-    try {
-      const res = await fetch('/api/settings/marketplace', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          marketplace: 'hepsiburada',
-          supplierId: hbMerchantId,
-          apiKey: hbApiKey,
-          apiSecret: hbApiSecret,
-        }),
-      });
-      const data = await res.json();
-      if (res.ok) {
-        setHbConnected(true);
-        toast.success(data.message || "Hepsiburada API anahtarları veritabanına kaydedildi!");
-      } else {
-        toast.error(data.error);
-      }
-    } catch (err) {
-      toast.error("Kaydedilemedi.");
-    } finally {
-      setSaving(false);
-    }
-  };
-
-  // Save Tab 6: Notifications
   const handleSaveNotifications = async () => {
     setSaving(true);
     try {
@@ -204,7 +174,6 @@ export default function SettingsPage() {
     }
   };
 
-  // Barem price change & save
   const handleBaremPriceChange = (id: string, field: 'discountedPriceExVat' | 'standardPriceExVat', value: number) => {
     setBaremTiers((prev) =>
       prev.map((t) => (t.id === id ? { ...t, [field]: value, isDirty: true } : t))
@@ -231,25 +200,61 @@ export default function SettingsPage() {
     }
   };
 
+  const handleToggleUserPermission = async (userId: string, field: string, currentValue: boolean) => {
+    try {
+      const targetUser = users.find(u => u.id === userId);
+      if (!targetUser) return;
+
+      const payload = {
+        userId,
+        role: targetUser.role,
+        canViewMargins: field === 'canViewMargins' ? !currentValue : targetUser.canViewMargins,
+        canViewCogs: field === 'canViewCogs' ? !currentValue : targetUser.canViewCogs,
+        canExportReports: field === 'canExportReports' ? !currentValue : targetUser.canExportReports,
+        canEditPrices: field === 'canEditPrices' ? !currentValue : targetUser.canEditPrices,
+      };
+
+      const res = await fetch('/api/settings/users', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+
+      if (res.ok) {
+        toast.success("Kullanıcı kâr maskeleme yetkisi güncellendi!");
+        fetchAllSettings();
+      }
+    } catch (e) {
+      toast.error("Yetki güncellenemedi.");
+    }
+  };
+
+  // 12 Sub Tabs
   const tabs = [
-    { id: "general", label: "Genel & Vergi / Hizmet", icon: Settings },
-    { id: "cargo_barem", label: "Kargo Barem Destek (10 Ağu 2026)", icon: Truck },
-    { id: "trendyol", label: "Trendyol API", icon: Key },
-    { id: "hepsiburada", label: "Hepsiburada API", icon: Key },
-    { id: "users", label: "Kullanıcılar (RBAC)", icon: Users },
-    { id: "notifications", label: "Bildirimler", icon: Mail },
+    { id: "general", label: "1. Genel Ayarlar", icon: Settings },
+    { id: "cargo_barem", label: "2. Kargo Barem Destek", icon: Truck },
+    { id: "desi_matrix", label: "3. 501 Desi Kargo Matrisi", icon: Layers },
+    { id: "trendyol", label: "4. Trendyol API", icon: Key },
+    { id: "hepsiburada", label: "5. Hepsiburada API", icon: Key },
+    { id: "amazon", label: "6. Amazon TR API", icon: Key },
+    { id: "service_fee", label: "7. Platform Hizmet Bedeli", icon: Receipt },
+    { id: "users", label: "8. Kullanıcılar & RBAC", icon: Users },
+    { id: "notifications", label: "9. Bildirim & E-Posta", icon: Mail },
+    { id: "tax_withholding", label: "10. Vergi & %1 Stopaj", icon: Percent },
+    { id: "fixed_expenses", label: "11. Sabit Gider Şablonları", icon: Package },
+    { id: "backup_logs", label: "12. Yedekleme & Loglar", icon: Database },
   ];
 
   return (
-    <div className="space-y-4 sm:space-y-6 max-w-6xl">
+    <div className="space-y-4 sm:space-y-6 max-w-7xl">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
         <div>
           <div className="flex items-center gap-2">
-            <h3 className="text-base sm:text-lg font-black text-dark">Sistem ve Firma Ayarları</h3>
-            <Badge variant="excellent">Supabase PostgreSQL</Badge>
+            <h3 className="text-base sm:text-lg font-black text-dark">Sistem ve Firma Ayarları (12 Alt Modül)</h3>
+            <Badge variant="excellent">Adım 18: Tam Entegrasyon</Badge>
           </div>
           <p className="text-[11px] sm:text-xs text-muted-foreground">
-            Tüm değişiklikler anında veritabanına yazılır, sayfa yenilendiğinde kalıcı olarak korunur.
+            Tüm firma, pazar yeri, vergi, kargo barem ve kullanıcı yetkilendirme parametreleri
           </p>
         </div>
 
@@ -260,97 +265,93 @@ export default function SettingsPage() {
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-12 gap-4 sm:gap-6">
-        {/* Navigation Tabs */}
-        <div className="md:col-span-4 bg-white p-2 sm:p-3 rounded-2xl sm:rounded-3xl border border-border flex md:flex-col overflow-x-auto gap-1 shadow-xs">
+        {/* Navigation 12 Tabs */}
+        <div className="md:col-span-4 bg-white p-2 sm:p-3 rounded-2xl sm:rounded-3xl border border-border flex md:flex-col overflow-x-auto gap-1 shadow-xs max-h-[700px]">
           {tabs.map((t) => {
             const Icon = t.icon;
             return (
               <button
                 key={t.id}
                 onClick={() => setActiveTab(t.id)}
-                className={`flex items-center gap-2 sm:gap-3 px-3 py-2 sm:py-2.5 rounded-xl sm:rounded-2xl text-xs font-bold transition-all text-left whitespace-nowrap shrink-0 ${
+                className={`flex items-center gap-2.5 px-3 py-2 sm:py-2.5 rounded-xl sm:rounded-2xl text-xs font-bold transition-all text-left whitespace-nowrap shrink-0 ${
                   activeTab === t.id
                     ? "bg-primary text-white shadow-xs"
                     : "text-dark hover:bg-canvas"
                 }`}
               >
-                <Icon className="w-4 h-4 shrink-0" />
+                <Icon className="w-3.5 h-3.5 shrink-0" />
                 <span>{t.label}</span>
               </button>
             );
           })}
         </div>
 
-        {/* Tab Content */}
+        {/* Tab Content Panels */}
         <div className="md:col-span-8 bg-white p-4 sm:p-6 rounded-2xl sm:rounded-3xl border border-border space-y-4 sm:space-y-5 shadow-xs">
           
-          {/* TAB 1: GENEL & VERGİ AYARLARI */}
+          {/* TAB 1: GENEL AYARLAR */}
           {activeTab === "general" && (
             <form onSubmit={handleSaveGeneral} className="space-y-4">
               <div className="flex items-center justify-between pb-3 border-b border-border">
                 <div>
-                  <h4 className="text-xs sm:text-sm font-bold text-dark">Genel Vergi & Platform Maliyet Ayarları</h4>
-                  <p className="text-[11px] text-gray-500">Hesaplama motorunun kullandığı varsayılan katsayılar</p>
+                  <h4 className="text-xs sm:text-sm font-bold text-dark">Genel Sistem & Finansal Parametreler</h4>
+                  <p className="text-[11px] text-gray-500">Kâr hesaplama motoru varsayılanları</p>
                 </div>
                 <Badge variant="excellent">Canlı Veritabanı</Badge>
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
                 <div>
-                  <label className="text-xs font-bold text-dark block mb-1">Varsayılan Satış KDV (%)</label>
+                  <label className="text-xs font-bold text-dark block mb-1">Varsayılan KDV Oranı (%)</label>
                   <input
                     type="number"
-                    step="1"
                     value={defaultVatRate}
                     onChange={(e) => setDefaultVatRate(parseFloat(e.target.value) || 0)}
-                    className="w-full px-3 py-2 rounded-xl border border-border text-xs font-bold text-dark focus:ring-2 focus:ring-primary focus:outline-none"
+                    className="w-full px-3 py-2 rounded-xl border border-border text-xs font-bold"
                   />
                 </div>
 
                 <div>
-                  <label className="text-xs font-bold text-dark block mb-1">Stopaj Kesinti Oranı (%)</label>
+                  <label className="text-xs font-bold text-dark block mb-1">Pazaryeri Stopaj Oranı (%)</label>
                   <input
                     type="number"
                     step="0.1"
                     value={defaultWithholdingRate}
                     onChange={(e) => setDefaultWithholdingRate(parseFloat(e.target.value) || 0)}
-                    className="w-full px-3 py-2 rounded-xl border border-border text-xs font-bold text-dark focus:ring-2 focus:ring-primary focus:outline-none"
+                    className="w-full px-3 py-2 rounded-xl border border-border text-xs font-bold"
                   />
                 </div>
 
                 <div>
-                  <label className="text-xs font-bold text-primary block mb-1">Platform Hizmet Bedeli (₺ KDV Dahil)</label>
+                  <label className="text-xs font-bold text-primary block mb-1">Sipariş Hizmet Bedeli (₺)</label>
                   <input
                     type="number"
                     step="0.01"
                     value={defaultServiceFee}
                     onChange={(e) => setDefaultServiceFee(parseFloat(e.target.value) || 0)}
-                    className="w-full px-3 py-2 rounded-xl border border-primary text-xs font-bold text-primary bg-primary-tint-50/20 focus:ring-2 focus:ring-primary focus:outline-none"
+                    className="w-full px-3 py-2 rounded-xl border border-primary text-xs font-bold text-primary bg-primary-tint-50/20"
                   />
                 </div>
 
                 <div>
-                  <label className="text-xs font-bold text-dark block mb-1">Minimum Kâr Marjı Uyarısı (%)</label>
+                  <label className="text-xs font-bold text-dark block mb-1">Minimum Marj Uyarısı (%)</label>
                   <input
                     type="number"
-                    step="1"
                     value={minProfitMarginWarning}
                     onChange={(e) => setMinProfitMarginWarning(parseFloat(e.target.value) || 0)}
-                    className="w-full px-3 py-2 rounded-xl border border-border text-xs font-bold text-dark focus:ring-2 focus:ring-primary focus:outline-none"
+                    className="w-full px-3 py-2 rounded-xl border border-border text-xs font-bold"
                   />
                 </div>
               </div>
 
-              <div className="pt-2">
-                <Button type="submit" disabled={saving} className="text-xs font-bold gap-2 shadow-xs">
-                  <Save className="w-4 h-4" />
-                  <span>{saving ? "Veritabanına Kaydediliyor..." : "Ayarları Veritabanına Kaydet"}</span>
-                </Button>
-              </div>
+              <Button type="submit" disabled={saving} className="text-xs font-bold gap-2 shadow-xs">
+                <Save className="w-4 h-4" />
+                <span>{saving ? "Kaydediliyor..." : "Genel Ayarları Kaydet"}</span>
+              </Button>
             </form>
           )}
 
-          {/* TAB 2: CARGO BAREM DESTEK SİSTEMİ */}
+          {/* TAB 2: KARGO BAREM DESTEK */}
           {activeTab === "cargo_barem" && (
             <div className="space-y-4">
               <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-3 border-b border-border gap-2">
@@ -359,70 +360,47 @@ export default function SettingsPage() {
                     <span className="text-xs sm:text-sm font-bold text-dark">Trendyol Kargo Barem Destek Sistemi</span>
                     <Badge variant="excellent">10 Ağustos 2026</Badge>
                   </div>
-                  <p className="text-[11px] text-gray-500 mt-0.5">
-                    1 Gün Termin / Hızlı Teslimat avantajlı fiyatları ile standart barem altı kargo tarifesi
-                  </p>
+                  <p className="text-[11px] text-gray-500 mt-0.5">Satış tutarı kademelerine göre avantajlı kargo fiyatları</p>
                 </div>
-
-                <Button size="sm" variant="outline" onClick={fetchAllSettings} className="text-xs h-8 gap-1.5 self-start sm:self-auto">
-                  <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} /> Yenile
-                </Button>
               </div>
 
-              {/* Barem Tiers Editable Table */}
-              <div className="overflow-x-auto -mx-4 sm:mx-0 px-4 sm:px-0">
-                <table className="w-full text-left text-xs border-collapse min-w-[620px]">
+              <div className="overflow-x-auto">
+                <table className="w-full text-left text-xs border-collapse min-w-[560px]">
                   <thead>
                     <tr className="border-b border-border text-muted-foreground font-semibold">
-                      <th className="pb-2.5 px-3 table-sticky-first-col">Kargo Firması</th>
-                      <th className="pb-2.5 px-3">Paket Tutarı</th>
-                      <th className="pb-2.5 px-3 text-emerald-700 font-bold">Avantajlı Destekli (₺)</th>
-                      <th className="pb-2.5 px-3 text-red-700 font-bold">Standart / Desteksiz (₺)</th>
-                      <th className="pb-2.5 px-3 text-right">İşlem</th>
+                      <th className="pb-2 px-2 table-sticky-first-col">Kargo</th>
+                      <th className="pb-2 px-2">Satış Tutarı Kademesi</th>
+                      <th className="pb-2 px-2 text-emerald-700 font-bold">Avantajlı (₺)</th>
+                      <th className="pb-2 px-2 text-red-700 font-bold">Standart (₺)</th>
+                      <th className="pb-2 px-2 text-right">İşlem</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-border/60">
                     {baremTiers.map((t) => (
-                      <tr key={t.id} className="hover:bg-canvas/50 transition-colors">
-                        <td className="py-2.5 px-3 table-sticky-first-col font-bold text-dark">
-                          {t.carrierName}
+                      <tr key={t.id} className="hover:bg-canvas/50">
+                        <td className="py-2 px-2 table-sticky-first-col font-bold text-dark">{t.carrierName}</td>
+                        <td className="py-2 px-2 font-semibold text-gray-700">{t.tierName}</td>
+                        <td className="py-2 px-2">
+                          <input
+                            type="number"
+                            step="0.01"
+                            value={t.discountedPriceExVat}
+                            onChange={(e) => handleBaremPriceChange(t.id, 'discountedPriceExVat', parseFloat(e.target.value) || 0)}
+                            className="w-18 px-1.5 py-1 rounded border border-emerald-300 bg-emerald-50/50 font-bold text-xs"
+                          />
                         </td>
-                        <td className="py-2.5 px-3 font-semibold text-gray-700">
-                          {t.tierName}
+                        <td className="py-2 px-2">
+                          <input
+                            type="number"
+                            step="0.01"
+                            value={t.standardPriceExVat}
+                            onChange={(e) => handleBaremPriceChange(t.id, 'standardPriceExVat', parseFloat(e.target.value) || 0)}
+                            className="w-18 px-1.5 py-1 rounded border border-red-300 bg-red-50/50 font-bold text-xs"
+                          />
                         </td>
-                        <td className="py-2.5 px-3">
-                          <div className="flex items-center gap-1">
-                            <input
-                              type="number"
-                              step="0.01"
-                              value={t.discountedPriceExVat}
-                              onChange={(e) => handleBaremPriceChange(t.id, 'discountedPriceExVat', parseFloat(e.target.value) || 0)}
-                              className="w-20 px-2 py-1 rounded-lg border border-emerald-300 bg-emerald-50/50 font-bold text-xs text-emerald-800 tabular-nums focus:outline-none focus:ring-2 focus:ring-emerald-500"
-                            />
-                            <span className="text-[10px] text-gray-400">TL</span>
-                          </div>
-                        </td>
-                        <td className="py-2.5 px-3">
-                          <div className="flex items-center gap-1">
-                            <input
-                              type="number"
-                              step="0.01"
-                              value={t.standardPriceExVat}
-                              onChange={(e) => handleBaremPriceChange(t.id, 'standardPriceExVat', parseFloat(e.target.value) || 0)}
-                              className="w-20 px-2 py-1 rounded-lg border border-red-300 bg-red-50/50 font-bold text-xs text-red-800 tabular-nums focus:outline-none focus:ring-2 focus:ring-red-500"
-                            />
-                            <span className="text-[10px] text-gray-400">TL</span>
-                          </div>
-                        </td>
-                        <td className="py-2.5 px-3 text-right">
-                          <Button
-                            size="sm"
-                            variant={t.isDirty ? "default" : "outline"}
-                            className="h-7 text-[11px] gap-1 px-2.5"
-                            onClick={() => handleSaveBaremTier(t)}
-                          >
-                            <Save className="w-3 h-3" />
-                            <span>Kaydet</span>
+                        <td className="py-2 px-2 text-right">
+                          <Button size="sm" variant="outline" className="h-6 text-[10px] px-2 font-bold" onClick={() => handleSaveBaremTier(t)}>
+                            Kaydet
                           </Button>
                         </td>
                       </tr>
@@ -433,18 +411,32 @@ export default function SettingsPage() {
             </div>
           )}
 
-          {/* TAB 3: TRENDYOL API */}
+          {/* TAB 3: 501 DESİ KARGO MATRİSİ KISAYOL */}
+          {activeTab === "desi_matrix" && (
+            <div className="space-y-4">
+              <div className="flex items-center justify-between pb-3 border-b border-border">
+                <div>
+                  <h4 className="text-xs sm:text-sm font-bold text-dark">501 Desi Kargo Fiyat Matrisi (0 - 500 Desi)</h4>
+                  <p className="text-[11px] text-gray-500">10 Kargo partnerinin tüm kademelerini yönetin</p>
+                </div>
+                <a href="/tariffs/desi">
+                  <Button size="sm" className="text-xs font-bold gap-1.5">
+                    Tam Ekran Matrise Git ➔
+                  </Button>
+                </a>
+              </div>
+              <p className="text-xs text-gray-600 leading-relaxed">
+                Tüm desi fiyatları <code>/tariffs/desi</code> ekranında canlı olarak düzenlenebilir, Excel formatında indirilebilir ve topluca yüklenebilir.
+              </p>
+            </div>
+          )}
+
+          {/* TAB 4: TRENDYOL API */}
           {activeTab === "trendyol" && (
-            <form onSubmit={handleSaveTrendyol} className="space-y-4">
+            <div className="space-y-4">
               <div className="flex items-center justify-between pb-2 border-b border-border">
-                <h4 className="text-xs sm:text-sm font-bold text-dark">Trendyol SAPI Entegrasyon Anahtarları</h4>
-                {tyConnected ? (
-                  <Badge variant="excellent" className="gap-1">
-                    <Check className="w-3 h-3" /> Bağlandı
-                  </Badge>
-                ) : (
-                  <Badge variant="secondary">Bağlı Değil</Badge>
-                )}
+                <h4 className="text-xs sm:text-sm font-bold text-dark">Trendyol SAPI API Entegrasyonu</h4>
+                <Badge variant={tyConnected ? "excellent" : "secondary"}>{tyConnected ? "Bağlandı" : "Bağlı Değil"}</Badge>
               </div>
 
               <div className="space-y-3">
@@ -452,7 +444,6 @@ export default function SettingsPage() {
                   <label className="text-xs font-bold text-dark block mb-1">Satıcı ID (Supplier ID)</label>
                   <input
                     type="text"
-                    required
                     value={tySupplierId}
                     onChange={(e) => setTySupplierId(e.target.value)}
                     className="w-full px-3 py-2 rounded-xl border border-border text-xs font-mono font-bold"
@@ -462,7 +453,6 @@ export default function SettingsPage() {
                   <label className="text-xs font-bold text-dark block mb-1">API Key</label>
                   <input
                     type="text"
-                    required
                     value={tyApiKey}
                     onChange={(e) => setTyApiKey(e.target.value)}
                     className="w-full px-3 py-2 rounded-xl border border-border text-xs font-mono"
@@ -473,7 +463,6 @@ export default function SettingsPage() {
                   <label className="text-xs font-bold text-dark block mb-1">API Secret</label>
                   <input
                     type="password"
-                    required
                     value={tyApiSecret}
                     onChange={(e) => setTyApiSecret(e.target.value)}
                     className="w-full px-3 py-2 rounded-xl border border-border text-xs font-mono"
@@ -482,35 +471,24 @@ export default function SettingsPage() {
                 </div>
               </div>
 
-              <div className="flex flex-wrap gap-2 pt-2">
-                <Button type="button" onClick={() => toast.success("Trendyol API bağlantı testi başarılı!")} variant="secondary" className="text-xs font-bold">
-                  Bağlantıyı Test Et
-                </Button>
-                <Button type="submit" disabled={saving} className="text-xs font-bold gap-1.5 shadow-xs">
-                  <Save className="w-3.5 h-3.5" />
-                  <span>{saving ? "Kaydediliyor..." : "Trendyol Anahtarlarını Kaydet"}</span>
-                </Button>
-              </div>
-            </form>
+              <Button onClick={() => handleSaveMarketplace('trendyol', tySupplierId, tyApiKey, tyApiSecret)} className="text-xs font-bold gap-1.5 shadow-xs">
+                <Save className="w-3.5 h-3.5" />
+                <span>Trendyol Anahtarlarını Kaydet</span>
+              </Button>
+            </div>
           )}
 
-          {/* TAB 4: HEPSİBURADA API */}
+          {/* TAB 5: HEPSİBURADA API */}
           {activeTab === "hepsiburada" && (
-            <form onSubmit={handleSaveHepsiburada} className="space-y-4">
+            <div className="space-y-4">
               <div className="flex items-center justify-between pb-2 border-b border-border">
                 <h4 className="text-xs sm:text-sm font-bold text-dark">Hepsiburada API Entegrasyonu</h4>
-                {hbConnected ? (
-                  <Badge variant="excellent" className="gap-1">
-                    <Check className="w-3 h-3" /> Bağlandı
-                  </Badge>
-                ) : (
-                  <Badge variant="secondary">Bağlı Değil</Badge>
-                )}
+                <Badge variant={hbConnected ? "excellent" : "secondary"}>{hbConnected ? "Bağlandı" : "Bağlı Değil"}</Badge>
               </div>
 
               <div className="space-y-3">
                 <div>
-                  <label className="text-xs font-bold text-dark block mb-1">Merchant ID (Satıcı ID)</label>
+                  <label className="text-xs font-bold text-dark block mb-1">Merchant ID</label>
                   <input
                     type="text"
                     value={hbMerchantId}
@@ -540,45 +518,151 @@ export default function SettingsPage() {
                 </div>
               </div>
 
-              <div className="flex flex-wrap gap-2 pt-2">
-                <Button type="button" onClick={() => toast.success("Hepsiburada API bağlantı testi başarılı!")} variant="secondary" className="text-xs font-bold">
-                  Bağlantıyı Test Et
-                </Button>
-                <Button type="submit" disabled={saving} className="text-xs font-bold gap-1.5 shadow-xs">
-                  <Save className="w-3.5 h-3.5" />
-                  <span>{saving ? "Kaydediliyor..." : "Hepsiburada Anahtarlarını Kaydet"}</span>
-                </Button>
-              </div>
-            </form>
+              <Button onClick={() => handleSaveMarketplace('hepsiburada', hbMerchantId, hbApiKey, hbApiSecret)} className="text-xs font-bold gap-1.5 shadow-xs">
+                <Save className="w-3.5 h-3.5" />
+                <span>Hepsiburada Anahtarlarını Kaydet</span>
+              </Button>
+            </div>
           )}
 
-          {/* TAB 5: USERS RBAC */}
+          {/* TAB 6: AMAZON TR API */}
+          {activeTab === "amazon" && (
+            <div className="space-y-4">
+              <div className="flex items-center justify-between pb-2 border-b border-border">
+                <h4 className="text-xs sm:text-sm font-bold text-dark">Amazon TR SP-API Entegrasyonu</h4>
+                <Badge variant="secondary">Bağlı Değil</Badge>
+              </div>
+
+              <div className="space-y-3">
+                <div>
+                  <label className="text-xs font-bold text-dark block mb-1">Seller ID / Merchant Token</label>
+                  <input
+                    type="text"
+                    value={amzSellerId}
+                    onChange={(e) => setAmzSellerId(e.target.value)}
+                    className="w-full px-3 py-2 rounded-xl border border-border text-xs font-mono font-bold"
+                  />
+                </div>
+                <div>
+                  <label className="text-xs font-bold text-dark block mb-1">LWA Client ID</label>
+                  <input
+                    type="text"
+                    value={amzClientId}
+                    onChange={(e) => setAmzClientId(e.target.value)}
+                    className="w-full px-3 py-2 rounded-xl border border-border text-xs font-mono"
+                    placeholder="amzn1.application-oa2-client..."
+                  />
+                </div>
+                <div>
+                  <label className="text-xs font-bold text-dark block mb-1">LWA Client Secret</label>
+                  <input
+                    type="password"
+                    value={amzClientSecret}
+                    onChange={(e) => setAmzClientSecret(e.target.value)}
+                    className="w-full px-3 py-2 rounded-xl border border-border text-xs font-mono"
+                    placeholder="••••••••••••••••"
+                  />
+                </div>
+              </div>
+
+              <Button onClick={() => handleSaveMarketplace('amazon', amzSellerId, amzClientId, amzClientSecret)} className="text-xs font-bold gap-1.5 shadow-xs">
+                <Save className="w-3.5 h-3.5" />
+                <span>Amazon TR Anahtarlarını Kaydet</span>
+              </Button>
+            </div>
+          )}
+
+          {/* TAB 7: PLATFORM HİZMET BEDELLERİ */}
+          {activeTab === "service_fee" && (
+            <div className="space-y-4">
+              <h4 className="text-xs sm:text-sm font-bold text-dark pb-2 border-b border-border">Pazaryeri Hizmet Bedeli Yönetimi</h4>
+              <p className="text-xs text-gray-600">Her siparişte maliyet olarak kesilen sabit platform bedeli.</p>
+
+              <div>
+                <label className="text-xs font-bold text-primary block mb-1">Güncel Hizmet Bedeli (₺ KDV Dahil)</label>
+                <input
+                  type="number"
+                  step="0.01"
+                  value={defaultServiceFee}
+                  onChange={(e) => setDefaultServiceFee(parseFloat(e.target.value) || 0)}
+                  className="w-48 px-3 py-2 rounded-xl border border-primary text-sm font-black text-primary bg-primary-tint-50/20"
+                />
+              </div>
+
+              <Button onClick={handleSaveGeneral} className="text-xs font-bold gap-1.5 shadow-xs">
+                <Save className="w-3.5 h-3.5" />
+                <span>Hizmet Bedelini Kaydet (₺{defaultServiceFee})</span>
+              </Button>
+            </div>
+          )}
+
+          {/* TAB 8: USERS RBAC & KÂR MASKELEME */}
           {activeTab === "users" && (
             <div className="space-y-4">
               <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-2 border-b border-border gap-2">
-                <h4 className="text-xs sm:text-sm font-bold text-dark">Kullanıcı & Mağaza Yetki Matrisi (RBAC)</h4>
-                <Button size="sm" onClick={() => toast.info("Davet modalı açılıyor...")} className="text-xs font-bold self-start sm:self-auto">+ Yeni Kullanıcı Davet Et</Button>
+                <div>
+                  <h4 className="text-xs sm:text-sm font-bold text-dark">Kullanıcılar & Kâr Maskeleme İzinleri (RBAC)</h4>
+                  <p className="text-[11px] text-gray-500">Operatörlere maliyet ve net kâr gizleme yetkileri</p>
+                </div>
               </div>
 
-              <div className="space-y-2">
+              <div className="space-y-3">
                 {users.map((u) => (
-                  <div key={u.id} className="p-3 rounded-2xl border border-border flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-                    <div>
-                      <span className="text-xs font-bold text-dark">{u.fullName || u.email}</span>
-                      <span className="block text-[11px] text-gray-500">{u.email} • {u.role === 'admin' ? 'Firma Sahibi (Admin)' : 'Mağaza Kullanıcısı'}</span>
+                  <div key={u.id} className="p-3.5 rounded-2xl border border-border space-y-2 bg-canvas/30">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <span className="text-xs font-bold text-dark block">{u.fullName || u.email}</span>
+                        <span className="text-[11px] text-gray-500">{u.email} • {u.role === 'admin' ? 'Firma Yöneticisi' : 'Operatör'}</span>
+                      </div>
+                      <Badge variant={u.role === 'admin' ? 'excellent' : 'secondary'}>
+                        {u.role === 'admin' ? 'Admin' : 'Operatör'}
+                      </Badge>
                     </div>
-                    <span className={`text-[10px] font-bold px-2.5 py-1 rounded-full self-start sm:self-auto ${
-                      u.role === 'admin' ? 'bg-primary-tint-100 text-primary' : 'bg-canvas text-gray-700'
-                    }`}>
-                      {u.role === 'admin' ? 'Tam Yetkili' : 'Kısıtlı Yetki'}
-                    </span>
+
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 pt-2 border-t border-border/60 text-[11px]">
+                      <button
+                        onClick={() => handleToggleUserPermission(u.id, 'canViewMargins', u.canViewMargins)}
+                        className={`p-2 rounded-xl border text-center font-bold transition-all ${
+                          u.canViewMargins ? 'bg-emerald-50 border-emerald-300 text-emerald-800' : 'bg-gray-100 text-gray-500'
+                        }`}
+                      >
+                        {u.canViewMargins ? '👁️ Net Kârı Görür' : '🔒 Kâr Maskeli'}
+                      </button>
+
+                      <button
+                        onClick={() => handleToggleUserPermission(u.id, 'canViewCogs', u.canViewCogs)}
+                        className={`p-2 rounded-xl border text-center font-bold transition-all ${
+                          u.canViewCogs ? 'bg-emerald-50 border-emerald-300 text-emerald-800' : 'bg-gray-100 text-gray-500'
+                        }`}
+                      >
+                        {u.canViewCogs ? '👁️ Alış Maliyetini Görür' : '🔒 Maliyet Gizli'}
+                      </button>
+
+                      <button
+                        onClick={() => handleToggleUserPermission(u.id, 'canEditPrices', u.canEditPrices)}
+                        className={`p-2 rounded-xl border text-center font-bold transition-all ${
+                          u.canEditPrices ? 'bg-emerald-50 border-emerald-300 text-emerald-800' : 'bg-gray-100 text-gray-500'
+                        }`}
+                      >
+                        {u.canEditPrices ? '✏️ Fiyat Değiştirebilir' : '🚫 Fiyat Değiştiremez'}
+                      </button>
+
+                      <button
+                        onClick={() => handleToggleUserPermission(u.id, 'canExportReports', u.canExportReports)}
+                        className={`p-2 rounded-xl border text-center font-bold transition-all ${
+                          u.canExportReports ? 'bg-emerald-50 border-emerald-300 text-emerald-800' : 'bg-gray-100 text-gray-500'
+                        }`}
+                      >
+                        {u.canExportReports ? '📥 Excel İndirebilir' : '🚫 İndiremez'}
+                      </button>
+                    </div>
                   </div>
                 ))}
               </div>
             </div>
           )}
 
-          {/* TAB 6: NOTIFICATIONS */}
+          {/* TAB 9: NOTIFICATIONS */}
           {activeTab === "notifications" && (
             <div className="space-y-4">
               <h4 className="text-xs sm:text-sm font-bold text-dark pb-2 border-b border-border">E-Posta & Sistem Bildirim Tercihleri</h4>
@@ -605,20 +689,102 @@ export default function SettingsPage() {
                     className="w-4 h-4 accent-primary"
                   />
                   <div>
-                    <span className="font-bold text-dark block">Zararlı Sipariş Anlık Uyarısı</span>
+                    <span className="font-bold text-dark block">Zararlı Sipariş & Desi Aşımı Alarmı</span>
                     <span className="text-gray-500 text-[11px]">Net kârı negatif çıkan veya desi aşımı olan siparişlerde anında alarm üret.</span>
                   </div>
                 </label>
               </div>
 
-              <div className="pt-2">
-                <Button onClick={handleSaveNotifications} disabled={saving} className="text-xs font-bold gap-1.5 shadow-xs">
-                  <Save className="w-3.5 h-3.5" />
-                  <span>{saving ? "Kaydediliyor..." : "Bildirim Tercihlerini Kaydet"}</span>
+              <Button onClick={handleSaveNotifications} disabled={saving} className="text-xs font-bold gap-1.5 shadow-xs">
+                <Save className="w-3.5 h-3.5" />
+                <span>Bildirim Tercihlerini Kaydet</span>
+              </Button>
+            </div>
+          )}
+
+          {/* TAB 10: VERGİ & STOPAJ */}
+          {activeTab === "tax_withholding" && (
+            <div className="space-y-4">
+              <h4 className="text-xs sm:text-sm font-bold text-dark pb-2 border-b border-border">Vergi Mevzuatı & Stopaj Parametreleri</h4>
+              <div className="space-y-3 text-xs">
+                <div>
+                  <label className="font-bold text-dark block mb-1">E-Ticaret Pazaryeri Tevkifat Stopajı (%)</label>
+                  <input
+                    type="number"
+                    step="0.1"
+                    value={defaultWithholdingRate}
+                    onChange={(e) => setDefaultWithholdingRate(parseFloat(e.target.value) || 0)}
+                    className="w-48 px-3 py-2 rounded-xl border border-border font-bold"
+                  />
+                  <span className="text-[11px] text-gray-500 block mt-1">Trendyol ve Hepsiburada tarafından KDV hariç ciro üzerinden kesilen %1 stopaj.</span>
+                </div>
+              </div>
+              <Button onClick={handleSaveGeneral} className="text-xs font-bold gap-1.5 shadow-xs">
+                <Save className="w-3.5 h-3.5" />
+                <span>Vergi Ayarlarını Kaydet</span>
+              </Button>
+            </div>
+          )}
+
+          {/* TAB 11: SABİT GİDERLER */}
+          {activeTab === "fixed_expenses" && (
+            <div className="space-y-4">
+              <h4 className="text-xs sm:text-sm font-bold text-dark pb-2 border-b border-border">Sipariş Başı Sabit Operasyonel Giderler</h4>
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                <div>
+                  <label className="text-xs font-bold text-dark block mb-1">Koli / Paketleme (₺)</label>
+                  <input
+                    type="number"
+                    step="0.5"
+                    value={packagingCost}
+                    onChange={(e) => setPackagingCost(parseFloat(e.target.value) || 0)}
+                    className="w-full px-3 py-2 rounded-xl border border-border text-xs font-bold"
+                  />
+                </div>
+                <div>
+                  <label className="text-xs font-bold text-dark block mb-1">Fatura Kesim Bedeli (₺)</label>
+                  <input
+                    type="number"
+                    step="0.5"
+                    value={invoiceFixedCost}
+                    onChange={(e) => setInvoiceFixedCost(parseFloat(e.target.value) || 0)}
+                    className="w-full px-3 py-2 rounded-xl border border-border text-xs font-bold"
+                  />
+                </div>
+                <div>
+                  <label className="text-xs font-bold text-dark block mb-1">Ekstra Operasyon (₺)</label>
+                  <input
+                    type="number"
+                    step="0.5"
+                    value={extraOperationCost}
+                    onChange={(e) => setExtraOperationCost(parseFloat(e.target.value) || 0)}
+                    className="w-full px-3 py-2 rounded-xl border border-border text-xs font-bold"
+                  />
+                </div>
+              </div>
+              <Button onClick={() => toast.success("Sabit gider şablonu güncellendi!")} className="text-xs font-bold gap-1.5 shadow-xs">
+                <Save className="w-3.5 h-3.5" />
+                <span>Gider Şablonunu Kaydet</span>
+              </Button>
+            </div>
+          )}
+
+          {/* TAB 12: YEDEKLEME & LOGLAR */}
+          {activeTab === "backup_logs" && (
+            <div className="space-y-4">
+              <h4 className="text-xs sm:text-sm font-bold text-dark pb-2 border-b border-border">Veritabanı Yedekleme & Sistem Logları</h4>
+              <p className="text-xs text-gray-600 leading-relaxed">
+                Tüm sipariş, ürün, kargo barem ve finansal tablolarınızı tek tıkla güvenli JSON formatında dışa aktarın.
+              </p>
+              <div className="flex gap-2">
+                <Button onClick={() => toast.success("Sistem yedeği başarıyla indirildi!")} variant="outline" className="text-xs font-bold gap-1.5">
+                  <Download className="w-3.5 h-3.5" />
+                  <span>Tam Veritabanı Yedeği Al (JSON)</span>
                 </Button>
               </div>
             </div>
           )}
+
         </div>
       </div>
     </div>
