@@ -36,7 +36,8 @@ export function Header({ onMobileMenuToggle }: { onMobileMenuToggle: () => void 
         </button>
 
         <div className="lg:hidden">
-          <BrandLogo size="sm" showBadge={false} showSlogan={false} />
+          <BrandLogo size="sm" showText={false} showBadge={false} showSlogan={false} className="sm:hidden" />
+          <BrandLogo size="sm" showText={true} showBadge={false} showSlogan={false} className="hidden sm:flex" />
         </div>
 
         <div className="flex items-center gap-1.5 ml-1 sm:ml-2">

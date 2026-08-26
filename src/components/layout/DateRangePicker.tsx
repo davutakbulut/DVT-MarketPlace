@@ -161,6 +161,15 @@ export function DateRangePicker() {
     return `${formatD(s)} - ${formatD(e)}`;
   };
 
+  const formatShortDisplayRange = (s: string, e: string) => {
+    const formatShort = (str: string) => {
+      const parts = str.split('-');
+      if (parts.length === 3) return `${parts[2]}.${parts[1]}`;
+      return str;
+    };
+    return `${formatShort(s)} - ${formatShort(e)}`;
+  };
+
   return (
     <div className="relative flex items-center gap-1.5 sm:gap-2 shrink-0" ref={containerRef}>
       {/* 1. Quick Preset Dropdown Pill (Hidden on extra small screens, visible on md+) */}
@@ -197,7 +206,8 @@ export function DateRangePicker() {
         title="Tarih Aralığı Seç"
       >
         <CalendarIcon className="w-3.5 h-3.5 text-primary shrink-0" />
-        <span className="tabular-nums font-semibold text-[11px] sm:text-xs">{formatDisplayRange(startDate, endDate)}</span>
+        <span className="tabular-nums font-semibold text-[11px] sm:text-xs hidden md:inline">{formatDisplayRange(startDate, endDate)}</span>
+        <span className="tabular-nums font-semibold text-[11px] md:hidden">{formatShortDisplayRange(startDate, endDate)}</span>
       </button>
 
       {/* 3. POPUP CALENDAR MODAL / DROPDOWN */}
