@@ -2,6 +2,8 @@ import { NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
 import { query } from '@/lib/db';
 
+export const dynamic = 'force-dynamic';
+
 export async function GET() {
   try {
     const cookieStore = await cookies();
@@ -20,7 +22,7 @@ export async function GET() {
 
     // Direct Database check: Verify user is still active in auth.users
     const userRows = await query(`
-      SELECT u.id, u.email, u.is_super_admin, u.raw_user_meta_data, ucr.role, ucr.company_id, c.name as company_name
+      SELECT u.id, u.email, u.is_super_admin, u.raw_user_meta_data, ucr.role, ucr.company_id, ucr.allowed_stores, c.name as company_name
       FROM auth.users u
       LEFT JOIN user_company_roles ucr ON ucr.user_id = u.id
       LEFT JOIN companies c ON c.id = ucr.company_id
@@ -33,15 +35,36 @@ export async function GET() {
 
     const dbUser = userRows[0];
     const isSuperAdmin = !!(dbUser.is_super_admin || dbUser.raw_user_meta_data?.is_super_admin || dbUser.role === 'super_admin');
+    const allowedStores = Array.isArray(dbUser.allowed_stores) ? dbUser.allowed_stores : [];
 
-    // Fetch user's active stores directly from DB
-    const storeRows = await query(`
-      SELECT s.id, s.store_name as name, s.marketplace, s.seller_id as "sellerId", usp.permissions
-      FROM stores s
-      LEFT JOIN user_store_permissions usp ON usp.store_id = s.id AND usp.user_id = $1
-      WHERE s.company_id = $2 AND s.is_active = true
-      ORDER BY s.created_at ASC
-    `, [userId, dbUser.company_id]);
+    // Fetch user's strictly permitted stores directly from DB
+    let storeRows: any[] = [];
+    if (isSuperAdmin) {
+      storeRows = await query(`
+        SELECT s.id, s.store_name as name, s.marketplace, s.seller_id as "sellerId", usp.permissions
+        FROM stores s
+        LEFT JOIN user_store_permissions usp ON usp.store_id = s.id AND usp.user_id = $1
+        WHERE s.is_active = true ${dbUser.company_id ? 'AND s.company_id = $2' : ''}
+        ORDER BY s.created_at ASC
+      `, dbUser.company_id ? [userId, dbUser.company_id] : [userId]);
+    } else if (dbUser.role === 'admin' || allowedStores.includes('all')) {
+      storeRows = await query(`
+        SELECT s.id, s.store_name as name, s.marketplace, s.seller_id as "sellerId", usp.permissions
+        FROM stores s
+        LEFT JOIN user_store_permissions usp ON usp.store_id = s.id AND usp.user_id = $1
+        WHERE s.company_id = $2 AND s.is_active = true
+        ORDER BY s.created_at ASC
+      `, [userId, dbUser.company_id]);
+    } else {
+      storeRows = await query(`
+        SELECT s.id, s.store_name as name, s.marketplace, s.seller_id as "sellerId", usp.permissions
+        FROM stores s
+        LEFT JOIN user_store_permissions usp ON usp.store_id = s.id AND usp.user_id = $1
+        WHERE s.company_id = $2 AND s.is_active = true
+          AND (s.id::text = ANY($3) OR usp.store_id IS NOT NULL)
+        ORDER BY s.created_at ASC
+      `, [userId, dbUser.company_id, allowedStores.length > 0 ? allowedStores : ['00000000-0000-0000-0000-000000000000']]);
+    }
 
     return NextResponse.json({
       authenticated: true,

@@ -1,11 +1,89 @@
 import { NextResponse } from 'next/server';
+import { cookies } from 'next/headers';
 import { query } from '@/lib/db';
 
-export async function GET() {
+export const dynamic = 'force-dynamic';
+
+export async function GET(request: Request) {
   try {
+    const cookieStore = await cookies();
+    const sessionCookie = cookieStore.get('dvt_session');
+
+    let userId: string | null = null;
+    let isSuperAdmin = false;
+    let userRole = 'user';
+    let companyId: string | null = null;
+    let allowedStores: string[] = [];
+
+    if (sessionCookie && sessionCookie.value) {
+      try {
+        const session = JSON.parse(sessionCookie.value);
+        userId = session.user?.id || null;
+
+        if (userId) {
+          const userRows = await query(`
+            SELECT u.id, u.email, u.is_super_admin, u.raw_user_meta_data, ucr.role, ucr.company_id, ucr.allowed_stores
+            FROM auth.users u
+            LEFT JOIN user_company_roles ucr ON ucr.user_id = u.id
+            WHERE u.id = $1
+          `, [userId]);
+
+          if (userRows.length > 0) {
+            const dbUser = userRows[0];
+            isSuperAdmin = !!(dbUser.is_super_admin || dbUser.raw_user_meta_data?.is_super_admin || dbUser.role === 'super_admin');
+            userRole = dbUser.role || 'user';
+            companyId = dbUser.company_id;
+            allowedStores = Array.isArray(dbUser.allowed_stores) ? dbUser.allowed_stores : [];
+          }
+        }
+      } catch (err) {
+        console.error('Session parse error in stores API:', err);
+      }
+    }
+
+    // Build query conditions based on user permission level
+    let whereClauses: string[] = [];
+    let params: any[] = [];
+    let pIdx = 1;
+
+    if (isSuperAdmin) {
+      // Super Admin: can see all stores across companies or filter by companyId
+      const url = new URL(request.url);
+      const reqCompanyId = url.searchParams.get('companyId');
+      if (reqCompanyId) {
+        whereClauses.push(`s.company_id::text = $${pIdx}`);
+        params.push(reqCompanyId);
+        pIdx++;
+      }
+    } else if (companyId) {
+      // Scoped to User's Company
+      whereClauses.push(`s.company_id::text = $${pIdx}`);
+      params.push(companyId);
+      pIdx++;
+
+      // If user is a regular user (not company admin):
+      if (userRole !== 'admin' && !allowedStores.includes('all')) {
+        whereClauses.push(`(
+          s.id::text = ANY($${pIdx}) 
+          OR s.id IN (SELECT store_id FROM user_store_permissions WHERE user_id = $${pIdx + 1})
+        )`);
+        params.push(allowedStores.length > 0 ? allowedStores : ['00000000-0000-0000-0000-000000000000']);
+        params.push(userId);
+        pIdx += 2;
+      }
+    } else if (userId) {
+      // Standalone user without explicit company: only explicitly assigned stores
+      whereClauses.push(`s.id IN (SELECT store_id FROM user_store_permissions WHERE user_id = $${pIdx})`);
+      params.push(userId);
+      pIdx++;
+    }
+
+    const whereSQL = whereClauses.length > 0 ? `WHERE ${whereClauses.join(' AND ')}` : '';
+
     const stores = await query(`
       SELECT 
         s.id,
+        s.company_id as "companyId",
         s.marketplace,
         s.store_name as "storeName",
         s.seller_id as "sellerId",
@@ -20,8 +98,9 @@ export async function GET() {
         (SELECT COUNT(*) FROM orders WHERE store_id = s.id) as "orderCount",
         (SELECT COUNT(*) FROM products WHERE store_id = s.id) as "productCount"
       FROM stores s
+      ${whereSQL}
       ORDER BY s.created_at ASC
-    `);
+    `, params);
 
     return NextResponse.json({ stores });
   } catch (error: any) {
@@ -32,6 +111,19 @@ export async function GET() {
 
 export async function POST(request: Request) {
   try {
+    const cookieStore = await cookies();
+    const sessionCookie = cookieStore.get('dvt_session');
+    let sessionCompanyId: string | null = null;
+    let userId: string | null = null;
+
+    if (sessionCookie && sessionCookie.value) {
+      try {
+        const session = JSON.parse(sessionCookie.value);
+        userId = session.user?.id;
+        sessionCompanyId = session.user?.companyId;
+      } catch {}
+    }
+
     const body = await request.json();
     const { 
       marketplace, 
@@ -50,8 +142,11 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Lütfen zorunlu alanları (Pazaryeri, Mağaza Adı ve Satıcı ID) doldurun.' }, { status: 400 });
     }
 
-    const compRows = await query('SELECT id FROM companies LIMIT 1');
-    const companyId = compRows[0]?.id || '11111111-1111-1111-1111-111111111111';
+    let companyId = sessionCompanyId;
+    if (!companyId) {
+      const compRows = await query('SELECT id FROM companies LIMIT 1');
+      companyId = compRows[0]?.id || '11111111-1111-1111-1111-111111111111';
+    }
 
     const extraConfig = {
       defaultCarrier: defaultCarrier || 'TEX',
@@ -70,6 +165,15 @@ export async function POST(request: Request) {
       ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, true, 'synced', now(), now(), now())
       RETURNING id, store_name as "storeName", marketplace, seller_id as "sellerId"
     `, [companyId, marketplace.toLowerCase(), storeName, sellerId, supplierId || sellerId, apiKey || 'ty_key_live', apiSecret || 'ty_secret_live', JSON.stringify(extraConfig)]);
+
+    // If regular user created it, also grant user_store_permissions
+    if (userId && newStore[0]?.id) {
+      await query(`
+        INSERT INTO user_store_permissions (user_id, store_id, permissions)
+        VALUES ($1, $2, '{"can_view_profit": true, "can_edit_costs": true, "can_update_prices": true, "can_export_reports": true, "allowed_modules": ["all"]}')
+        ON CONFLICT (user_id, store_id) DO NOTHING
+      `, [userId, newStore[0].id]).catch(() => {});
+    }
 
     return NextResponse.json({
       success: true,

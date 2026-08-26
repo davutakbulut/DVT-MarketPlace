@@ -241,12 +241,12 @@ export default function StoresManagementPage() {
       {/* Top Banner */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-white p-4 sm:p-6 rounded-3xl border border-border shadow-xs">
         <div>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 flex-wrap">
             <h3 className="text-base sm:text-lg font-black text-dark">Mağaza Yönetimi & API Entegrasyon Merkezi</h3>
-            <Badge variant="excellent">Canlı API & Veritabanı</Badge>
+            <Badge variant="excellent">Tanımlı Hesaplarınız</Badge>
           </div>
           <p className="text-xs text-muted-foreground mt-0.5">
-            Trendyol, Hepsiburada, Amazon TR ve diğer pazaryeri mağazalarınızı bağlayın, API anahtarlarını düzenleyin ve siparişleri anlık senkronize edin.
+            Hesabınıza tanımlanmış aktif pazaryeri mağazaları, API bağlantıları ve sipariş senkronizasyon merkezi.
           </p>
         </div>
 
@@ -254,25 +254,37 @@ export default function StoresManagementPage() {
           <Button
             size="sm"
             onClick={openNewStoreModal}
-            className="text-xs h-8 sm:h-9 gap-1.5 font-bold shadow-xs bg-primary hover:bg-primary-hover text-white"
+            className="text-xs h-8 sm:h-9 gap-1.5 font-bold shadow-xs bg-primary hover:bg-primary-hover text-white cursor-pointer"
           >
             <Plus className="w-4 h-4" />
             <span>Yeni Mağaza Bağla</span>
           </Button>
 
-          <Button size="sm" variant="outline" onClick={fetchStores} className="h-8 sm:h-9 text-xs">
+          <Button size="sm" variant="outline" onClick={fetchStores} className="h-8 sm:h-9 text-xs cursor-pointer">
             <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />
           </Button>
         </div>
       </div>
 
       {/* Connected Stores Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-        {stores.map((s) => {
-          const mpMeta = marketplaceLogos[s.marketplace] || { name: s.marketplace, color: 'text-gray-700', bg: 'bg-gray-50 border-gray-200' };
-          const isSyncing = syncingId === s.id;
+      {loading ? (
+        <div className="py-20 text-center space-y-3 bg-white rounded-3xl border border-border shadow-xs">
+          <RefreshCw className="w-8 h-8 text-primary animate-spin mx-auto" />
+          <p className="text-xs text-gray-500 font-bold">Tanımlı mağazalarınız yükleniyor...</p>
+        </div>
+      ) : stores.length === 0 ? (
+        <div className="py-16 text-center space-y-2 bg-white rounded-3xl border border-border shadow-xs p-6">
+          <Store className="w-10 h-10 text-gray-300 mx-auto" />
+          <h4 className="text-sm font-bold text-dark">Hesabınıza Tanımlı Aktif Mağaza Bulunamadı</h4>
+          <p className="text-xs text-gray-400">Yöneticinizden hesabınıza mağaza yetkisi atamasını talep edebilir veya yeni mağaza ekleyebilirsiniz.</p>
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          {stores.map((s) => {
+            const mpMeta = marketplaceLogos[s.marketplace] || { name: s.marketplace, color: 'text-gray-700', bg: 'bg-gray-50 border-gray-200' };
+            const isSyncing = syncingId === s.id;
 
-          return (
+            return (
             <div
               key={s.id}
               className="bg-white rounded-3xl border border-border p-5 shadow-xs hover:border-primary/40 transition-all flex flex-col justify-between space-y-4 group"
@@ -358,6 +370,7 @@ export default function StoresManagementPage() {
           );
         })}
       </div>
+      )}
 
       {/* MODAL 1: Connect New Store */}
       {connectModal && (
