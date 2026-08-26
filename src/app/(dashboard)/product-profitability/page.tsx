@@ -8,15 +8,15 @@ import {
   TrendingUp, Download, RefreshCw, Search, Package, 
   DollarSign, Percent, Truck, ExternalLink, ChevronLeft, 
   ChevronRight, ChevronsLeft, ChevronsRight, Award, AlertTriangle
-} from "lucide-react";
-import { DateRangePicker, DateFilterValue } from "@/components/common/DateRangePicker";
+, Calendar } from "lucide-react";
+import { useDateStore } from "@/store/useDateStore";
 
 export default function ProductProfitabilityPage() {
   const [items, setItems] = useState<any[]>([]);
   const [summary, setSummary] = useState<any>({});
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
-  const [dateFilter, setDateFilter] = useState<DateFilterValue>({ period: "all" });
+  const { period, startDate, endDate, label } = useDateStore();
   const [pagination, setPagination] = useState({
     page: 1,
     pageSize: 50,
@@ -27,9 +27,9 @@ export default function ProductProfitabilityPage() {
   const fetchProfitability = async () => {
     setLoading(true);
     try {
-      let url = `/api/products/profitability?page=${pagination.page}&pageSize=${pagination.pageSize}&search=${encodeURIComponent(search)}&period=${dateFilter.period}`;
-      if (dateFilter.startDate && dateFilter.endDate) {
-        url += `&startDate=${dateFilter.startDate}&endDate=${dateFilter.endDate}`;
+      let url = `/api/products/profitability?page=${pagination.page}&pageSize=${pagination.pageSize}&search=${encodeURIComponent(search)}&period=${period}`;
+      if (startDate && endDate) {
+        url += `&startDate=${startDate}&endDate=${endDate}`;
       }
       const res = await fetch(url);
       const data = await res.json();
@@ -45,7 +45,7 @@ export default function ProductProfitabilityPage() {
 
   useEffect(() => {
     fetchProfitability();
-  }, [pagination.page, pagination.pageSize, dateFilter]);
+  }, [pagination.page, pagination.pageSize, period, startDate, endDate]);
 
   const handleSearchSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -142,8 +142,11 @@ export default function ProductProfitabilityPage() {
         </form>
 
         <div className="flex items-center gap-2.5 flex-wrap sm:flex-nowrap w-full sm:w-auto justify-between sm:justify-end">
-          {/* Universal DateRangePicker */}
-          <DateRangePicker value={dateFilter} onChange={setDateFilter} />
+          {/* Global Active Period Indicator */}
+          <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-canvas border border-border text-xs font-bold text-dark">
+            <Calendar className="w-3.5 h-3.5 text-primary" />
+            <span>Dönem: {label}</span>
+          </div>
 
           <select
             value={pagination.pageSize}

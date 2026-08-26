@@ -12,7 +12,7 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { OrderDetailModal } from "@/components/orders/OrderDetailModal";
-import { DateRangePicker, DateFilterValue } from "@/components/common/DateRangePicker";
+import { useDateStore } from "@/store/useDateStore";
 import {
   ResponsiveContainer, AreaChart, Area, BarChart, Bar,
   PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend
@@ -21,7 +21,7 @@ import {
 export default function DashboardPage() {
   const [data, setData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
-  const [dateFilter, setDateFilter] = useState<DateFilterValue>({ period: "all" });
+  const { period, startDate, endDate, label } = useDateStore();
   const [selectedStore, setSelectedStore] = useState("all");
   const [selectedOrderId, setSelectedOrderId] = useState<string | null>(null);
   const [mounted, setMounted] = useState(false);
@@ -33,9 +33,9 @@ export default function DashboardPage() {
   const fetchDashboard = async () => {
     setLoading(true);
     try {
-      let url = `/api/dashboard?period=${dateFilter.period}&storeId=${selectedStore}`;
-      if (dateFilter.startDate && dateFilter.endDate) {
-        url += `&startDate=${dateFilter.startDate}&endDate=${dateFilter.endDate}`;
+      let url = `/api/dashboard?period=${period}&storeId=${selectedStore}`;
+      if (startDate && endDate) {
+        url += `&startDate=${startDate}&endDate=${endDate}`;
       }
       const res = await fetch(url);
       const json = await res.json();
@@ -49,7 +49,7 @@ export default function DashboardPage() {
 
   useEffect(() => {
     fetchDashboard();
-  }, [dateFilter, selectedStore]);
+  }, [period, startDate, endDate, selectedStore]);
 
   const d = data || {};
   const monthlyTrends = d.monthlyTrends || [];
@@ -95,8 +95,11 @@ export default function DashboardPage() {
 
         {/* Filters */}
         <div className="flex items-center gap-2 flex-wrap sm:flex-nowrap">
-          {/* Universal DateRangePicker */}
-          <DateRangePicker value={dateFilter} onChange={setDateFilter} />
+          {/* Global Active Period Indicator */}
+          <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-canvas border border-border text-xs font-bold text-dark">
+            <Calendar className="w-3.5 h-3.5 text-primary" />
+            <span>Dönem: {label}</span>
+          </div>
 
           {/* Store Selector */}
           <select

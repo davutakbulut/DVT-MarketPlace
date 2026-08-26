@@ -8,9 +8,9 @@ import {
   FileSpreadsheet, Download, RefreshCw, Eye, Filter, 
   Layers, Package, TrendingUp, AlertTriangle, Truck, Award,
   ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, Search
-} from "lucide-react";
+, Calendar } from "lucide-react";
 import { OrderDetailModal } from "@/components/orders/OrderDetailModal";
-import { DateRangePicker, DateFilterValue } from "@/components/common/DateRangePicker";
+import { useDateStore } from "@/store/useDateStore";
 
 export default function OrderProfitabilityReportPage() {
   const [reportType, setReportType] = useState<'order' | 'product' | 'category' | 'returns' | 'shipping'>('order');
@@ -22,16 +22,16 @@ export default function OrderProfitabilityReportPage() {
     totalPages: 1,
   });
   const [search, setSearch] = useState("");
-  const [dateFilter, setDateFilter] = useState<DateFilterValue>({ period: "all" });
+  const { period, startDate, endDate, label } = useDateStore();
   const [loading, setLoading] = useState(true);
   const [selectedOrderId, setSelectedOrderId] = useState<string | null>(null);
 
   const fetchReport = async () => {
     setLoading(true);
     try {
-      let url = `/api/reports?type=${reportType}&page=${pagination.page}&pageSize=${pagination.pageSize}&search=${encodeURIComponent(search)}&period=${dateFilter.period}`;
-      if (dateFilter.startDate && dateFilter.endDate) {
-        url += `&startDate=${dateFilter.startDate}&endDate=${dateFilter.endDate}`;
+      let url = `/api/reports?type=${reportType}&page=${pagination.page}&pageSize=${pagination.pageSize}&search=${encodeURIComponent(search)}&period=${period}`;
+      if (startDate && endDate) {
+        url += `&startDate=${startDate}&endDate=${endDate}`;
       }
       const res = await fetch(url);
       const json = await res.json();
@@ -48,7 +48,7 @@ export default function OrderProfitabilityReportPage() {
 
   useEffect(() => {
     fetchReport();
-  }, [reportType, pagination.page, pagination.pageSize, dateFilter]);
+  }, [reportType, pagination.page, pagination.pageSize, period, startDate, endDate]);
 
   const handleSearchSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -158,8 +158,11 @@ export default function OrderProfitabilityReportPage() {
         </form>
 
         <div className="flex items-center gap-2.5 flex-wrap sm:flex-nowrap w-full sm:w-auto justify-between sm:justify-end">
-          {/* Universal DateRangePicker */}
-          <DateRangePicker value={dateFilter} onChange={setDateFilter} />
+          {/* Global Active Period Indicator */}
+          <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-canvas border border-border text-xs font-bold text-dark">
+            <Calendar className="w-3.5 h-3.5 text-primary" />
+            <span>Dönem: {label}</span>
+          </div>
 
           <div className="flex items-center gap-1.5">
             <select

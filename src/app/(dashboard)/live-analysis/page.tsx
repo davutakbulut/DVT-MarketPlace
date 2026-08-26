@@ -9,9 +9,9 @@ import {
   Activity, RefreshCw, Search, Eye, Filter, Truck, CheckCircle2, 
   AlertTriangle, DollarSign, Package, Clock, ShieldCheck, ChevronRight, 
   Layers, Edit3, Check, X, TrendingUp, PieChart as PieIcon, BarChart3
-} from "lucide-react";
+, Calendar } from "lucide-react";
 import { OrderDetailModal } from "@/components/orders/OrderDetailModal";
-import { DateRangePicker, DateFilterValue } from "@/components/common/DateRangePicker";
+import { useDateStore } from "@/store/useDateStore";
 import {
   ResponsiveContainer, AreaChart, Area, BarChart, Bar,
   PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend
@@ -26,7 +26,7 @@ export default function LiveAnalysisPage() {
   const [pageSize, setPageSize] = useState(15);
   const [statusFilter, setStatusFilter] = useState("all");
   const [carrierFilter, setCarrierFilter] = useState("all");
-  const [dateFilter, setDateFilter] = useState<DateFilterValue>({ period: "all" });
+  const { period, startDate, endDate, label } = useDateStore();
   const [showCharts, setShowCharts] = useState(true);
   const [mounted, setMounted] = useState(false);
 
@@ -46,9 +46,9 @@ export default function LiveAnalysisPage() {
   const fetchOrders = async () => {
     setLoading(true);
     try {
-      let url = `/api/orders?search=${encodeURIComponent(search)}&status=${statusFilter}&carrier=${carrierFilter}&period=${dateFilter.period}&limit=100`;
-      if (dateFilter.startDate && dateFilter.endDate) {
-        url += `&startDate=${dateFilter.startDate}&endDate=${dateFilter.endDate}`;
+      let url = `/api/orders?search=${encodeURIComponent(search)}&status=${statusFilter}&carrier=${carrierFilter}&period=${period}&limit=100`;
+      if (startDate && endDate) {
+        url += `&startDate=${startDate}&endDate=${endDate}`;
       }
       const res = await fetch(url);
       const data = await res.json();
@@ -63,7 +63,7 @@ export default function LiveAnalysisPage() {
 
   useEffect(() => {
     fetchOrders();
-  }, [statusFilter, carrierFilter, dateFilter]);
+  }, [statusFilter, carrierFilter, period, startDate, endDate]);
 
   const handleSearchSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -322,8 +322,11 @@ export default function LiveAnalysisPage() {
         </form>
 
         <div className="flex items-center gap-2 flex-wrap sm:flex-nowrap w-full sm:w-auto">
-          {/* Universal DateRangePicker */}
-          <DateRangePicker value={dateFilter} onChange={setDateFilter} />
+          {/* Global Active Period Indicator */}
+          <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-canvas border border-border text-xs font-bold text-dark">
+            <Calendar className="w-3.5 h-3.5 text-primary" />
+            <span>Dönem: {label}</span>
+          </div>
 
           <select
             value={carrierFilter}

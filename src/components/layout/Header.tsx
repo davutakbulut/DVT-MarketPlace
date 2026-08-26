@@ -54,7 +54,7 @@ export function Header({ onMobileMenuToggle }: { onMobileMenuToggle: () => void 
           <span>Canlı PostgreSQL Aktif</span>
         </div>
 
-        <div className="hidden md:block">
+        <div className="flex items-center">
           <DateRangePicker />
         </div>
 
