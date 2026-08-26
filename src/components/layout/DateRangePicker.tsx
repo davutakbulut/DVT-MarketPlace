@@ -65,15 +65,12 @@ export function DateRangePicker() {
     const lastDay = new Date(year, month + 1, 0);
     const daysInMonth = lastDay.getDate();
 
-    // In JS: Sunday = 0, Monday = 1 ... Saturday = 6
-    // We want Monday = 0, Sunday = 6
     let startingDayOfWeek = firstDay.getDay() - 1;
     if (startingDayOfWeek === -1) startingDayOfWeek = 6;
 
     const prevMonthLastDay = new Date(year, month, 0).getDate();
     const days: { day: number; dateStr: string; isCurrentMonth: boolean }[] = [];
 
-    // Leading days from previous month
     for (let i = startingDayOfWeek - 1; i >= 0; i--) {
       const prevDay = prevMonthLastDay - i;
       const prevMonthIdx = month === 0 ? 11 : month - 1;
@@ -87,7 +84,6 @@ export function DateRangePicker() {
       });
     }
 
-    // Days of current month
     for (let i = 1; i <= daysInMonth; i++) {
       const mStr = String(month + 1).padStart(2, '0');
       const dStr = String(i).padStart(2, '0');
@@ -98,7 +94,6 @@ export function DateRangePicker() {
       });
     }
 
-    // Trailing days from next month to fill grid
     const remaining = 42 - days.length;
     for (let i = 1; i <= remaining; i++) {
       const nextMonthIdx = month === 11 ? 0 : month + 1;
@@ -117,14 +112,11 @@ export function DateRangePicker() {
 
   const days = getDaysInMonth(currentYear, currentMonth);
 
-  // Day Click Logic for Range Selection
   const handleDayClick = (dateStr: string) => {
     if (!rangeStart || (rangeStart && rangeEnd)) {
-      // First click: start new range
       setRangeStart(dateStr);
       setRangeEnd(null);
     } else {
-      // Second click: complete range
       let start = rangeStart;
       let end = dateStr;
       if (new Date(start) > new Date(end)) {
@@ -170,9 +162,9 @@ export function DateRangePicker() {
   };
 
   return (
-    <div className="relative flex items-center gap-1.5 sm:gap-2" ref={containerRef}>
-      {/* 1. Quick Preset Dropdown Pill */}
-      <div className="relative">
+    <div className="relative flex items-center gap-1.5 sm:gap-2 shrink-0" ref={containerRef}>
+      {/* 1. Quick Preset Dropdown Pill (Hidden on extra small screens, visible on md+) */}
+      <div className="hidden md:block relative">
         <select
           value={period === 'custom' ? 'custom' : period}
           onChange={(e) => {
@@ -198,14 +190,14 @@ export function DateRangePicker() {
         <ChevronRight className="w-3.5 h-3.5 text-gray-400 absolute right-2.5 top-2.5 sm:top-3 pointer-events-none rotate-90" />
       </div>
 
-      {/* 2. Interactive Date Range Button (Matches User Screenshot) */}
+      {/* 2. Interactive Date Range Button */}
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className="h-8 sm:h-9 px-3 rounded-2xl bg-dark hover:bg-dark/90 text-white font-bold text-xs flex items-center gap-2 shadow-xs transition-colors cursor-pointer"
+        className="h-8 sm:h-9 px-2.5 sm:px-3 rounded-2xl bg-dark hover:bg-dark/90 text-white font-bold text-xs flex items-center gap-1.5 sm:gap-2 shadow-xs transition-colors cursor-pointer shrink-0"
         title="Tarih Aralığı Seç"
       >
         <CalendarIcon className="w-3.5 h-3.5 text-primary shrink-0" />
-        <span className="tabular-nums font-semibold">{formatDisplayRange(startDate, endDate)}</span>
+        <span className="tabular-nums font-semibold text-[11px] sm:text-xs">{formatDisplayRange(startDate, endDate)}</span>
       </button>
 
       {/* 3. POPUP CALENDAR MODAL / DROPDOWN */}
@@ -255,7 +247,6 @@ export function DateRangePicker() {
               let containerClasses = "relative h-9 flex items-center justify-center cursor-pointer transition-all";
               let pillClasses = "w-7 h-7 sm:w-8 sm:h-8 rounded-full flex items-center justify-center font-bold text-xs transition-transform";
 
-              // Range Highlight background bar
               if (inRange) {
                 containerClasses += " bg-[#FFEDE7]";
               } else if (isStart && (rangeEnd || hoveredDate)) {
@@ -264,7 +255,6 @@ export function DateRangePicker() {
                 containerClasses += " bg-gradient-to-l from-transparent to-[#FFEDE7]";
               }
 
-              // Selected Endpoints Style
               if (isStart || isEnd || isHovered) {
                 pillClasses += " bg-primary text-white shadow-xs scale-105 z-10";
               } else if (inRange) {

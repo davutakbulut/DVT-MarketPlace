@@ -36,7 +36,7 @@ export function BrandLogo({
   }[size];
 
   const content = (
-    <div className={`flex items-center gap-2 sm:gap-2.5 select-none shrink-0 ${className}`}>
+    <div className={`relative flex items-center gap-2 sm:gap-2.5 select-none shrink-0 ${className}`}>
       {/* SVG Monogram Dynamic Logo Badge */}
       <div className={`${iconDimensions} bg-gradient-to-tr from-primary via-[#FF5722] to-[#D83A14] flex items-center justify-center text-white shadow-xs shrink-0 font-black relative overflow-hidden group`}>
         <svg viewBox="0 0 100 100" className="w-5/6 h-5/6 fill-none stroke-white stroke-[9] stroke-linecap-round stroke-linejoin-round">
@@ -50,13 +50,13 @@ export function BrandLogo({
       </div>
 
       {showText && (
-        <div className="flex flex-col justify-center shrink-0">
-          <div className="flex items-center gap-1.5 leading-none whitespace-nowrap">
+        <div className="relative flex flex-col justify-center shrink-0 pr-6">
+          <div className="flex items-center leading-none whitespace-nowrap">
             <span className={`font-black tracking-tight text-dark ${titleSize} whitespace-nowrap inline-flex items-center`}>
               DVT<span className="text-primary ml-1">MarketPlace</span>
             </span>
             {showBadge && (
-              <span className="bg-[#FFEDE7] text-primary text-[9px] font-black px-1.5 py-0.5 rounded-md leading-none tracking-wide shrink-0 border border-primary/20 uppercase">
+              <span className="absolute -top-1.5 right-0 bg-[#FFEDE7] text-primary text-[8px] sm:text-[9px] font-black px-1.5 py-0.5 rounded-full leading-none tracking-wider border border-primary/20 uppercase shadow-2xs pointer-events-none">
                 PRO
               </span>
             )}
