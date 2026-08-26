@@ -10,10 +10,11 @@ export class OrderProfitEngine {
     const commissionAmount = grossRevenue * commRateWithVat;
     const withholdingRate = (params.withholdingRate ?? 1.0) / 100;
     const withholdingTax = (grossRevenue / (1 + params.saleVatRate / 100)) * withholdingRate;
+    const shippingFee = params.shippingFee ?? 42.50;
 
     const outputVat = grossRevenue * (1 - 1 / (1 + params.saleVatRate / 100));
     const cogsVat = cogs * (1 - 1 / (1 + params.costVatRate / 100));
-    const shippingVat = params.shippingFee * (1 - 1 / 1.20);
+    const shippingVat = shippingFee * (1 - 1 / 1.20);
     const commVat = commissionAmount * (1 - 1 / 1.20);
     const serviceFeeVat = params.serviceFeeShare * (1 - 1 / 1.20);
     const inputVat = cogsVat + shippingVat + commVat + serviceFeeVat;
@@ -22,7 +23,7 @@ export class OrderProfitEngine {
     const totalCost =
       cogs +
       commissionAmount +
-      params.shippingFee +
+      shippingFee +
       params.serviceFeeShare +
       withholdingTax +
       netVatPayable +
@@ -39,7 +40,8 @@ export class OrderProfitEngine {
       grossRevenue: Math.round(grossRevenue * 100) / 100,
       cogs: Math.round(cogs * 100) / 100,
       commissionAmount: Math.round(commissionAmount * 100) / 100,
-      shippingFee: Math.round(params.shippingFee * 100) / 100,
+      shippingFee: Math.round(shippingFee * 100) / 100,
+      baremSaving: 0,
       serviceFeeShare: Math.round(params.serviceFeeShare * 100) / 100,
       withholdingTax: Math.round(withholdingTax * 100) / 100,
       netVatPayable: Math.round(netVatPayable * 100) / 100,

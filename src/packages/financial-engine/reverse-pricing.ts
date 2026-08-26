@@ -6,6 +6,7 @@ export class ReversePricingEngine {
     const withholdingRate = (input.withholdingRate ?? 1.0) / 100;
     const extraCost = input.extraCost ?? 0.0;
     const commRateWithVat = (input.commissionRate * 1.20) / 100;
+    const shippingFee = input.shippingFee ?? 42.50;
 
     // Linearization terms for VAT
     const outputVatRate = 1 - 1 / (1 + input.saleVatRate / 100);
@@ -14,14 +15,13 @@ export class ReversePricingEngine {
 
     // Fixed Input VAT credits
     const cogsVat = input.cogs * (1 - 1 / (1 + input.costVatRate / 100));
-    const shippingVat = input.shippingFee * (1 - 1 / 1.20);
+    const shippingVat = shippingFee * (1 - 1 / 1.20);
     const serviceFeeVat = serviceFee * (1 - 1 / 1.20);
     const extraCostVat = extraCost * (1 - 1 / 1.20);
     const betaVatRaw = cogsVat + shippingVat + serviceFeeVat + extraCostVat;
-    // When saleVatRate is 0%, output VAT is 0 so betaVat credit cannot be offset against sale VAT
     const betaVat = input.saleVatRate === 0 ? 0 : betaVatRaw;
 
-    const fixedCosts = input.cogs + input.shippingFee + serviceFee + extraCost;
+    const fixedCosts = input.cogs + shippingFee + serviceFee + extraCost;
 
     let targetCashProfit = 0;
     let variableMarginRate = 0;
@@ -61,7 +61,7 @@ export class ReversePricingEngine {
 
     const totalDeductions =
       input.cogs +
-      input.shippingFee +
+      shippingFee +
       serviceFee +
       extraCost +
       commissionAmount +
@@ -79,7 +79,8 @@ export class ReversePricingEngine {
       profitMarkupPercent,
       breakdown: {
         cogs: input.cogs,
-        shippingFee: input.shippingFee,
+        shippingFee,
+        baremSaving: 0,
         commissionAmount,
         serviceFee,
         withholdingTax,
