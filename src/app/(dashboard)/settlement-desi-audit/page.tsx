@@ -160,64 +160,105 @@ export default function SettlementDesiAuditPage() {
       {/* Table Content */}
       {activeTab === 'audits' ? (
         <div className="bg-white rounded-3xl border border-border shadow-xs overflow-hidden">
-          <div className="overflow-x-auto">
-            <table className="w-full text-left text-xs border-collapse min-w-[850px]">
-              <thead>
-                <tr className="bg-canvas border-b border-border text-muted-foreground font-semibold text-[11px]">
-                  <th className="py-3 px-4 table-sticky-first-col bg-canvas">Sipariş & Paket No</th>
-                  <th className="py-3 px-4">Tarih</th>
-                  <th className="py-3 px-4">Kargo Firması</th>
-                  <th className="py-3 px-4 text-center">Hesaplanan Desi</th>
-                  <th className="py-3 px-4 text-center font-bold text-primary">Kargodan Alınan Desi</th>
-                  <th className="py-3 px-4 font-black text-dark">Faturalanan Kargo</th>
-                  <th className="py-3 px-4 text-right">İşlem</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-border/60">
-                {audits.slice((auditPage - 1) * auditPageSize, auditPage * auditPageSize).map((a) => (
-                  <tr 
-                    key={a.id} 
-                    onClick={() => setSelectedOrderId(a.id)}
-                    className="hover:bg-primary-tint-50/30 cursor-pointer transition-colors"
-                  >
-                    <td className="py-3 px-4 table-sticky-first-col font-bold text-dark font-mono">
-                      <div>{a.orderNumber}</div>
-                      <span className="text-[10px] text-gray-400">Paket: {a.packageNumber}</span>
-                    </td>
-
-                    <td className="py-3 px-4 text-gray-500 tabular-nums text-[11px]">{a.invoiceDate}</td>
-
-                    <td className="py-3 px-4 font-semibold text-dark truncate max-w-[140px]">{a.carrierName}</td>
-
-                    <td className="py-3 px-4 text-center tabular-nums text-gray-600">{a.declaredDesi} Desi</td>
-
-                    <td className="py-3 px-4 text-center font-black text-primary tabular-nums">
-                      {a.billedDesi} Desi
-                    </td>
-
-                    <td className="py-3 px-4 font-black text-dark tabular-nums">
-                      ₺{parseFloat(a.billedCost || 0).toFixed(2)}
-                    </td>
-
-                    <td className="py-3 px-4 text-right">
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setSelectedOrderId(a.id);
-                        }}
-                        className="h-7 text-[11px] font-bold px-2 text-primary hover:bg-primary-tint-100"
-                      >
-                        <Eye className="w-3.5 h-3.5 mr-1" />
-                        <span>İncele</span>
-                      </Button>
-                    </td>
+                    <>
+            {/* Desktop Table View */}
+            <div className="hidden md:block overflow-x-auto">
+              <table className="w-full text-left text-xs border-collapse min-w-[750px]">
+                <thead>
+                  <tr className="bg-canvas border-b border-border text-muted-foreground font-semibold text-[11px]">
+                    <th className="py-3 px-4 table-sticky-first-col bg-canvas">Sipariş & Paket No</th>
+                    <th className="py-3 px-4">Tarih</th>
+                    <th className="py-3 px-4">Kargo Firması</th>
+                    <th className="py-3 px-4 text-center">Hesaplanan Desi</th>
+                    <th className="py-3 px-4 text-center font-bold text-primary">Kargodan Alınan Desi</th>
+                    <th className="py-3 px-4 font-black text-dark">Faturalanan Kargo</th>
+                    <th className="py-3 px-4 text-right">İşlem</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+                </thead>
+                <tbody className="divide-y divide-border/60">
+                  {audits.slice((auditPage - 1) * auditPageSize, auditPage * auditPageSize).map((a) => (
+                    <tr 
+                      key={a.id} 
+                      onClick={() => setSelectedOrderId(a.id)}
+                      className="hover:bg-primary-tint-50/30 cursor-pointer transition-colors"
+                    >
+                      <td className="py-3 px-4 table-sticky-first-col font-bold text-dark font-mono">
+                        <div>{a.orderNumber}</div>
+                        <span className="text-[10px] text-gray-400">Paket: {a.packageNumber}</span>
+                      </td>
+                      <td className="py-3 px-4 text-gray-500 tabular-nums text-[11px]">{a.invoiceDate}</td>
+                      <td className="py-3 px-4 font-semibold text-dark truncate max-w-[140px]">{a.carrierName}</td>
+                      <td className="py-3 px-4 text-center tabular-nums text-gray-600">{a.declaredDesi} Desi</td>
+                      <td className="py-3 px-4 text-center font-black text-primary tabular-nums">
+                        {a.billedDesi} Desi
+                      </td>
+                      <td className="py-3 px-4 font-black text-dark tabular-nums">
+                        ₺{parseFloat(a.billedCost || 0).toFixed(2)}
+                      </td>
+                      <td className="py-3 px-4 text-right">
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setSelectedOrderId(a.id);
+                          }}
+                          className="h-7 text-[11px] font-bold px-2 text-primary hover:bg-primary-tint-100"
+                        >
+                          <Eye className="w-3.5 h-3.5 mr-1" />
+                          <span>İncele</span>
+                        </Button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+
+            {/* Mobile Touch-Friendly Card View */}
+            <div className="block md:hidden divide-y divide-border/60">
+              {audits.slice((auditPage - 1) * auditPageSize, auditPage * auditPageSize).map((a) => (
+                <div 
+                  key={a.id} 
+                  onClick={() => setSelectedOrderId(a.id)}
+                  className="p-3.5 space-y-2.5 bg-white hover:bg-canvas/30 transition-colors cursor-pointer"
+                >
+                  <div className="flex items-center justify-between gap-2">
+                    <div>
+                      <span className="font-bold text-xs text-dark font-mono block">{a.orderNumber}</span>
+                      <span className="text-[10px] text-gray-400">Paket: {a.packageNumber} • {a.invoiceDate}</span>
+                    </div>
+                    <Badge variant="warning" className="text-[10px] font-bold">
+                      Desi Farkı
+                    </Badge>
+                  </div>
+
+                  <div className="grid grid-cols-3 gap-2 bg-canvas/60 p-2.5 rounded-2xl border border-border/80 text-[11px]">
+                    <div>
+                      <span className="text-[10px] text-gray-400 block font-semibold">Paket Desi</span>
+                      <span className="font-bold text-gray-700">{a.declaredDesi} D</span>
+                    </div>
+                    <div>
+                      <span className="text-[10px] text-gray-400 block font-semibold">Kesilen Desi</span>
+                      <span className="font-black text-primary">{a.billedDesi} D</span>
+                    </div>
+                    <div>
+                      <span className="text-[10px] text-gray-400 block font-semibold">Kargo Gideri</span>
+                      <span className="font-black text-dark tabular-nums">₺{parseFloat(a.billedCost || 0).toFixed(2)}</span>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center justify-between text-[11px] text-gray-500 pt-1">
+                    <span>{a.carrierName}</span>
+                    <span className="font-bold text-primary flex items-center gap-1 text-xs">
+                      <Eye className="w-3.5 h-3.5" />
+                      <span>Desi İtirazını İncele ➔</span>
+                    </span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </>
           <TablePagination currentPage={auditPage} totalPages={Math.ceil(audits.length / auditPageSize) || 1} pageSize={auditPageSize} totalItems={audits.length} onPageChange={setAuditPage} onPageSizeChange={setAuditPageSize} />
         </div>
       ) : (

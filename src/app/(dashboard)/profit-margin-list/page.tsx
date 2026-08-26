@@ -105,20 +105,86 @@ export default function ProfitMarginListPage() {
       </div>
 
       <div className="bg-white rounded-3xl border border-border shadow-xs overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="w-full text-left text-xs border-collapse min-w-[700px]">
-            <thead>
-              <tr className="bg-canvas border-b border-border text-muted-foreground font-semibold text-[11px]">
-                <th className="py-3 px-4 table-sticky-first-col">Ürün Bilgisi</th>
-                <th className="py-3 px-4 text-primary font-bold">Satış Fiyatı</th>
-                <th className="py-3 px-4">Alış Maliyeti (₺)</th>
-                <th className="py-3 px-4">Komisyon</th>
-                <th className="py-3 px-4">Tahmini Net Kâr</th>
-                <th className="py-3 px-4">Kâr Marjı (%)</th>
-                <th className="py-3 px-4 text-right">İşlem</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-border/60">
+                  <>
+            {/* Desktop Table View */}
+            <div className="hidden md:block overflow-x-auto">
+              <table className="w-full text-left text-xs border-collapse min-w-[700px]">
+                <thead>
+                  <tr className="bg-canvas border-b border-border text-muted-foreground font-semibold text-[11px]">
+                    <th className="py-3 px-4 table-sticky-first-col">Ürün Bilgisi</th>
+                    <th className="py-3 px-4 text-primary font-bold">Satış Fiyatı</th>
+                    <th className="py-3 px-4">Alış Maliyeti (₺)</th>
+                    <th className="py-3 px-4">Komisyon</th>
+                    <th className="py-3 px-4">Tahmini Net Kâr</th>
+                    <th className="py-3 px-4">Kâr Marjı (%)</th>
+                    <th className="py-3 px-4 text-right">İşlem</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-border/60">
+                  {paginatedProducts.map((p) => {
+                    const salePrice = parseFloat(p.salePrice || 0);
+                    const costPrice = parseFloat(p.costPrice || 0);
+                    const comm = parseFloat(p.commissionRate || 16.15);
+                    const estProfit = salePrice - (costPrice + (salePrice * comm / 100) + 45 + 13.19);
+                    const margin = salePrice > 0 ? (estProfit / salePrice) * 100 : 0;
+                    const isProfitable = estProfit >= 0;
+
+                    return (
+                      <tr key={p.id} className="hover:bg-canvas/50 transition-colors">
+                        <td className="py-3 px-4 table-sticky-first-col font-bold text-dark">
+                          <span className="block truncate max-w-[280px]">{p.title}</span>
+                          <span className="text-[10px] text-gray-400 font-mono">{p.barcode}</span>
+                        </td>
+                        <td className="py-3 px-4 font-black text-primary tabular-nums">
+                          ₺{salePrice.toFixed(2)}
+                        </td>
+                        <td className="py-3 px-4">
+                          <input
+                            type="number"
+                            step="0.5"
+                            value={p.costPrice || ''}
+                            onChange={(e) => handleCostChange(p.id, parseFloat(e.target.value) || 0)}
+                            className="w-24 px-2 py-1 rounded-lg border border-border text-xs font-bold text-dark bg-white focus:ring-1 focus:ring-primary"
+                          />
+                        </td>
+                        <td className="py-3 px-4 text-gray-600 font-semibold tabular-nums">
+                          %{comm.toFixed(1)}
+                        </td>
+                        <td className={`py-3 px-4 font-black tabular-nums ${isProfitable ? 'text-emerald-700' : 'text-red-600'}`}>
+                          ₺{estProfit.toFixed(2)}
+                        </td>
+                        <td className="py-3 px-4 font-bold tabular-nums">
+                          <Badge variant={isProfitable ? 'excellent' : 'secondary'}>
+                            %{margin.toFixed(1)}
+                          </Badge>
+                        </td>
+                        <td className="py-3 px-4 text-right">
+                          {p.isEdited ? (
+                            <Button
+                              size="sm"
+                              onClick={() => handleSaveCost(p.id, p.costPrice)}
+                              disabled={savingId === p.id}
+                              className="h-7 text-[11px] font-bold px-2.5 bg-primary text-white hover:bg-primary-hover shadow-xs"
+                            >
+                              <Save className="w-3 h-3 mr-1" />
+                              <span>Kaydet</span>
+                            </Button>
+                          ) : (
+                            <span className="text-gray-300 flex items-center justify-end gap-1 text-[11px]">
+                              <CheckCircle2 className="w-3 h-3 text-emerald-500" />
+                              <span>Güncel</span>
+                            </span>
+                          )}
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+
+            {/* Mobile Touch-Friendly Card View */}
+            <div className="block md:hidden divide-y divide-border/60">
               {paginatedProducts.map((p) => {
                 const salePrice = parseFloat(p.salePrice || 0);
                 const costPrice = parseFloat(p.costPrice || 0);
@@ -128,64 +194,72 @@ export default function ProfitMarginListPage() {
                 const isProfitable = estProfit >= 0;
 
                 return (
-                  <tr key={p.id} className="hover:bg-canvas/50 transition-colors">
-                    <td className="py-3 px-4 table-sticky-first-col font-bold text-dark">
-                      <span className="block truncate max-w-[280px]">{p.title}</span>
-                      <span className="text-[10px] text-gray-400 font-mono">{p.barcode}</span>
-                    </td>
-
-                    <td className="py-3 px-4 font-black text-primary tabular-nums">
-                      ₺{salePrice.toFixed(2)}
-                    </td>
-
-                    <td className="py-3 px-4">
-                      <input
-                        type="number"
-                        step="0.5"
-                        value={p.costPrice || ''}
-                        onChange={(e) => handleCostChange(p.id, parseFloat(e.target.value) || 0)}
-                        className="w-24 px-2 py-1 rounded-lg border border-border text-xs font-bold text-dark bg-white focus:ring-1 focus:ring-primary"
-                      />
-                    </td>
-
-                    <td className="py-3 px-4 text-gray-600 font-semibold tabular-nums">
-                      %{comm.toFixed(1)}
-                    </td>
-
-                    <td className={`py-3 px-4 font-black tabular-nums ${isProfitable ? 'text-emerald-700' : 'text-red-600'}`}>
-                      ₺{estProfit.toFixed(2)}
-                    </td>
-
-                    <td className="py-3 px-4 font-bold tabular-nums">
-                      <Badge variant={isProfitable ? 'excellent' : 'secondary'}>
-                        %{margin.toFixed(1)}
+                  <div key={p.id} className="p-3.5 space-y-3 bg-white hover:bg-canvas/30 transition-colors">
+                    {/* Header: Title + Margin Badge */}
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="min-w-0 flex-1">
+                        <h4 className="text-xs font-bold text-dark truncate">{p.title}</h4>
+                        <span className="text-[10px] text-gray-400 font-mono block mt-0.5">{p.barcode}</span>
+                      </div>
+                      <Badge variant={isProfitable ? 'excellent' : 'secondary'} className="shrink-0 text-[10px]">
+                        %{margin.toFixed(1)} Marj
                       </Badge>
-                    </td>
+                    </div>
 
-                    <td className="py-3 px-4 text-right">
+                    {/* Financial Micro-Grid */}
+                    <div className="grid grid-cols-3 gap-2 bg-canvas/60 p-2.5 rounded-2xl border border-border/80 text-[11px]">
+                      <div>
+                        <span className="text-[10px] text-gray-400 block font-semibold">Satış Fiyatı</span>
+                        <span className="font-black text-primary tabular-nums">₺{salePrice.toFixed(2)}</span>
+                      </div>
+                      <div>
+                        <span className="text-[10px] text-gray-400 block font-semibold">Komisyon</span>
+                        <span className="font-bold text-gray-700 tabular-nums">%{comm.toFixed(1)}</span>
+                      </div>
+                      <div>
+                        <span className="text-[10px] text-gray-400 block font-semibold">Net Kâr</span>
+                        <span className={`font-black tabular-nums ${isProfitable ? 'text-emerald-700' : 'text-red-600'}`}>
+                          ₺{estProfit.toFixed(2)}
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* Cost Input & Save Action Row */}
+                    <div className="flex items-center justify-between gap-3 pt-1">
+                      <div className="flex items-center gap-2 flex-1">
+                        <label className="text-[11px] font-bold text-gray-600 shrink-0">Alış Maliyeti:</label>
+                        <input
+                          type="number"
+                          step="0.5"
+                          value={p.costPrice || ''}
+                          onChange={(e) => handleCostChange(p.id, parseFloat(e.target.value) || 0)}
+                          placeholder="₺0.00"
+                          className="w-24 px-2 py-1 rounded-xl border border-border text-xs font-bold text-dark bg-white focus:ring-2 focus:ring-primary"
+                        />
+                      </div>
+
                       {p.isEdited ? (
                         <Button
                           size="sm"
                           onClick={() => handleSaveCost(p.id, p.costPrice)}
                           disabled={savingId === p.id}
-                          className="h-7 text-[11px] font-bold px-2.5 bg-primary text-white hover:bg-primary-hover shadow-xs"
+                          className="h-8 text-xs font-bold px-3 bg-primary text-white hover:bg-primary-hover rounded-xl shadow-xs"
                         >
-                          <Save className="w-3 h-3 mr-1" />
+                          <Save className="w-3.5 h-3.5 mr-1" />
                           <span>Kaydet</span>
                         </Button>
                       ) : (
-                        <span className="text-gray-300 flex items-center justify-end gap-1 text-[11px]">
-                          <CheckCircle2 className="w-3 h-3 text-emerald-500" />
-                          <span>Güncel</span>
+                        <span className="text-gray-400 text-[11px] font-semibold flex items-center gap-1">
+                          <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500" />
+                          <span>Kayıtlı</span>
                         </span>
                       )}
-                    </td>
-                  </tr>
+                    </div>
+                  </div>
                 );
               })}
-            </tbody>
-          </table>
-        </div>
+            </div>
+          </>
 
         <TablePagination
           currentPage={currentPage}

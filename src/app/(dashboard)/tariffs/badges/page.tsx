@@ -63,63 +63,84 @@ export default function AdvantageousBadgesPage() {
             Veritabanında ürün bulunamadı.
           </div>
         ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-left text-xs border-collapse min-w-[850px]">
-              <thead>
-                <tr className="bg-canvas border-b border-border text-muted-foreground font-semibold text-[11px]">
-                  <th className="py-3 px-4 table-sticky-first-col bg-canvas">Ürün Adı & Barkod</th>
-                  <th className="py-3 px-4">Mevcut Fiyat</th>
-                  <th className="py-3 px-4 text-emerald-700 font-bold">⭐ Avantaj Fiyatı (%5 İndirim)</th>
-                  <th className="py-3 px-4 text-sky-700 font-bold">🔥 Çok Avantaj (%10 İndirim)</th>
-                  <th className="py-3 px-4 text-amber-700 font-bold text-right">⚡ Süper Avantaj (%15 İndirim)</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-border/60">
-                {(products || []).map((p) => {
-                  const currentPrice = parseFloat(p.salePrice || 100);
-                  const cost = parseFloat(p.costPrice || 50);
-                  const comm = parseFloat(p.commissionRate || 18);
-                  
-                  const p1 = currentPrice * 0.95;
-                  const profit1 = p1 - (cost + (p1 * comm / 100) + 45 + 13.19);
-                  
-                  const p2 = currentPrice * 0.90;
-                  const profit2 = p2 - (cost + (p2 * comm / 100) + 45 + 13.19);
-                  
-                  const p3 = currentPrice * 0.85;
-                  const profit3 = p3 - (cost + (p3 * comm / 100) + 45 + 13.19);
+                    <>
+            {/* Desktop Table View */}
+            <div className="hidden md:block overflow-x-auto">
+              <table className="w-full text-left text-xs border-collapse min-w-[750px]">
+                <thead>
+                  <tr className="bg-canvas border-b border-border text-muted-foreground font-semibold text-[11px]">
+                    <th className="py-3 px-4 table-sticky-first-col bg-canvas">Ürün Adı & Barkod</th>
+                    <th className="py-3 px-4 text-center">Fiyat (₺)</th>
+                    <th className="py-3 px-4 text-center">Standart Komisyon</th>
+                    <th className="py-3 px-4 text-center font-bold text-primary">Rozet Komisyonu</th>
+                    <th className="py-3 px-4 text-center font-bold text-emerald-700">Rozet Kâr Artışı</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-border/60">
+                  {(products || []).slice((currentPage - 1) * pageSize, currentPage * pageSize).map((p) => {
+                    const price = parseFloat(p.salePrice || 0);
+                    const stdRate = parseFloat(p.commissionRate || 16.15);
+                    const badgeRate = Math.max(10.0, stdRate - 2.0);
+                    const stdFee = (price * stdRate) / 100;
+                    const badgeFee = (price * badgeRate) / 100;
+                    const diff = Math.max(0, stdFee - badgeFee);
+                    return (
+                      <tr key={p.id} className="hover:bg-canvas/50 transition-colors">
+                        <td className="py-3 px-4 table-sticky-first-col font-bold text-dark">
+                          <span className="block truncate max-w-[260px]">{p.title}</span>
+                          <span className="text-[10px] text-gray-400 font-mono">{p.barcode}</span>
+                        </td>
+                        <td className="py-3 px-4 text-center font-bold text-dark tabular-nums">₺{price.toFixed(2)}</td>
+                        <td className="py-3 px-4 text-center text-gray-500 tabular-nums">%{stdRate.toFixed(1)}</td>
+                        <td className="py-3 px-4 text-center font-black text-primary tabular-nums">%{badgeRate.toFixed(1)}</td>
+                        <td className="py-3 px-4 text-center font-black text-emerald-700 tabular-nums">+₺{diff.toFixed(2)}</td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
 
-                  return (
-                    <tr key={p.id} className="hover:bg-canvas/50 transition-colors">
-                      <td className="py-3 px-4 table-sticky-first-col font-bold text-dark">
-                        <span className="block truncate max-w-[280px]">{p.title}</span>
-                        <span className="text-[10px] text-gray-400 font-mono">{p.barcode}</span>
-                      </td>
+            {/* Mobile Touch-Friendly Card View */}
+            <div className="block md:hidden divide-y divide-border/60">
+              {(products || []).slice((currentPage - 1) * pageSize, currentPage * pageSize).map((p) => {
+                const price = parseFloat(p.salePrice || 0);
+                const stdRate = parseFloat(p.commissionRate || 16.15);
+                const badgeRate = Math.max(10.0, stdRate - 2.0);
+                const stdFee = (price * stdRate) / 100;
+                const badgeFee = (price * badgeRate) / 100;
+                const diff = Math.max(0, stdFee - badgeFee);
+                return (
+                  <div key={p.id} className="p-3.5 space-y-2.5 bg-white hover:bg-canvas/30 transition-colors">
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="min-w-0 flex-1">
+                        <h4 className="text-xs font-bold text-dark truncate">{p.title}</h4>
+                        <span className="text-[10px] text-gray-400 font-mono block mt-0.5">{p.barcode}</span>
+                      </div>
+                      <Badge variant="excellent" className="text-[10px] shrink-0 font-bold">
+                        +₺{diff.toFixed(2)} Kâr
+                      </Badge>
+                    </div>
 
-                      <td className="py-3 px-4 font-bold text-dark tabular-nums">
-                        ₺{currentPrice.toFixed(2)}
-                      </td>
-
-                      <td className="py-3 px-4 tabular-nums">
-                        <span className="font-black text-emerald-700 block">₺{p1.toFixed(2)}</span>
-                        <span className="text-[10px] text-emerald-800 font-bold">Kâr: ₺{profit1.toFixed(2)}</span>
-                      </td>
-
-                      <td className="py-3 px-4 tabular-nums">
-                        <span className="font-black text-sky-700 block">₺{p2.toFixed(2)}</span>
-                        <span className="text-[10px] text-sky-800 font-bold">Kâr: ₺{profit2.toFixed(2)}</span>
-                      </td>
-
-                      <td className="py-3 px-4 text-right tabular-nums">
-                        <span className="font-black text-amber-700 block">₺{p3.toFixed(2)}</span>
-                        <span className="text-[10px] text-amber-800 font-bold">Kâr: ₺{profit3.toFixed(2)}</span>
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
+                    <div className="grid grid-cols-3 gap-2 bg-canvas/60 p-2.5 rounded-2xl border border-border/80 text-[11px]">
+                      <div>
+                        <span className="text-[10px] text-gray-400 block font-semibold">Fiyat</span>
+                        <span className="font-bold text-dark tabular-nums">₺{price.toFixed(2)}</span>
+                      </div>
+                      <div>
+                        <span className="text-[10px] text-gray-400 block font-semibold">Standart</span>
+                        <span className="font-semibold text-gray-500 tabular-nums">%{stdRate.toFixed(1)}</span>
+                      </div>
+                      <div>
+                        <span className="text-[10px] text-gray-400 block font-semibold">Rozetli Oran</span>
+                        <span className="font-black text-primary tabular-nums">%{badgeRate.toFixed(1)}</span>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </>
         )}
       </div>
     </div>

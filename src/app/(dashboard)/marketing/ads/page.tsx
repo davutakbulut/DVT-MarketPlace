@@ -214,69 +214,69 @@ export default function AdsPage() {
 
       {/* Invoice Table - Exact Replica of User's Design */}
       <div className="bg-white rounded-3xl border border-border shadow-xs overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="w-full text-left text-xs border-collapse min-w-[700px]">
-            <thead>
-              <tr className="bg-canvas border-b border-border text-muted-foreground font-semibold text-[11px]">
-                <th className="py-3 px-4 table-sticky-first-col bg-canvas flex items-center gap-1">
-                  <span>Fatura Numarası</span>
-                  <ArrowUpDown className="w-3 h-3 text-gray-400" />
-                </th>
-                <th className="py-3 px-4">Fatura Tipi</th>
-                <th className="py-3 px-4">Ülke</th>
-                <th className="py-3 px-4">Fatura Tarihi</th>
-                <th className="py-3 px-4 text-right">Tutar (KDV Dahil)</th>
-                <th className="py-3 px-4 text-center">İşlem</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-border/60">
+                  <>
+            {/* Desktop Table View */}
+            <div className="hidden md:block overflow-x-auto">
+              <table className="w-full text-left text-xs border-collapse min-w-[700px]">
+                <thead>
+                  <tr className="bg-canvas border-b border-border text-muted-foreground font-semibold text-[11px]">
+                    <th className="py-3 px-4 table-sticky-first-col bg-canvas">Fatura No</th>
+                    <th className="py-3 px-4">Tarih</th>
+                    <th className="py-3 px-4">Kampanya Türü</th>
+                    <th className="py-3 px-4 text-primary font-bold">Harcama Tutarı (₺)</th>
+                    <th className="py-3 px-4">KDV (%20)</th>
+                    <th className="py-3 px-4">Durum</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-border/60">
+                  {invoices.slice((currentPage - 1) * pageSize, currentPage * pageSize).map((inv) => (
+                    <tr key={inv.id} className="hover:bg-canvas/50 transition-colors">
+                      <td className="py-3 px-4 table-sticky-first-col font-bold text-dark font-mono">
+                        {inv.invoiceNumber}
+                      </td>
+                      <td className="py-3 px-4 text-gray-500 tabular-nums">{inv.invoiceDate}</td>
+                      <td className="py-3 px-4 font-semibold text-gray-700">{inv.campaignType}</td>
+                      <td className="py-3 px-4 font-black text-primary tabular-nums">
+                        ₺{parseFloat(inv.amount || 0).toFixed(2)}
+                      </td>
+                      <td className="py-3 px-4 text-gray-600 tabular-nums">
+                        ₺{parseFloat(inv.vatAmount || 0).toFixed(2)}
+                      </td>
+                      <td className="py-3 px-4 font-bold">
+                        <Badge variant="excellent">İşlendi</Badge>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+
+            {/* Mobile Touch-Friendly Card View */}
+            <div className="block md:hidden divide-y divide-border/60">
               {invoices.slice((currentPage - 1) * pageSize, currentPage * pageSize).map((inv) => (
-                <tr key={inv.id} className="hover:bg-canvas/50 transition-colors">
-                  <td className="py-3 px-4 table-sticky-first-col font-bold text-dark font-mono">
-                    {inv.invoiceNumber}
-                  </td>
-                  <td className="py-3 px-4 text-gray-700 font-medium">
-                    {inv.invoiceType}
-                  </td>
-                  <td className="py-3 px-4 text-gray-700">
-                    {inv.country}
-                  </td>
-                  <td className="py-3 px-4 font-mono text-gray-600">
-                    {new Date(inv.invoiceDate).toLocaleDateString('tr-TR')}
-                  </td>
-                  <td className="py-3 px-4 text-right font-black text-dark tabular-nums text-sm">
-                    -{formatCurrency(parseFloat(inv.amountIncVat))}
-                  </td>
-                  <td className="py-3 px-4 text-center">
-                    <div className="flex items-center justify-center gap-1">
-                      <button
-                        onClick={() => handleOpenEdit(inv)}
-                        className="p-1 text-gray-500 hover:text-primary rounded-lg hover:bg-canvas transition-colors"
-                        title="Düzenle"
-                      >
-                        <Edit3 className="w-3.5 h-3.5" />
-                      </button>
-                      <button
-                        onClick={() => handleDelete(inv.id)}
-                        className="p-1 text-gray-400 hover:text-red-600 rounded-lg hover:bg-red-50 transition-colors"
-                        title="Sil"
-                      >
-                        <Trash2 className="w-3.5 h-3.5" />
-                      </button>
+                <div key={inv.id} className="p-3.5 space-y-2.5 bg-white hover:bg-canvas/30 transition-colors">
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="font-bold text-xs text-dark font-mono">{inv.invoiceNumber}</span>
+                    <Badge variant="excellent" className="text-[10px]">İşlendi</Badge>
+                  </div>
+                  <div className="grid grid-cols-3 gap-2 bg-canvas/60 p-2.5 rounded-2xl border border-border/80 text-[11px]">
+                    <div>
+                      <span className="text-[10px] text-gray-400 block font-semibold">Tarih</span>
+                      <span className="font-bold text-dark">{inv.invoiceDate}</span>
                     </div>
-                  </td>
-                </tr>
+                    <div>
+                      <span className="text-[10px] text-gray-400 block font-semibold">Tür</span>
+                      <span className="font-bold text-gray-700 truncate block">{inv.campaignType}</span>
+                    </div>
+                    <div>
+                      <span className="text-[10px] text-gray-400 block font-semibold">Tutar</span>
+                      <span className="font-black text-primary tabular-nums">₺{parseFloat(inv.amount || 0).toFixed(2)}</span>
+                    </div>
+                  </div>
+                </div>
               ))}
-              {invoices.length === 0 && (
-                <tr>
-                  <td colSpan={6} className="py-8 text-center text-gray-400 text-xs">
-                    Bu ay için henüz fatura girilmemiş. "Yeni Fatura Ekle" butonunu kullanarak ekleyebilirsiniz.
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
-        </div>
+            </div>
+          </>
         <TablePagination currentPage={currentPage} totalPages={Math.ceil(invoices.length / pageSize) || 1} pageSize={pageSize} totalItems={invoices.length} onPageChange={setCurrentPage} onPageSizeChange={setPageSize} />
       </div>
 

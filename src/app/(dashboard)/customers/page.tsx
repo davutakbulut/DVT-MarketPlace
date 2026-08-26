@@ -165,80 +165,110 @@ export default function CustomersPage() {
 
       {/* Customer Table */}
       <div className="bg-white rounded-3xl border border-border shadow-xs overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="w-full text-left text-xs border-collapse min-w-[860px]">
-            <thead>
-              <tr className="bg-canvas border-b border-border text-muted-foreground font-semibold text-[11px]">
-                <th className="py-3 px-4 table-sticky-first-col bg-canvas">Müşteri Adı</th>
-                <th className="py-3 px-4">İletişim & Lokasyon</th>
-                <th className="py-3 px-4">Segment</th>
-                <th className="py-3 px-4 text-center">Sipariş Sayısı</th>
-                <th className="py-3 px-4 text-primary font-bold">Toplam Ciro (₺)</th>
-                <th className="py-3 px-4 text-emerald-700 font-bold">Bıraktığı Kâr (₺)</th>
-                <th className="py-3 px-4">Son Sipariş</th>
-                <th className="py-3 px-4 text-right">İşlem</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-border/60">
+                  <>
+            {/* Desktop Table View */}
+            <div className="hidden md:block overflow-x-auto">
+              <table className="w-full text-left text-xs border-collapse min-w-[860px]">
+                <thead>
+                  <tr className="bg-canvas border-b border-border text-muted-foreground font-semibold text-[11px]">
+                    <th className="py-3 px-4 table-sticky-first-col bg-canvas">Müşteri Adı</th>
+                    <th className="py-3 px-4">İletişim & Lokasyon</th>
+                    <th className="py-3 px-4">Segment</th>
+                    <th className="py-3 px-4 text-center">Sipariş Sayısı</th>
+                    <th className="py-3 px-4 text-primary font-bold">Toplam Ciro (₺)</th>
+                    <th className="py-3 px-4 text-emerald-700 font-bold">Bıraktığı Kâr (₺)</th>
+                    <th className="py-3 px-4">Son Sipariş</th>
+                    <th className="py-3 px-4 text-right">İşlem</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-border/60">
+                  {filteredCustomers.slice((currentPage - 1) * pageSize, currentPage * pageSize).map((c, idx) => (
+                    <tr key={idx} className="hover:bg-canvas/50 transition-colors">
+                      <td className="py-3 px-4 table-sticky-first-col font-bold text-dark">
+                        <div className="flex items-center gap-2">
+                          <div className="w-7 h-7 rounded-full bg-primary-tint-100 text-primary flex items-center justify-center font-bold text-xs shrink-0">
+                            {c.name ? c.name[0] : 'M'}
+                          </div>
+                          <span className="truncate max-w-[160px]">{c.name}</span>
+                        </div>
+                      </td>
+                      <td className="py-3 px-4 text-gray-600">
+                        <div className="flex items-center gap-1 font-semibold text-dark">
+                          <MapPin className="w-3 h-3 text-gray-400" />
+                          <span>{c.city || 'Belirtilmemiş'}</span>
+                        </div>
+                      </td>
+                      <td className="py-3 px-4 font-bold">
+                        <Badge variant={c.totalOrdersCount > 1 ? 'excellent' : 'default'}>
+                          {c.totalOrdersCount > 1 ? 'Sadık Müşteri' : 'Yeni Müşteri'}
+                        </Badge>
+                      </td>
+                      <td className="py-3 px-4 text-center font-bold tabular-nums">{c.totalOrdersCount} Sipariş</td>
+                      <td className="py-3 px-4 font-black text-primary tabular-nums">₺{Number(c.totalSpendAmount || 0).toFixed(2)}</td>
+                      <td className="py-3 px-4 font-black text-emerald-700 tabular-nums">₺{Number(c.totalNetProfit || 0).toFixed(2)}</td>
+                      <td className="py-3 px-4 text-gray-500 tabular-nums">{c.lastOrderDate}</td>
+                      <td className="py-3 px-4 text-right">
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          onClick={() => handleOpenCustomerOrders(c)}
+                          className="h-7 text-[11px] font-bold px-2 text-primary hover:bg-primary-tint-100"
+                        >
+                          <Eye className="w-3.5 h-3.5 mr-1" />
+                          <span>Geçmiş</span>
+                        </Button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+
+            {/* Mobile Touch-Friendly Card View */}
+            <div className="block md:hidden divide-y divide-border/60">
               {filteredCustomers.slice((currentPage - 1) * pageSize, currentPage * pageSize).map((c, idx) => (
-                <tr key={idx} className="hover:bg-canvas/50 transition-colors">
-                  <td className="py-3 px-4 table-sticky-first-col font-bold text-dark">
+                <div 
+                  key={idx} 
+                  onClick={() => handleOpenCustomerOrders(c)}
+                  className="p-3.5 space-y-3 bg-white hover:bg-canvas/30 transition-colors cursor-pointer"
+                >
+                  <div className="flex items-center justify-between gap-2">
                     <div className="flex items-center gap-2">
-                      <div className="w-7 h-7 rounded-full bg-primary-tint-100 text-primary flex items-center justify-center font-bold text-xs shrink-0">
+                      <div className="w-8 h-8 rounded-full bg-primary-tint-100 text-primary flex items-center justify-center font-bold text-xs shrink-0">
                         {c.name ? c.name[0] : 'M'}
                       </div>
-                      <span className="truncate max-w-[160px]">{c.name}</span>
+                      <div>
+                        <h4 className="text-xs font-bold text-dark">{c.name}</h4>
+                        <span className="text-[10px] text-gray-400">{c.city || 'Şehir Yok'} • {c.totalOrdersCount} Sipariş</span>
+                      </div>
                     </div>
-                  </td>
-
-                  <td className="py-3 px-4 text-gray-600">
-                    <div className="flex items-center gap-1 font-semibold text-dark">
-                      <MapPin className="w-3 h-3 text-muted-foreground" />
-                      <span>{c.city} {c.district !== '-' ? `(${c.district})` : ''}</span>
-                    </div>
-                    <div className="text-[10px] text-gray-400 font-mono mt-0.5">{c.email}</div>
-                  </td>
-
-                  <td className="py-3 px-4">
-                    <Badge variant={c.customerTier.includes('VIP') ? 'excellent' : c.customerTier.includes('Tekrarlayan') ? 'default' : 'secondary'}>
-                      {c.customerTier}
+                    <Badge variant={c.totalOrdersCount > 1 ? 'excellent' : 'default'} className="text-[10px] shrink-0">
+                      {c.totalOrdersCount > 1 ? 'Sadık' : 'Yeni'}
                     </Badge>
-                  </td>
+                  </div>
 
-                  <td className="py-3 px-4 text-center font-bold tabular-nums">
-                    <span className="px-2 py-0.5 rounded-full bg-canvas border border-border">
-                      {c.totalOrdersCount} Sipariş
+                  <div className="grid grid-cols-2 gap-2 bg-canvas/60 p-2.5 rounded-2xl border border-border/80 text-[11px]">
+                    <div>
+                      <span className="text-[10px] text-gray-400 block font-semibold">Toplam Harcama</span>
+                      <span className="font-black text-primary tabular-nums">₺{Number(c.totalSpendAmount || 0).toFixed(2)}</span>
+                    </div>
+                    <div>
+                      <span className="text-[10px] text-gray-400 block font-semibold">Bırakılan Net Kâr</span>
+                      <span className="font-black text-emerald-700 tabular-nums">₺{Number(c.totalNetProfit || 0).toFixed(2)}</span>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center justify-between text-[11px] text-gray-500 pt-1">
+                    <span>Son Sipariş: {c.lastOrderDate}</span>
+                    <span className="font-bold text-primary flex items-center gap-1 text-xs">
+                      <Eye className="w-3.5 h-3.5" />
+                      <span>Sipariş Geçmişi ➔</span>
                     </span>
-                  </td>
-
-                  <td className="py-3 px-4 font-black text-primary tabular-nums">
-                    {formatCurrency(c.totalSpendAmount)}
-                  </td>
-
-                  <td className="py-3 px-4 font-black text-emerald-700 tabular-nums">
-                    {formatCurrency(c.totalNetProfit)}
-                  </td>
-
-                  <td className="py-3 px-4 text-gray-500 tabular-nums text-[11px]">
-                    {c.lastOrderDate}
-                  </td>
-
-                  <td className="py-3 px-4 text-right">
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={() => handleOpenCustomerOrders(c)}
-                      className="h-7 text-[11px] font-bold gap-1 px-2.5 bg-white hover:bg-primary hover:text-white transition-all"
-                    >
-                      <Eye className="w-3 h-3" />
-                      <span>Siparişleri İncele</span>
-                    </Button>
-                  </td>
-                </tr>
+                  </div>
+                </div>
               ))}
-            </tbody>
-          </table>
-        </div>
+            </div>
+          </>
         <TablePagination currentPage={currentPage} totalPages={Math.ceil(filteredCustomers.length / pageSize) || 1} pageSize={pageSize} totalItems={filteredCustomers.length} onPageChange={setCurrentPage} onPageSizeChange={setPageSize} />
       </div>
 

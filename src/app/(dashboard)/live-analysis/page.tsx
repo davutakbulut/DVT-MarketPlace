@@ -343,95 +343,140 @@ export default function LiveAnalysisPage() {
 
       {/* Orders Table */}
       <div className="bg-white rounded-3xl border border-border shadow-xs overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="w-full text-left text-xs border-collapse min-w-[900px]">
-            <thead>
-              <tr className="bg-canvas border-b border-border text-muted-foreground font-semibold text-[11px]">
-                <th className="py-3 px-4 table-sticky-first-col bg-canvas">Sipariş & Paket No</th>
-                <th className="py-3 px-4">Tarih</th>
-                <th className="py-3 px-4">Müşteri & Şehir</th>
-                <th className="py-3 px-4">Kargo & Desi</th>
-                <th className="py-3 px-4 text-primary font-bold">Tutar (₺)</th>
-                <th className="py-3 px-4">Maliyet (₺)</th>
-                <th className="py-3 px-4">Komisyon + Kargo</th>
-                <th className="py-3 px-4 text-emerald-700 font-bold">Net Kâr (₺)</th>
-                <th className="py-3 px-4">Marj</th>
-                <th className="py-3 px-4 text-right">İşlem</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-border/60">
+                  <>
+            {/* Desktop Table View */}
+            <div className="hidden md:block overflow-x-auto">
+              <table className="w-full text-left text-xs border-collapse min-w-[1000px]">
+                <thead>
+                  <tr className="bg-canvas border-b border-border text-muted-foreground font-semibold text-[11px]">
+                    <th className="py-3 px-4 table-sticky-first-col bg-canvas">Sipariş No & Müşteri</th>
+                    <th className="py-3 px-4">Tarih</th>
+                    <th className="py-3 px-4">Kargo & Desi</th>
+                    <th className="py-3 px-4 text-primary font-bold">Ciro (₺)</th>
+                    <th className="py-3 px-4">Komisyon (₺)</th>
+                    <th className="py-3 px-4">Kargo Gideri (₺)</th>
+                    <th className="py-3 px-4">Ürün Maliyeti (₺)</th>
+                    <th className="py-3 px-4 font-black text-emerald-700">Net Kâr (₺)</th>
+                    <th className="py-3 px-4">Kâr Marjı</th>
+                    <th className="py-3 px-4 text-right">İşlem</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-border/60">
+                  {orders.slice((currentPage - 1) * pageSize, currentPage * pageSize).map((o) => {
+                    const isProfitable = parseFloat(o.netProfit) >= 0;
+                    return (
+                      <tr 
+                        key={o.id} 
+                        onClick={() => setSelectedOrderId(o.id)}
+                        className="hover:bg-primary-tint-50/30 cursor-pointer transition-colors"
+                      >
+                        <td className="py-3 px-4 table-sticky-first-col font-bold text-dark">
+                          <div className="flex items-center gap-2">
+                            <span className="font-mono text-dark">{o.orderNumber}</span>
+                            <Badge variant={o.status === 'Delivered' ? 'excellent' : 'default'} className="text-[10px] py-0">
+                              {o.status === 'Delivered' ? 'Teslim Edildi' : o.status === 'Shipped' ? 'Kargoda' : o.status === 'Cancelled' ? 'İptal' : 'Yeni'}
+                            </Badge>
+                          </div>
+                          <span className="text-[10px] text-gray-400 block font-normal mt-0.5">{o.customerName || 'Gizli Müşteri'}</span>
+                        </td>
+                        <td className="py-3 px-4 text-gray-500 tabular-nums text-[11px]">{o.orderDate}</td>
+                        <td className="py-3 px-4 font-semibold text-gray-700">
+                          <div>{o.cargoProvider || 'Trendyol Express'}</div>
+                          <span className="text-[10px] text-gray-400 font-mono">{o.calculatedDesi || 1} Desi</span>
+                        </td>
+                        <td className="py-3 px-4 font-black text-primary tabular-nums">₺{parseFloat(o.grossAmount || 0).toFixed(2)}</td>
+                        <td className="py-3 px-4 text-gray-600 tabular-nums">₺{parseFloat(o.commission || 0).toFixed(2)}</td>
+                        <td className="py-3 px-4 text-gray-600 tabular-nums">₺{parseFloat(o.shippingCost || 0).toFixed(2)}</td>
+                        <td className="py-3 px-4 text-gray-600 tabular-nums">₺{parseFloat(o.cogs || 0).toFixed(2)}</td>
+                        <td className={`py-3 px-4 font-black tabular-nums ${isProfitable ? 'text-emerald-700' : 'text-red-600'}`}>
+                          ₺{parseFloat(o.netProfit || 0).toFixed(2)}
+                        </td>
+                        <td className="py-3 px-4 font-bold tabular-nums">
+                          <Badge variant={isProfitable ? 'excellent' : 'secondary'}>
+                            %{parseFloat(o.profitMargin || 0).toFixed(1)}
+                          </Badge>
+                        </td>
+                        <td className="py-3 px-4 text-right">
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setSelectedOrderId(o.id);
+                            }}
+                            className="h-7 text-[11px] font-bold px-2 text-primary hover:bg-primary-tint-100"
+                          >
+                            <Eye className="w-3.5 h-3.5 mr-1" />
+                            <span>İncele</span>
+                          </Button>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+
+            {/* Mobile Touch-Friendly Card View */}
+            <div className="block md:hidden divide-y divide-border/60">
               {orders.slice((currentPage - 1) * pageSize, currentPage * pageSize).map((o) => {
                 const isProfitable = parseFloat(o.netProfit) >= 0;
                 return (
-                  <tr 
+                  <div 
                     key={o.id} 
                     onClick={() => setSelectedOrderId(o.id)}
-                    className="hover:bg-primary-tint-50/30 cursor-pointer transition-colors"
+                    className="p-3.5 space-y-3 bg-white hover:bg-canvas/40 transition-colors cursor-pointer"
                   >
-                    <td className="py-3 px-4 table-sticky-first-col font-bold text-dark">
-                      <div className="flex items-center gap-1.5">
-                        <span className="font-mono">{o.orderNumber}</span>
-                        {o.isCorporate && <span className="text-[9px] bg-amber-100 text-amber-800 font-bold px-1 rounded">Kurumsal</span>}
+                    {/* Header: Order Number + Status + Margin */}
+                    <div className="flex items-center justify-between gap-2">
+                      <div>
+                        <div className="flex items-center gap-1.5">
+                          <span className="font-bold text-xs text-dark font-mono">{o.orderNumber}</span>
+                          <Badge variant={o.status === 'Delivered' ? 'excellent' : 'default'} className="text-[9px] py-0">
+                            {o.status === 'Delivered' ? 'Teslim' : o.status === 'Shipped' ? 'Kargoda' : 'Yeni'}
+                          </Badge>
+                        </div>
+                        <span className="text-[10px] text-gray-400 block mt-0.5">{o.customerName || 'Müşteri'} • {o.orderDate}</span>
                       </div>
-                      <span className="text-[10px] text-gray-400 font-mono block">Paket: {o.packageNumber}</span>
-                    </td>
 
-                    <td className="py-3 px-4 text-gray-500 tabular-nums text-[11px]">
-                      {o.orderDate}
-                    </td>
-
-                    <td className="py-3 px-4">
-                      <span className="font-bold text-dark block truncate max-w-[140px]">{o.customerName}</span>
-                      <span className="text-[10px] text-gray-500">{o.city} {o.district ? `(${o.district})` : ''}</span>
-                    </td>
-
-                    <td className="py-3 px-4">
-                      <span className="font-semibold text-dark block truncate max-w-[130px]">{o.carrierName}</span>
-                      <span className="text-[10px] text-primary font-mono">{o.billedDesi} Desi</span>
-                    </td>
-
-                    <td className="py-3 px-4 font-black text-primary tabular-nums">
-                      ₺{parseFloat(o.paidAmount || 0).toFixed(2)}
-                    </td>
-
-                    <td className="py-3 px-4 font-bold text-red-700 tabular-nums">
-                      ₺{parseFloat(o.cogs || 0).toFixed(2)}
-                    </td>
-
-                    <td className="py-3 px-4 text-gray-600 tabular-nums text-[11px]">
-                      ₺{(parseFloat(o.commission || 0) + parseFloat(o.shippingCost || 0)).toFixed(2)}
-                    </td>
-
-                    <td className={`py-3 px-4 font-black tabular-nums ${isProfitable ? 'text-emerald-700' : 'text-red-600'}`}>
-                      ₺{parseFloat(o.netProfit || 0).toFixed(2)}
-                    </td>
-
-                    <td className="py-3 px-4 font-bold tabular-nums">
-                      <Badge variant={isProfitable ? 'excellent' : 'secondary'} className="text-[10px]">
-                        %{parseFloat(o.marginPercent || 0).toFixed(1)}
+                      <Badge variant={isProfitable ? 'excellent' : 'secondary'} className="text-[10px] shrink-0">
+                        %{parseFloat(o.profitMargin || 0).toFixed(1)} Marj
                       </Badge>
-                    </td>
+                    </div>
 
-                    <td className="py-3 px-4 text-right">
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setSelectedOrderId(o.id);
-                        }}
-                        className="h-7 text-[11px] font-bold px-2 text-primary hover:bg-primary-tint-100"
-                      >
-                        <Eye className="w-3.5 h-3.5 mr-1" />
-                        <span>İncele</span>
-                      </Button>
-                    </td>
-                  </tr>
+                    {/* Financial Micro-Grid */}
+                    <div className="grid grid-cols-3 gap-2 bg-canvas/60 p-2.5 rounded-2xl border border-border/80 text-[11px]">
+                      <div>
+                        <span className="text-[10px] text-gray-400 block font-semibold">Ciro</span>
+                        <span className="font-black text-primary tabular-nums">₺{parseFloat(o.grossAmount || 0).toFixed(2)}</span>
+                      </div>
+                      <div>
+                        <span className="text-[10px] text-gray-400 block font-semibold">Giderler (Kargo+Kom)</span>
+                        <span className="font-bold text-gray-700 tabular-nums">
+                          ₺{(parseFloat(o.shippingCost || 0) + parseFloat(o.commission || 0)).toFixed(2)}
+                        </span>
+                      </div>
+                      <div>
+                        <span className="text-[10px] text-gray-400 block font-semibold">Net Kâr</span>
+                        <span className={`font-black tabular-nums ${isProfitable ? 'text-emerald-700' : 'text-red-600'}`}>
+                          ₺{parseFloat(o.netProfit || 0).toFixed(2)}
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* Footer / Action */}
+                    <div className="flex items-center justify-between text-[11px] text-gray-500 pt-1">
+                      <span>{o.cargoProvider || 'Kargo'} ({o.calculatedDesi || 1} Desi)</span>
+                      <span className="font-bold text-primary flex items-center gap-1 text-xs">
+                        <Eye className="w-3.5 h-3.5" />
+                        <span>Siparişi İncele ➔</span>
+                      </span>
+                    </div>
+                  </div>
                 );
               })}
-            </tbody>
-          </table>
-        </div>
+            </div>
+          </>
         <TablePagination currentPage={currentPage} totalPages={Math.ceil(orders.length / pageSize) || 1} pageSize={pageSize} totalItems={orders.length} onPageChange={setCurrentPage} onPageSizeChange={setPageSize} />
       </div>
 

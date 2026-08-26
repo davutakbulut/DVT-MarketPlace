@@ -73,60 +73,74 @@ export default function CommissionTariffPage() {
             Veritabanında ürün bulunamadı.
           </div>
         ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-left text-xs border-collapse min-w-[850px]">
-              <thead>
-                <tr className="bg-canvas border-b border-border text-muted-foreground font-semibold text-[11px]">
-                  <th className="py-3 px-4 table-sticky-first-col bg-canvas">Ürün Adı & Barkod</th>
-                  <th className="py-3 px-4">Satış Fiyatı (₺)</th>
-                  <th className="py-3 px-4">Mevcut Komisyon</th>
-                  <th className="py-3 px-4">1. Barem (&lt;100₺)</th>
-                  <th className="py-3 px-4">2. Barem (100-300₺)</th>
-                  <th className="py-3 px-4">3. Barem (300-600₺)</th>
-                  <th className="py-3 px-4 text-right">4. Barem (&gt;600₺)</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-border/60">
-                {(products || []).map((p) => {
-                  const currentPrice = parseFloat(p.salePrice || 100);
-                  const comm = parseFloat(p.commissionRate || 16.15);
+                    <>
+            {/* Desktop Table View */}
+            <div className="hidden md:block overflow-x-auto">
+              <table className="w-full text-left text-xs border-collapse min-w-[700px]">
+                <thead>
+                  <tr className="bg-canvas border-b border-border text-muted-foreground font-semibold text-[11px]">
+                    <th className="py-3 px-4 table-sticky-first-col bg-canvas">Kategori / Ürün</th>
+                    <th className="py-3 px-4">Barkod</th>
+                    <th className="py-3 px-4 text-center">Mevcut Satış Fiyatı</th>
+                    <th className="py-3 px-4 text-center font-bold text-primary">Standart Komisyon (%)</th>
+                    <th className="py-3 px-4 text-center font-bold text-emerald-700">Komisyon Tutarı (₺)</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-border/60">
+                  {(products || []).slice((currentPage - 1) * pageSize, currentPage * pageSize).map((p) => {
+                    const price = parseFloat(p.salePrice || 0);
+                    const rate = parseFloat(p.commissionRate || 16.15);
+                    const fee = (price * rate) / 100;
+                    return (
+                      <tr key={p.id} className="hover:bg-canvas/50 transition-colors">
+                        <td className="py-3 px-4 table-sticky-first-col font-bold text-dark">
+                          <span className="block truncate max-w-[260px]">{p.title}</span>
+                          <span className="text-[10px] text-gray-400 font-normal">{p.category || 'Sağlık / Medikal'}</span>
+                        </td>
+                        <td className="py-3 px-4 font-mono text-gray-500 text-[11px]">{p.barcode}</td>
+                        <td className="py-3 px-4 text-center font-bold text-dark tabular-nums">₺{price.toFixed(2)}</td>
+                        <td className="py-3 px-4 text-center font-black text-primary tabular-nums">%{rate.toFixed(2)}</td>
+                        <td className="py-3 px-4 text-center font-black text-emerald-700 tabular-nums">₺{fee.toFixed(2)}</td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
 
-                  return (
-                    <tr key={p.id} className="hover:bg-canvas/50 transition-colors">
-                      <td className="py-3 px-4 table-sticky-first-col font-bold text-dark">
-                        <span className="block truncate max-w-[260px]">{p.title}</span>
-                        <span className="text-[10px] text-gray-400 font-mono">{p.barcode}</span>
-                      </td>
+            {/* Mobile Touch-Friendly Card View */}
+            <div className="block md:hidden divide-y divide-border/60">
+              {(products || []).slice((currentPage - 1) * pageSize, currentPage * pageSize).map((p) => {
+                const price = parseFloat(p.salePrice || 0);
+                const rate = parseFloat(p.commissionRate || 16.15);
+                const fee = (price * rate) / 100;
+                return (
+                  <div key={p.id} className="p-3.5 space-y-2.5 bg-white hover:bg-canvas/30 transition-colors">
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="min-w-0 flex-1">
+                        <h4 className="text-xs font-bold text-dark truncate">{p.title}</h4>
+                        <span className="text-[10px] text-gray-400 font-mono block mt-0.5">{p.barcode}</span>
+                      </div>
+                      <Badge variant="default" className="text-[10px] shrink-0 font-bold">
+                        %{rate.toFixed(1)} Komisyon
+                      </Badge>
+                    </div>
 
-                      <td className="py-3 px-4 font-black text-primary tabular-nums">
-                        ₺{currentPrice.toFixed(2)}
-                      </td>
-
-                      <td className="py-3 px-4 font-bold text-dark tabular-nums">
-                        %{comm.toFixed(1)}
-                      </td>
-
-                      <td className="py-3 px-4 font-bold text-emerald-700 tabular-nums">
-                        %{(comm * 0.85).toFixed(1)}
-                      </td>
-
-                      <td className="py-3 px-4 font-bold text-sky-700 tabular-nums">
-                        %{(comm * 0.92).toFixed(1)}
-                      </td>
-
-                      <td className="py-3 px-4 font-bold text-amber-700 tabular-nums">
-                        %{comm.toFixed(1)}
-                      </td>
-
-                      <td className="py-3 px-4 text-right font-bold text-gray-700 tabular-nums">
-                        %{(comm * 1.05).toFixed(1)}
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
+                    <div className="grid grid-cols-2 gap-2 bg-canvas/60 p-2.5 rounded-2xl border border-border/80 text-[11px]">
+                      <div>
+                        <span className="text-[10px] text-gray-400 block font-semibold">Satış Fiyatı</span>
+                        <span className="font-bold text-dark tabular-nums">₺{price.toFixed(2)}</span>
+                      </div>
+                      <div>
+                        <span className="text-[10px] text-gray-400 block font-semibold">Komisyon Kesintisi</span>
+                        <span className="font-black text-emerald-700 tabular-nums">₺{fee.toFixed(2)}</span>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </>
         )}
       </div>
 
