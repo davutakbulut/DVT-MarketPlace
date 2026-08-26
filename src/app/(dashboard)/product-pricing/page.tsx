@@ -291,21 +291,27 @@ export default function ProductPricingPage() {
         )}
       </div>
 
-      {/* MODE TOGGLE BUTTONS - 2 COLUMN COMPACT GRID FOR MOBILE & DESKTOP */}
-      <div className="grid grid-cols-2 gap-2.5 sm:gap-3">
+      {/* MODE TOGGLE BUTTONS - ULTRA-COMPACT HORIZONTAL ROW LAYOUT */}
+      <div className="grid grid-cols-2 gap-2 sm:gap-3">
         <button
           type="button"
           onClick={() => setPricingMode('target_margin')}
-          className={`p-3 sm:p-4 rounded-2xl sm:rounded-3xl border text-left transition-all flex flex-col xs:flex-row items-start gap-2 sm:gap-3 shadow-xs cursor-pointer ${
+          className={`px-2.5 py-2 sm:px-4 sm:py-2.5 rounded-2xl sm:rounded-3xl border text-left transition-all flex items-center gap-2 sm:gap-2.5 shadow-xs cursor-pointer ${
             pricingMode === 'target_margin'
               ? 'bg-primary text-white border-primary ring-2 ring-primary/20'
               : 'bg-white text-dark border-border hover:bg-canvas'
           }`}
         >
-          <Target className={`w-4 h-4 sm:w-5 sm:h-5 shrink-0 mt-0.5 ${pricingMode === 'target_margin' ? 'text-white' : 'text-primary'}`} />
-          <div className="min-w-0">
-            <span className="font-black text-xs sm:text-sm block truncate">1. Hedef Kârdan Fiyat</span>
-            <span className={`text-[10px] sm:text-xs block mt-0.5 leading-tight ${pricingMode === 'target_margin' ? 'text-white/85' : 'text-gray-500'}`}>
+          <div className={`p-1.5 rounded-xl shrink-0 flex items-center justify-center ${
+            pricingMode === 'target_margin' ? 'bg-white/20 text-white' : 'bg-primary-tint-100 text-primary'
+          }`}>
+            <Target className="w-4 h-4" />
+          </div>
+          <div className="min-w-0 flex-1">
+            <span className="font-black text-xs sm:text-sm block truncate leading-tight">1. Hedef Kârdan Fiyat</span>
+            <span className={`text-[10px] sm:text-[11px] block leading-tight truncate mt-0.5 ${
+              pricingMode === 'target_margin' ? 'text-white/85' : 'text-gray-500'
+            }`}>
               Marj gir ➔ Fiyat bul
             </span>
           </div>
@@ -314,16 +320,22 @@ export default function ProductPricingPage() {
         <button
           type="button"
           onClick={() => setPricingMode('manual_price')}
-          className={`p-3 sm:p-4 rounded-2xl sm:rounded-3xl border text-left transition-all flex flex-col xs:flex-row items-start gap-2 sm:gap-3 shadow-xs cursor-pointer ${
+          className={`px-2.5 py-2 sm:px-4 sm:py-2.5 rounded-2xl sm:rounded-3xl border text-left transition-all flex items-center gap-2 sm:gap-2.5 shadow-xs cursor-pointer ${
             pricingMode === 'manual_price'
               ? 'bg-primary text-white border-primary ring-2 ring-primary/20'
               : 'bg-white text-dark border-border hover:bg-canvas'
           }`}
         >
-          <Sliders className={`w-4 h-4 sm:w-5 sm:h-5 shrink-0 mt-0.5 ${pricingMode === 'manual_price' ? 'text-white' : 'text-primary'}`} />
-          <div className="min-w-0">
-            <span className="font-black text-xs sm:text-sm block truncate">2. Fiyattan Kâr Gör</span>
-            <span className={`text-[10px] sm:text-xs block mt-0.5 leading-tight ${pricingMode === 'manual_price' ? 'text-white/85' : 'text-gray-500'}`}>
+          <div className={`p-1.5 rounded-xl shrink-0 flex items-center justify-center ${
+            pricingMode === 'manual_price' ? 'bg-white/20 text-white' : 'bg-primary-tint-100 text-primary'
+          }`}>
+            <Sliders className="w-4 h-4" />
+          </div>
+          <div className="min-w-0 flex-1">
+            <span className="font-black text-xs sm:text-sm block truncate leading-tight">2. Fiyattan Kâr Gör</span>
+            <span className={`text-[10px] sm:text-[11px] block leading-tight truncate mt-0.5 ${
+              pricingMode === 'manual_price' ? 'text-white/85' : 'text-gray-500'
+            }`}>
               Fiyat gir ➔ Net kârı gör
             </span>
           </div>
