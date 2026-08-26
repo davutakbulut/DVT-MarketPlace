@@ -6,22 +6,34 @@ import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 import { 
   FileSpreadsheet, Download, RefreshCw, Eye, Filter, 
-  Layers, Package, TrendingUp, AlertTriangle, Truck, Award
+  Layers, Package, TrendingUp, AlertTriangle, Truck, Award,
+  ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, Search
 } from "lucide-react";
 import { OrderDetailModal } from "@/components/orders/OrderDetailModal";
 
 export default function OrderProfitabilityReportPage() {
   const [reportType, setReportType] = useState<'order' | 'product' | 'category' | 'returns' | 'shipping'>('order');
   const [reportData, setReportData] = useState<any[]>([]);
+  const [pagination, setPagination] = useState({
+    page: 1,
+    pageSize: 50,
+    totalCount: 0,
+    totalPages: 1,
+  });
+  const [search, setSearch] = useState("");
   const [loading, setLoading] = useState(true);
   const [selectedOrderId, setSelectedOrderId] = useState<string | null>(null);
 
   const fetchReport = async () => {
     setLoading(true);
     try {
-      const res = await fetch(`/api/reports?type=${reportType}&limit=100`);
+      const url = `/api/reports?type=${reportType}&page=${pagination.page}&pageSize=${pagination.pageSize}&search=${encodeURIComponent(search)}`;
+      const res = await fetch(url);
       const json = await res.json();
       setReportData(json.data || []);
+      if (json.pagination) {
+        setPagination(json.pagination);
+      }
     } catch (e) {
       toast.error("Rapor yüklenemedi.");
     } finally {
@@ -31,7 +43,29 @@ export default function OrderProfitabilityReportPage() {
 
   useEffect(() => {
     fetchReport();
-  }, [reportType]);
+  }, [reportType, pagination.page, pagination.pageSize]);
+
+  const handleSearchSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    setPagination(prev => ({ ...prev, page: 1 }));
+    fetchReport();
+  };
+
+  const handlePageChange = (newPage: number) => {
+    if (newPage >= 1 && newPage <= pagination.totalPages) {
+      setPagination(prev => ({ ...prev, page: newPage }));
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+  };
+
+  const handlePageSizeChange = (newSize: number) => {
+    setPagination({
+      page: 1,
+      pageSize: newSize,
+      totalCount: pagination.totalCount,
+      totalPages: Math.ceil(pagination.totalCount / newSize)
+    });
+  };
 
   const handleExportCSV = () => {
     if (!reportData || reportData.length === 0) {
@@ -48,7 +82,7 @@ export default function OrderProfitabilityReportPage() {
     const url = URL.createObjectURL(blob);
     const link = document.createElement("a");
     link.setAttribute("href", url);
-    link.setAttribute("download", `Trendyol_${reportType}_raporu_4aylik.csv`);
+    link.setAttribute("download", `Trendyol_${reportType}_raporu_sayfa_${pagination.page}.csv`);
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
@@ -92,7 +126,10 @@ export default function OrderProfitabilityReportPage() {
         ].map((t) => (
           <button
             key={t.id}
-            onClick={() => setReportType(t.id as any)}
+            onClick={() => {
+              setReportType(t.id as any);
+              setPagination(prev => ({ ...prev, page: 1 }));
+            }}
             className={`px-3 py-2 rounded-xl text-xs font-bold transition-all whitespace-nowrap ${
               reportType === t.id ? 'bg-primary text-white shadow-xs' : 'text-dark hover:bg-white'
             }`}
@@ -100,6 +137,40 @@ export default function OrderProfitabilityReportPage() {
             {t.label}
           </button>
         ))}
+      </div>
+
+      {/* Search Bar and Page Size Selector */}
+      <div className="bg-white p-4 rounded-2xl sm:rounded-3xl border border-border shadow-xs flex flex-col sm:flex-row items-center justify-between gap-3">
+        <form onSubmit={handleSearchSubmit} className="relative w-full sm:w-80">
+          <Search className="w-4 h-4 text-muted-foreground absolute left-3 top-2.5" />
+          <input
+            type="text"
+            placeholder="Arama yapın (Sipariş no, müşteri, barkod)..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="w-full pl-9 pr-3 py-2 rounded-xl border border-border text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-primary"
+          />
+        </form>
+
+        <div className="flex items-center gap-3 text-xs font-bold text-dark w-full sm:w-auto justify-between sm:justify-end">
+          <span className="text-muted-foreground text-[11px]">
+            Toplam <strong className="text-dark">{pagination.totalCount}</strong> kayıt
+          </span>
+
+          <div className="flex items-center gap-1.5">
+            <span className="text-gray-500 text-[11px]">Sayfa Başına:</span>
+            <select
+              value={pagination.pageSize}
+              onChange={(e) => handlePageSizeChange(parseInt(e.target.value))}
+              className="px-2.5 py-1.5 rounded-xl border border-border text-xs font-bold text-dark bg-white focus:ring-2 focus:ring-primary"
+            >
+              <option value={25}>25 Kayıt</option>
+              <option value={50}>50 Kayıt</option>
+              <option value={100}>100 Kayıt</option>
+              <option value={200}>200 Kayıt</option>
+            </select>
+          </div>
+        </div>
       </div>
 
       {/* Report Tables */}
@@ -268,6 +339,92 @@ export default function OrderProfitabilityReportPage() {
             </table>
           )}
         </div>
+
+        {/* PAGINATION BAR */}
+        {pagination.totalPages > 1 && (
+          <div className="p-4 bg-canvas border-t border-border flex flex-col sm:flex-row items-center justify-between gap-3 text-xs">
+            <div className="text-gray-500 font-semibold text-[11px]">
+              Toplam <strong>{pagination.totalCount}</strong> kayıttan <strong>{(pagination.page - 1) * pagination.pageSize + 1}</strong> - <strong>{Math.min(pagination.page * pagination.pageSize, pagination.totalCount)}</strong> arası gösteriliyor (Sayfa {pagination.page} / {pagination.totalPages})
+            </div>
+
+            <div className="flex items-center gap-1.5">
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => handlePageChange(1)}
+                disabled={pagination.page <= 1}
+                className="h-8 w-8 p-0"
+                title="İlk Sayfa"
+              >
+                <ChevronsLeft className="w-4 h-4" />
+              </Button>
+
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => handlePageChange(pagination.page - 1)}
+                disabled={pagination.page <= 1}
+                className="h-8 w-8 p-0"
+                title="Önceki Sayfa"
+              >
+                <ChevronLeft className="w-4 h-4" />
+              </Button>
+
+              {/* Dynamic Page Number Buttons */}
+              {Array.from({ length: Math.min(5, pagination.totalPages) }).map((_, i) => {
+                let pageNum = pagination.page;
+                if (pagination.page <= 3) {
+                  pageNum = i + 1;
+                } else if (pagination.page >= pagination.totalPages - 2) {
+                  pageNum = pagination.totalPages - 4 + i;
+                } else {
+                  pageNum = pagination.page - 2 + i;
+                }
+
+                if (pageNum < 1 || pageNum > pagination.totalPages) return null;
+
+                return (
+                  <Button
+                    key={pageNum}
+                    size="sm"
+                    variant={pagination.page === pageNum ? "default" : "outline"}
+                    onClick={() => handlePageChange(pageNum)}
+                    className={`h-8 w-8 p-0 font-bold ${
+                      pagination.page === pageNum 
+                        ? 'bg-primary text-white hover:bg-primary-hover shadow-xs' 
+                        : 'text-dark bg-white'
+                    }`}
+                  >
+                    {pageNum}
+                  </Button>
+                );
+              })}
+
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => handlePageChange(pagination.page + 1)}
+                disabled={pagination.page >= pagination.totalPages}
+                className="h-8 w-8 p-0"
+                title="Sonraki Sayfa"
+              >
+                <ChevronRight className="w-4 h-4" />
+              </Button>
+
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => handlePageChange(pagination.totalPages)}
+                disabled={pagination.page >= pagination.totalPages}
+                className="h-8 w-8 p-0"
+                title="Son Sayfa"
+              >
+                <ChevronsRight className="w-4 h-4" />
+              </Button>
+            </div>
+          </div>
+        )}
+
       </div>
 
       {/* Order Detail Modal */}

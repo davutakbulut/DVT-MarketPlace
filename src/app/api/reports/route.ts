@@ -5,9 +5,24 @@ export async function GET(request: Request) {
   try {
     const { searchParams } = new URL(request.url);
     const type = searchParams.get('type') || 'order';
-    const limit = parseInt(searchParams.get('limit') || '100');
+    const page = Math.max(1, parseInt(searchParams.get('page') || '1'));
+    const pageSize = Math.min(250, Math.max(10, parseInt(searchParams.get('pageSize') || '50')));
+    const offset = (page - 1) * pageSize;
+    const search = searchParams.get('search') || '';
 
     if (type === 'order') {
+      let whereClause = '1=1';
+      let params: any[] = [];
+      if (search) {
+        whereClause = `(o.marketplace_order_number ILIKE $1 OR o.package_number ILIKE $1 OR o.customer_name ILIKE $1 OR o.customer_city ILIKE $1)`;
+        params.push(`%${search}%`);
+      }
+
+      // Total count
+      const countRes = await query(`SELECT COUNT(o.id) as total FROM orders o WHERE ${whereClause}`, params);
+      const totalCount = parseInt(countRes[0]?.total || '0');
+      const totalPages = Math.ceil(totalCount / pageSize);
+
       const orders = await query(`
         SELECT 
           o.id,
@@ -28,14 +43,32 @@ export async function GET(request: Request) {
           o.profit_margin_percent as "marginPercent",
           o.status
         FROM orders o
+        WHERE ${whereClause}
         ORDER BY o.order_date DESC
-        LIMIT $1
-      `, [limit]);
+        LIMIT ${pageSize} OFFSET ${offset}
+      `, params);
 
-      return NextResponse.json({ type, count: orders.length, data: orders });
+      return NextResponse.json({ 
+        type, 
+        pagination: { page, pageSize, totalCount, totalPages },
+        data: orders 
+      });
     }
 
     if (type === 'product') {
+      let whereClause = '1=1';
+      let params: any[] = [];
+      if (search) {
+        whereClause = `(oi.title ILIKE $1 OR oi.barcode ILIKE $1 OR oi.brand ILIKE $1)`;
+        params.push(`%${search}%`);
+      }
+
+      const countRes = await query(`
+        SELECT COUNT(DISTINCT oi.barcode) as total FROM order_items oi WHERE ${whereClause}
+      `, params);
+      const totalCount = parseInt(countRes[0]?.total || '0');
+      const totalPages = Math.ceil(totalCount / pageSize);
+
       const products = await query(`
         SELECT 
           oi.barcode,
@@ -49,15 +82,24 @@ export async function GET(request: Request) {
           SUM(oi.net_profit) as "totalProfit",
           ROUND((SUM(oi.net_profit) / NULLIF(SUM(oi.invoiced_amount), 0)) * 100, 1) as "avgMarginPercent"
         FROM order_items oi
+        WHERE ${whereClause}
         GROUP BY oi.barcode, oi.title, oi.brand
         ORDER BY SUM(oi.net_profit) DESC
-        LIMIT $1
-      `, [limit]);
+        LIMIT ${pageSize} OFFSET ${offset}
+      `, params);
 
-      return NextResponse.json({ type, count: products.length, data: products });
+      return NextResponse.json({ 
+        type, 
+        pagination: { page, pageSize, totalCount, totalPages },
+        data: products 
+      });
     }
 
     if (type === 'category' || type === 'brand') {
+      const countRes = await query(`SELECT COUNT(DISTINCT COALESCE(oi.brand, 'Genel')) as total FROM order_items oi`);
+      const totalCount = parseInt(countRes[0]?.total || '0');
+      const totalPages = Math.ceil(totalCount / pageSize);
+
       const brands = await query(`
         SELECT 
           COALESCE(oi.brand, 'Genel') as "brand",
@@ -69,13 +111,25 @@ export async function GET(request: Request) {
         FROM order_items oi
         GROUP BY oi.brand
         ORDER BY SUM(oi.net_profit) DESC
-        LIMIT $1
-      `, [limit]);
+        LIMIT ${pageSize} OFFSET ${offset}
+      `);
 
-      return NextResponse.json({ type, count: brands.length, data: brands });
+      return NextResponse.json({ 
+        type, 
+        pagination: { page, pageSize, totalCount, totalPages },
+        data: brands 
+      });
     }
 
     if (type === 'returns') {
+      const countRes = await query(`
+        SELECT COUNT(o.id) as total 
+        FROM orders o 
+        WHERE o.status ILIKE '%İade%' OR o.status ILIKE '%İptal%' OR o.net_profit < 0
+      `);
+      const totalCount = parseInt(countRes[0]?.total || '0');
+      const totalPages = Math.ceil(totalCount / pageSize);
+
       const returns = await query(`
         SELECT 
           o.id,
@@ -91,10 +145,14 @@ export async function GET(request: Request) {
         FROM orders o
         WHERE o.status ILIKE '%İade%' OR o.status ILIKE '%İptal%' OR o.net_profit < 0
         ORDER BY o.order_date DESC
-        LIMIT $1
-      `, [limit]);
+        LIMIT ${pageSize} OFFSET ${offset}
+      `);
 
-      return NextResponse.json({ type, count: returns.length, data: returns });
+      return NextResponse.json({ 
+        type, 
+        pagination: { page, pageSize, totalCount, totalPages },
+        data: returns 
+      });
     }
 
     if (type === 'shipping') {
@@ -111,7 +169,11 @@ export async function GET(request: Request) {
         ORDER BY COUNT(o.id) DESC
       `);
 
-      return NextResponse.json({ type, count: carriers.length, data: carriers });
+      return NextResponse.json({ 
+        type, 
+        pagination: { page: 1, pageSize: carriers.length, totalCount: carriers.length, totalPages: 1 },
+        data: carriers 
+      });
     }
 
     return NextResponse.json({ type, count: 0, data: [] });
