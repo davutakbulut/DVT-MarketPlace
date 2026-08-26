@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { formatCurrency } from "@/lib/formatters";
 import { toast } from "sonner";
+import { TablePagination } from "@/components/common/TablePagination";
 import { 
   Users, ShoppingBag, TrendingUp, Search, RefreshCw, Eye, 
   MapPin, Phone, Mail, Calendar, ArrowRight, ShieldCheck, 
@@ -31,6 +32,8 @@ export default function CustomersPage() {
   const [summary, setSummary] = useState<any>({});
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(15);
   const [selectedCity, setSelectedCity] = useState("all");
 
   // Drawer / Modal for Customer Orders
@@ -141,7 +144,7 @@ export default function CustomersPage() {
             type="text"
             placeholder="Müşteri adı, şehir veya e-posta ara..."
             value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
+            onChange={(e) => { setSearchQuery(e.target.value); setCurrentPage(1); }}
             className="w-full pl-9 pr-3 py-2 rounded-xl border border-border text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-primary"
           />
         </div>
@@ -149,7 +152,7 @@ export default function CustomersPage() {
         <div className="flex items-center gap-2 w-full sm:w-auto">
           <select
             value={selectedCity}
-            onChange={(e) => setSelectedCity(e.target.value)}
+            onChange={(e) => { setSelectedCity(e.target.value); setCurrentPage(1); }}
             className="px-3 py-2 rounded-xl border border-border text-xs font-bold text-dark bg-white focus:ring-2 focus:ring-primary"
           >
             <option value="all">Tüm Şehirler</option>
@@ -177,7 +180,7 @@ export default function CustomersPage() {
               </tr>
             </thead>
             <tbody className="divide-y divide-border/60">
-              {filteredCustomers.slice(0, 100).map((c, idx) => (
+              {filteredCustomers.slice((currentPage - 1) * pageSize, currentPage * pageSize).map((c, idx) => (
                 <tr key={idx} className="hover:bg-canvas/50 transition-colors">
                   <td className="py-3 px-4 table-sticky-first-col font-bold text-dark">
                     <div className="flex items-center gap-2">
@@ -236,6 +239,7 @@ export default function CustomersPage() {
             </tbody>
           </table>
         </div>
+        <TablePagination currentPage={currentPage} totalPages={Math.ceil(filteredCustomers.length / pageSize) || 1} pageSize={pageSize} totalItems={filteredCustomers.length} onPageChange={setCurrentPage} onPageSizeChange={setPageSize} />
       </div>
 
       {/* Customer Orders Modal */}

@@ -4,9 +4,12 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { formatCurrency } from "@/lib/formatters";
 import { toast } from "sonner";
+import { TablePagination } from "@/components/common/TablePagination";
 import { Sparkles, RefreshCw, Layers, TrendingUp, ArrowRight } from "lucide-react";
 
 export default function PlusTariffPage() {
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(15);
   const [products, setProducts] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 

@@ -4,6 +4,7 @@ import { formatCurrency } from "@/lib/formatters";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
+import { TablePagination } from "@/components/common/TablePagination";
 import { 
   AlertOctagon, AlertTriangle, AlertCircle, CheckCircle2, 
   ShieldAlert, RefreshCw, Filter, ArrowRight, Check, Sparkles 
@@ -19,6 +20,8 @@ export default function AlertsPage() {
   });
   const [loading, setLoading] = useState(true);
   const [activeFilter, setActiveFilter] = useState<string>("all");
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
 
   const fetchAlerts = async () => {
     setLoading(true);
@@ -151,7 +154,7 @@ export default function AlertsPage() {
             <p className="text-xs text-muted-foreground mt-0.5">Tüm siparişler ve ürünler kârlılık kurallarına uygun görünüyor.</p>
           </div>
         ) : (
-          filteredAlerts.map((a) => {
+          filteredAlerts.slice((currentPage - 1) * pageSize, currentPage * pageSize).map((a) => {
             const isCrit = a.severity === 'critical';
             const isWarn = a.severity === 'warning';
 
@@ -211,6 +214,7 @@ export default function AlertsPage() {
           })
         )}
       </div>
+      <TablePagination currentPage={currentPage} totalPages={Math.ceil(filteredAlerts.length / pageSize) || 1} pageSize={pageSize} totalItems={filteredAlerts.length} onPageChange={setCurrentPage} onPageSizeChange={setPageSize} />
     </div>
   );
 }

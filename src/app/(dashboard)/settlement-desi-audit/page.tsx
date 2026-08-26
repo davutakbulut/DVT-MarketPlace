@@ -4,6 +4,7 @@ import { formatCurrency } from "@/lib/formatters";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
+import { TablePagination } from "@/components/common/TablePagination";
 import { 
   FileCheck2, AlertTriangle, ShieldCheck, RefreshCw, Eye, 
   Layers, Truck, ArrowRight, DollarSign, Download, Check
@@ -16,6 +17,10 @@ export default function SettlementDesiAuditPage() {
   const [settlements, setSettlements] = useState<any[]>([]);
   const [summary, setSummary] = useState<any>({});
   const [loading, setLoading] = useState(true);
+  const [auditPage, setAuditPage] = useState(1);
+  const [auditPageSize, setAuditPageSize] = useState(10);
+  const [settlePage, setSettlePage] = useState(1);
+  const [settlePageSize, setSettlePageSize] = useState(10);
   const [selectedOrderId, setSelectedOrderId] = useState<string | null>(null);
 
   const fetchAuditData = async () => {
@@ -169,7 +174,7 @@ export default function SettlementDesiAuditPage() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-border/60">
-                {audits.map((a) => (
+                {audits.slice((auditPage - 1) * auditPageSize, auditPage * auditPageSize).map((a) => (
                   <tr 
                     key={a.id} 
                     onClick={() => setSelectedOrderId(a.id)}
@@ -213,6 +218,7 @@ export default function SettlementDesiAuditPage() {
               </tbody>
             </table>
           </div>
+          <TablePagination currentPage={auditPage} totalPages={Math.ceil(audits.length / auditPageSize) || 1} pageSize={auditPageSize} totalItems={audits.length} onPageChange={setAuditPage} onPageSizeChange={setAuditPageSize} />
         </div>
       ) : (
         <div className="bg-white rounded-3xl border border-border shadow-xs overflow-hidden">
@@ -230,7 +236,7 @@ export default function SettlementDesiAuditPage() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-border/60">
-                {settlements.map((s, idx) => (
+                {settlements.slice((settlePage - 1) * settlePageSize, settlePage * settlePageSize).map((s, idx) => (
                   <tr key={idx} className="hover:bg-canvas/50">
                     <td className="py-3 px-4 font-black text-dark">{s.periodName}</td>
                     <td className="py-3 px-4 font-black text-primary tabular-nums">{formatCurrency(parseFloat(s.grossSales || 0))}</td>
@@ -244,6 +250,7 @@ export default function SettlementDesiAuditPage() {
               </tbody>
             </table>
           </div>
+          <TablePagination currentPage={settlePage} totalPages={Math.ceil(settlements.length / settlePageSize) || 1} pageSize={settlePageSize} totalItems={settlements.length} onPageChange={setSettlePage} onPageSizeChange={setSettlePageSize} />
         </div>
       )}
 

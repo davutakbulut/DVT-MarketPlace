@@ -4,6 +4,7 @@ import { formatCurrency, formatPercentage } from "@/lib/formatters";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
+import { TablePagination } from "@/components/common/TablePagination";
 import { 
   Megaphone, Plus, Calendar, RefreshCw, Trash2, Edit3, 
   TrendingDown, ShoppingCart, Percent, FileText, ArrowUpDown, CheckCircle2 
@@ -21,6 +22,8 @@ export default function AdsPage() {
     tacosPercent: 0,
   });
   const [loading, setLoading] = useState(true);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
   const [modalOpen, setModalOpen] = useState(false);
   const [editingInvoice, setEditingInvoice] = useState<any>(null);
 
@@ -227,7 +230,7 @@ export default function AdsPage() {
               </tr>
             </thead>
             <tbody className="divide-y divide-border/60">
-              {invoices.map((inv) => (
+              {invoices.slice((currentPage - 1) * pageSize, currentPage * pageSize).map((inv) => (
                 <tr key={inv.id} className="hover:bg-canvas/50 transition-colors">
                   <td className="py-3 px-4 table-sticky-first-col font-bold text-dark font-mono">
                     {inv.invoiceNumber}
@@ -274,6 +277,7 @@ export default function AdsPage() {
             </tbody>
           </table>
         </div>
+        <TablePagination currentPage={currentPage} totalPages={Math.ceil(invoices.length / pageSize) || 1} pageSize={pageSize} totalItems={invoices.length} onPageChange={setCurrentPage} onPageSizeChange={setPageSize} />
       </div>
 
       {/* Add / Edit Invoice Modal */}

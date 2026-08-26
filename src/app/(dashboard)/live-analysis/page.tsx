@@ -4,6 +4,7 @@ import { formatCurrency, formatPercentage } from "@/lib/formatters";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
+import { TablePagination } from "@/components/common/TablePagination";
 import { 
   Activity, RefreshCw, Search, Eye, Filter, Truck, CheckCircle2, 
   AlertTriangle, DollarSign, Package, Clock, ShieldCheck, ChevronRight, 
@@ -21,6 +22,8 @@ export default function LiveAnalysisPage() {
   const [summary, setSummary] = useState<any>({});
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(15);
   const [statusFilter, setStatusFilter] = useState("all");
   const [carrierFilter, setCarrierFilter] = useState("all");
   const [dateFilter, setDateFilter] = useState<DateFilterValue>({ period: "all" });
@@ -357,7 +360,7 @@ export default function LiveAnalysisPage() {
               </tr>
             </thead>
             <tbody className="divide-y divide-border/60">
-              {orders.map((o) => {
+              {orders.slice((currentPage - 1) * pageSize, currentPage * pageSize).map((o) => {
                 const isProfitable = parseFloat(o.netProfit) >= 0;
                 return (
                   <tr 
@@ -429,6 +432,7 @@ export default function LiveAnalysisPage() {
             </tbody>
           </table>
         </div>
+        <TablePagination currentPage={currentPage} totalPages={Math.ceil(orders.length / pageSize) || 1} pageSize={pageSize} totalItems={orders.length} onPageChange={setCurrentPage} onPageSizeChange={setPageSize} />
       </div>
 
       {/* Batch Cost Update Modal */}

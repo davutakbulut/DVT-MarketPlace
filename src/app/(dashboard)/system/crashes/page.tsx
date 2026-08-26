@@ -4,6 +4,7 @@ import { formatDateTime } from "@/lib/formatters";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
+import { TablePagination } from "@/components/common/TablePagination";
 import { 
   AlertTriangle, ShieldAlert, CheckCircle2, RefreshCw, 
   Copy, Download, Terminal, Bug, Clock, ExternalLink,
@@ -17,6 +18,8 @@ export default function SystemCrashesPage() {
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [severityFilter, setSeverityFilter] = useState<string>("all");
   const [expandedId, setExpandedId] = useState<string | null>(null);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
 
   const fetchCrashes = async () => {
     setLoading(true);
@@ -177,7 +180,7 @@ export default function SystemCrashesPage() {
             <p className="text-xs text-gray-500">Tüm sistem sayfaları ve istemci iş parçacıkları sorunsuz çalışıyor.</p>
           </div>
         ) : (
-          logs.map((log) => {
+          logs.slice((currentPage - 1) * pageSize, currentPage * pageSize).map((log) => {
             const isExpanded = expandedId === log.id;
             return (
               <div 
@@ -291,6 +294,7 @@ export default function SystemCrashesPage() {
           })
         )}
       </div>
+      <TablePagination currentPage={currentPage} totalPages={Math.ceil(logs.length / pageSize) || 1} pageSize={pageSize} totalItems={logs.length} onPageChange={setCurrentPage} onPageSizeChange={setPageSize} />
     </div>
   );
 }

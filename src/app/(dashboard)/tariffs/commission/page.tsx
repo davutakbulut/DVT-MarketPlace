@@ -7,6 +7,8 @@ import { Layers, Upload, Download, RefreshCw, Sparkles, ArrowRight } from "lucid
 import { BulkIngestionModal } from "@/components/common/BulkIngestionModal";
 
 export default function CommissionTariffPage() {
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(15);
   const [products, setProducts] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [importModal, setImportModal] = useState(false);

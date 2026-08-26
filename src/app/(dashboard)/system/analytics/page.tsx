@@ -4,6 +4,7 @@ import { formatNumber } from "@/lib/formatters";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
+import { TablePagination } from "@/components/common/TablePagination";
 import { 
   Activity, Clock, Zap, Flame, Database, RefreshCw, 
   BarChart2, MousePointer, Gauge, Globe, ArrowUpRight,
@@ -14,6 +15,8 @@ export default function SystemAnalyticsPage() {
   const [activeTab, setActiveTab] = useState<'dwell' | 'speed' | 'heatmap' | 'data'>('dwell');
   const [selectedPage, setSelectedPage] = useState<string>('/product-pricing');
   const [analyticsData, setAnalyticsData] = useState<any>(null);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(8);
   const [loading, setLoading] = useState(true);
 
   const fetchAnalytics = async (pageKey?: string) => {
@@ -173,7 +176,7 @@ export default function SystemAnalyticsPage() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-border/60">
-                {pageMetrics.map((p: any, idx: number) => {
+                {pageMetrics.slice((currentPage - 1) * pageSize, currentPage * pageSize).map((p: any, idx: number) => {
                   const dwell = parseFloat(p.avgDwellSeconds || 120);
                   const maxDwell = Math.max(...pageMetrics.map((m: any) => parseFloat(m.avgDwellSeconds || 120)), 300);
                   const barWidth = Math.min(100, Math.round((dwell / maxDwell) * 100));
@@ -212,6 +215,7 @@ export default function SystemAnalyticsPage() {
               </tbody>
             </table>
           </div>
+          <TablePagination currentPage={currentPage} totalPages={Math.ceil(pageMetrics.length / pageSize) || 1} pageSize={pageSize} totalItems={pageMetrics.length} onPageChange={setCurrentPage} onPageSizeChange={setPageSize} />
         </div>
       )}
 
@@ -238,7 +242,7 @@ export default function SystemAnalyticsPage() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-border/60">
-                {pageMetrics.map((p: any) => {
+                {pageMetrics.slice((currentPage - 1) * pageSize, currentPage * pageSize).map((p: any) => {
                   const loadMs = parseFloat(p.avgLoadTimeMs || 140);
                   const isUltraFast = loadMs < 160;
 
@@ -272,6 +276,7 @@ export default function SystemAnalyticsPage() {
               </tbody>
             </table>
           </div>
+          <TablePagination currentPage={currentPage} totalPages={Math.ceil(pageMetrics.length / pageSize) || 1} pageSize={pageSize} totalItems={pageMetrics.length} onPageChange={setCurrentPage} onPageSizeChange={setPageSize} />
         </div>
       )}
 
@@ -419,7 +424,7 @@ export default function SystemAnalyticsPage() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-border/60">
-                {pageMetrics.map((p: any) => {
+                {pageMetrics.slice((currentPage - 1) * pageSize, currentPage * pageSize).map((p: any) => {
                   const kb = parseFloat(p.avgDataKb || 150);
 
                   return (
@@ -447,6 +452,7 @@ export default function SystemAnalyticsPage() {
               </tbody>
             </table>
           </div>
+          <TablePagination currentPage={currentPage} totalPages={Math.ceil(pageMetrics.length / pageSize) || 1} pageSize={pageSize} totalItems={pageMetrics.length} onPageChange={setCurrentPage} onPageSizeChange={setPageSize} />
         </div>
       )}
 
