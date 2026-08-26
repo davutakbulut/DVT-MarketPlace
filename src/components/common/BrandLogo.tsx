@@ -53,7 +53,7 @@ export function BrandLogo({
         <div className="relative flex flex-col justify-center shrink-0 pr-6">
           <div className="flex items-center leading-none whitespace-nowrap">
             <span className={`font-black tracking-tight text-dark ${titleSize} whitespace-nowrap inline-flex items-center`}>
-              DVT<span className="text-primary ml-1 hidden xs:inline">MarketPlace</span>
+              DVT<span className="text-primary ml-1">MarketPlace</span>
             </span>
             {showBadge && (
               <span className="absolute -top-1.5 right-0 bg-[#FFEDE7] text-primary text-[8px] sm:text-[9px] font-black px-1.5 py-0.5 rounded-full leading-none tracking-wider border border-primary/20 uppercase shadow-2xs pointer-events-none">
