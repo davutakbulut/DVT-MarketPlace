@@ -129,14 +129,14 @@ export async function GET(request: Request) {
     // Carrier distribution for Selected Period
     const carrierDistribution = await query(`
       SELECT 
-        COALESCE(o.carrier_name, 'Trendyol Express') as "carrier",
+        COALESCE(NULLIF(o.carrier_name, ''), 'Trendyol Express') as "carrier",
         COUNT(o.id) as "orderCount",
         SUM(o.total_shipping_cost) as "totalShippingCost",
-        ROUND(AVG(o.billed_desi), 1) as "avgDesi",
+        ROUND(AVG(COALESCE(o.billed_desi, 1)), 1) as "avgDesi",
         SUM(o.paid_amount - (o.total_cost + o.total_commission + o.total_shipping_cost + o.service_fee + o.withholding_tax + o.net_vat + (o.gross_amount * $${extraParamIdx}))) as "profit"
       FROM orders o
       WHERE ${whereClause}
-      GROUP BY o.carrier_name
+      GROUP BY COALESCE(NULLIF(o.carrier_name, ''), 'Trendyol Express')
       ORDER BY COUNT(o.id) DESC
     `, params);
 
@@ -153,21 +153,21 @@ export async function GET(request: Request) {
       ORDER BY EXTRACT(HOUR FROM o.order_date) ASC
     `, params);
 
-    // Top profitable products for Selected Period
+    // Top profitable products for Selected Period (calculated using unit_sale_price and unit_cost_price)
     const topProducts = await query(`
       SELECT 
         oi.barcode,
         oi.title,
-        oi.brand,
+        COALESCE(oi.brand, 'Genel') as brand,
         SUM(oi.quantity) as "totalQuantity",
-        SUM(oi.invoiced_amount) as "totalRevenue",
-        SUM(oi.invoiced_amount - (oi.unit_cost_price * oi.quantity + (oi.invoiced_amount * 0.16) + (oi.invoiced_amount * $${extraParamIdx}))) as "totalProfit",
-        ROUND((SUM(oi.invoiced_amount - (oi.unit_cost_price * oi.quantity + (oi.invoiced_amount * 0.16) + (oi.invoiced_amount * $${extraParamIdx}))) / NULLIF(SUM(oi.invoiced_amount), 0) * 100)::numeric, 1) as "avgMargin"
+        SUM(oi.unit_sale_price * oi.quantity) as "totalRevenue",
+        SUM((oi.unit_sale_price * oi.quantity) - (COALESCE(oi.unit_cost_price, 0) * oi.quantity + (oi.unit_sale_price * oi.quantity * 0.16) + (oi.unit_sale_price * oi.quantity * $${extraParamIdx}))) as "totalProfit",
+        ROUND((SUM((oi.unit_sale_price * oi.quantity) - (COALESCE(oi.unit_cost_price, 0) * oi.quantity + (oi.unit_sale_price * oi.quantity * 0.16) + (oi.unit_sale_price * oi.quantity * $${extraParamIdx}))) / NULLIF(SUM(oi.unit_sale_price * oi.quantity), 0) * 100)::numeric, 1) as "avgMargin"
       FROM order_items oi
       JOIN orders o ON o.id = oi.order_id
-      WHERE ${whereClause}
+      WHERE ${whereClause} AND o.status NOT IN ('Cancelled', 'Returned', 'İptal Edildi', 'İade Edildi')
       GROUP BY oi.barcode, oi.title, oi.brand
-      ORDER BY SUM(oi.invoiced_amount) DESC
+      ORDER BY SUM((oi.unit_sale_price * oi.quantity) - (COALESCE(oi.unit_cost_price, 0) * oi.quantity + (oi.unit_sale_price * oi.quantity * 0.16) + (oi.unit_sale_price * oi.quantity * $${extraParamIdx}))) DESC
       LIMIT 5
     `, params);
 
@@ -177,9 +177,9 @@ export async function GET(request: Request) {
         o.id,
         o.marketplace_order_number as "orderNumber",
         TO_CHAR(o.order_date, 'YYYY-MM-DD HH24:MI') as "orderDate",
-        o.customer_name as "customerName",
-        o.customer_city as "city",
-        o.carrier_name as "carrierName",
+        COALESCE(NULLIF(o.customer_name, ''), 'Gizli Müşteri') as "customerName",
+        COALESCE(NULLIF(o.customer_city, ''), 'Türkiye') as "city",
+        COALESCE(NULLIF(o.carrier_name, ''), 'Trendyol Express') as "carrierName",
         o.paid_amount as "paidAmount",
         ROUND((o.paid_amount - (o.total_cost + o.total_commission + o.total_shipping_cost + o.service_fee + o.withholding_tax + o.net_vat + (o.gross_amount * $${extraParamIdx})))::numeric, 2) as "netProfit",
         ROUND(((o.paid_amount - (o.total_cost + o.total_commission + o.total_shipping_cost + o.service_fee + o.withholding_tax + o.net_vat + (o.gross_amount * $${extraParamIdx}))) / NULLIF(o.paid_amount, 0) * 100)::numeric, 1) as "marginPercent",
