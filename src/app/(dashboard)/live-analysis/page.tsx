@@ -10,6 +10,7 @@ import {
   AlertTriangle, DollarSign, Package, Clock, ShieldCheck, ChevronRight, 
   Layers, Edit3, Check, X, TrendingUp, PieChart as PieIcon, BarChart3
 , Calendar } from "lucide-react";
+import { useSearchParams } from "next/navigation";
 import { OrderDetailModal } from "@/components/orders/OrderDetailModal";
 import { OrderStatusBadge } from "@/components/common/OrderStatusBadge";
 import { useDateStore } from "@/store/useDateStore";
@@ -19,11 +20,13 @@ import {
   PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend
 } from "recharts";
 
-export default function LiveAnalysisPage() {
+function LiveAnalysisContent() {
+  const searchParams = useSearchParams();
+  const urlSearch = searchParams.get('search') || '';
   const [orders, setOrders] = useState<any[]>([]);
   const [summary, setSummary] = useState<any>({});
   const [loading, setLoading] = useState(true);
-  const [search, setSearch] = useState("");
+  const [search, setSearch] = useState(urlSearch);
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(15);
   const [statusFilter, setStatusFilter] = useState("all");
@@ -594,5 +597,13 @@ export default function LiveAnalysisPage() {
         onUpdated={fetchOrders}
       />
     </div>
+  );
+}
+
+export default function LiveAnalysisPage() {
+  return (
+    <React.Suspense fallback={<div className="p-12 text-center text-xs text-gray-400 font-bold">Yükleniyor...</div>}>
+      <LiveAnalysisContent />
+    </React.Suspense>
   );
 }

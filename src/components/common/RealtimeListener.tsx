@@ -102,7 +102,7 @@ export function RealtimeListener() {
                 action: {
                   label: 'Siparişi Gör',
                   onClick: () => {
-                    window.location.href = '/orders';
+                    window.location.href = `/live-analysis?search=${order.orderNumber || ''}`;
                   },
                 },
               });
@@ -164,7 +164,7 @@ export function RealtimeListener() {
                 action: {
                   label: 'Siparişi Gör',
                   onClick: () => {
-                    window.location.href = '/orders';
+                    window.location.href = `/live-analysis?search=${newOrder.marketplace_order_number || newOrder.id || ''}`;
                   },
                 },
               });
