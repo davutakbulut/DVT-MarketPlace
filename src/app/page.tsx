@@ -28,6 +28,8 @@ import {
   Percent,
   Sparkles,
   Users,
+  User,
+  LayoutDashboard,
   Play,
   Pause,
   RotateCcw,
@@ -52,16 +54,35 @@ export default function LandingHomePage() {
   const [tourOpen, setTourOpen] = useState(false);
   const [faqOpen, setFaqOpen] = useState<number | null>(0);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [userSession, setUserSession] = useState<{ name: string; email: string; role: string } | null>(null);
 
-  // Lock body scroll when mobile menu drawer is open
+  // Fetch active user session
+  useEffect(() => {
+    fetch('/api/auth/session')
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data) => {
+        if (data?.user) {
+          setUserSession(data.user);
+        }
+      })
+      .catch(() => {});
+  }, []);
+
+  // Lock body & html scroll completely when mobile menu drawer is open
   useEffect(() => {
     if (mobileMenuOpen) {
       document.body.style.overflow = 'hidden';
+      document.documentElement.style.overflow = 'hidden';
+      document.body.style.touchAction = 'none';
     } else {
       document.body.style.overflow = '';
+      document.documentElement.style.overflow = '';
+      document.body.style.touchAction = '';
     }
     return () => {
       document.body.style.overflow = '';
+      document.documentElement.style.overflow = '';
+      document.body.style.touchAction = '';
     };
   }, [mobileMenuOpen]);
 
@@ -203,7 +224,7 @@ export default function LandingHomePage() {
             <a href="#sss" className="hover:text-primary transition-colors">Sıkça Sorulanlar</a>
           </nav>
 
-          {/* Right Desktop / Mobile Actions */}
+          {/* Right Desktop / Mobile Actions with Auth Session Detection */}
           <div className="flex items-center gap-1.5 sm:gap-2.5 shrink-0">
             <Button
               variant="ghost"
@@ -215,17 +236,29 @@ export default function LandingHomePage() {
               <span>Sistem Turu</span>
             </Button>
 
-            <Link href="/login" className="hidden sm:block">
-              <Button variant="outline" size="sm" className="rounded-xl text-xs font-bold px-3.5 h-9 bg-white hover:bg-canvas">
-                Giriş Yap
-              </Button>
-            </Link>
+            {userSession ? (
+              <Link href="/dashboard">
+                <Button size="sm" className="rounded-2xl text-xs font-bold px-3.5 sm:px-4 h-9 bg-dark hover:bg-dark/90 text-white shadow-xs flex items-center gap-2">
+                  <User className="w-3.5 h-3.5 text-primary" />
+                  <span>Panelim ({userSession.name.split(' ')[0]})</span>
+                  <ArrowRight className="w-3.5 h-3.5 text-primary hidden sm:inline" />
+                </Button>
+              </Link>
+            ) : (
+              <>
+                <Link href="/login" className="hidden sm:block">
+                  <Button variant="outline" size="sm" className="rounded-xl text-xs font-bold px-3.5 h-9 bg-white hover:bg-canvas">
+                    Giriş Yap
+                  </Button>
+                </Link>
 
-            <Link href="/register">
-              <Button size="sm" className="rounded-xl text-xs font-bold px-3 sm:px-4 h-8 sm:h-9 shadow-xs bg-primary text-white hover:bg-primary-hover whitespace-nowrap">
-                <span className="hidden xs:inline">Canlı </span>Başla ➔
-              </Button>
-            </Link>
+                <Link href="/register">
+                  <Button size="sm" className="rounded-xl text-xs font-bold px-3 sm:px-4 h-8 sm:h-9 shadow-xs bg-primary text-white hover:bg-primary-hover whitespace-nowrap">
+                    <span className="hidden xs:inline">Canlı </span>Başla ➔
+                  </Button>
+                </Link>
+              </>
+            )}
           </div>
         </div>
 
@@ -324,6 +357,127 @@ export default function LandingHomePage() {
           </div>
         )}
       </header>
+      {/* 2. STANDALONE MOBILE SLIDE-IN DRAWER (OUTSIDE HEADER TO PREVENT BACKDROP/STACKING ARTIFACTS) */}
+      {mobileMenuOpen && (
+        <div className="fixed inset-0 z-99 lg:hidden">
+          {/* Opaque Dark Backdrop */}
+          <div 
+            className="fixed inset-0 bg-black/60 backdrop-blur-xs transition-opacity animate-in fade-in duration-200"
+            onClick={() => setMobileMenuOpen(false)}
+          />
+
+          {/* Solid White Opaque Slide-In Drawer */}
+          <div className="fixed inset-y-0 left-0 w-72 sm:w-80 bg-white z-100 p-5 shadow-2xl flex flex-col justify-between animate-in slide-in-from-left duration-200 border-r border-border overflow-y-auto">
+            <div className="space-y-6">
+              {/* Drawer Top Header */}
+              <div className="flex items-center justify-between pb-4 border-b border-border">
+                <BrandLogo size="sm" href="/" showSlogan={true} />
+                <button
+                  onClick={() => setMobileMenuOpen(false)}
+                  className="p-1.5 rounded-xl text-gray-400 hover:text-dark hover:bg-canvas transition-colors cursor-pointer"
+                  aria-label="Menüyü Kapat"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+
+              {/* Navigation Links */}
+              <nav className="space-y-1 text-sm font-bold text-dark">
+                <a
+                  href="#canli-akis"
+                  onClick={() => setMobileMenuOpen(false)}
+                  className="flex items-center gap-2.5 p-3 rounded-2xl hover:bg-canvas text-dark hover:text-primary transition-colors"
+                >
+                  <Sparkles className="w-4 h-4 text-primary shrink-0" />
+                  <span>Canlı Akış Deneyimi</span>
+                </a>
+                <a
+                  href="#motorlar"
+                  onClick={() => setMobileMenuOpen(false)}
+                  className="flex items-center gap-2.5 p-3 rounded-2xl hover:bg-canvas text-dark hover:text-primary transition-colors"
+                >
+                  <Layers className="w-4 h-4 text-primary shrink-0" />
+                  <span>11 Güçlü Motor</span>
+                </a>
+                <a
+                  href="#hesaplayici"
+                  onClick={() => setMobileMenuOpen(false)}
+                  className="flex items-center gap-2.5 p-3 rounded-2xl hover:bg-canvas text-dark hover:text-primary transition-colors"
+                >
+                  <Calculator className="w-4 h-4 text-primary shrink-0" />
+                  <span>Tersine Kâr Simülatörü</span>
+                </a>
+                <a
+                  href="#karsilastirma"
+                  onClick={() => setMobileMenuOpen(false)}
+                  className="flex items-center gap-2.5 p-3 rounded-2xl hover:bg-canvas text-dark hover:text-primary transition-colors"
+                >
+                  <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+                  <span>Neden DVT-MarketPlace?</span>
+                </a>
+                <a
+                  href="#sss"
+                  onClick={() => setMobileMenuOpen(false)}
+                  className="flex items-center gap-2.5 p-3 rounded-2xl hover:bg-canvas text-dark hover:text-primary transition-colors"
+                >
+                  <Compass className="w-4 h-4 text-gray-500 shrink-0" />
+                  <span>Sıkça Sorulan Sorular</span>
+                </a>
+              </nav>
+            </div>
+
+            {/* Drawer Bottom Area: User Session Profile or Login Buttons */}
+            <div className="pt-4 border-t border-border space-y-2.5">
+              <Button
+                variant="outline"
+                onClick={() => { setMobileMenuOpen(false); setTourOpen(true); }}
+                className="w-full h-10 text-xs font-bold rounded-2xl gap-2 justify-center"
+              >
+                <Compass className="w-4 h-4 text-primary" />
+                <span>Sistem Turunu Başlat</span>
+              </Button>
+
+              {userSession ? (
+                <div className="p-3 bg-canvas rounded-2xl border border-border space-y-2.5">
+                  <div className="flex items-center gap-2.5">
+                    <div className="w-8 h-8 rounded-xl bg-primary text-white font-bold flex items-center justify-center text-xs shadow-xs shrink-0">
+                      {userSession.name.charAt(0).toUpperCase()}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="text-xs font-bold text-dark truncate flex items-center gap-1">
+                        {userSession.name}
+                        <ShieldCheck className="w-3 h-3 text-primary shrink-0" />
+                      </div>
+                      <div className="text-[10px] text-gray-500 font-mono truncate">{userSession.email}</div>
+                    </div>
+                  </div>
+
+                  <Link href="/dashboard" className="block" onClick={() => setMobileMenuOpen(false)}>
+                    <Button className="w-full h-9 text-xs font-bold rounded-xl justify-center bg-primary text-white hover:bg-primary-hover shadow-xs gap-1.5">
+                      <LayoutDashboard className="w-3.5 h-3.5" />
+                      <span>Yönetim Paneline Git</span>
+                    </Button>
+                  </Link>
+                </div>
+              ) : (
+                <>
+                  <Link href="/login" className="block" onClick={() => setMobileMenuOpen(false)}>
+                    <Button variant="outline" className="w-full h-10 text-xs font-bold rounded-2xl justify-center bg-canvas">
+                      Giriş Yap
+                    </Button>
+                  </Link>
+
+                  <Link href="/register" className="block" onClick={() => setMobileMenuOpen(false)}>
+                    <Button className="w-full h-10 text-xs font-bold rounded-2xl justify-center bg-primary text-white hover:bg-primary-hover shadow-xs">
+                      Ücretsiz Başla ➔
+                    </Button>
+                  </Link>
+                </>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* 2. HERO SECTION WITH CINEMATIC LIVE FRAME SIMULATOR */}
       <section id="canli-akis" className="relative pt-10 pb-16 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto overflow-hidden">
