@@ -8,7 +8,7 @@ export function StoreSelector() {
 
   return (
     <div className="relative inline-block text-left">
-      <div className="flex items-center gap-1 sm:gap-2 bg-canvas hover:bg-border/60 px-2 sm:px-3 py-1 sm:py-1.5 rounded-xl border border-border transition-colors cursor-pointer group max-w-[140px] sm:max-w-[220px]">
+      <div className="flex items-center gap-1 sm:gap-2 bg-canvas hover:bg-border/60 px-2 sm:px-3 py-1 sm:py-1.5 rounded-xl border border-border transition-colors cursor-pointer group max-w-[95px] xs:max-w-[125px] sm:max-w-[200px]">
         <Store className="w-3.5 h-3.5 text-primary shrink-0" />
         <select
           value={activeStore.id}

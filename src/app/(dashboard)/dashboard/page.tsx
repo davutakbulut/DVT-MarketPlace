@@ -124,7 +124,7 @@ export default function DashboardPage() {
               <DollarSign className="w-4 h-4" />
             </div>
           </div>
-          <div className="text-2xl sm:text-3xl font-black text-primary tabular-nums mt-2">
+          <div className="text-lg xs:text-xl sm:text-2xl lg:text-3xl font-black text-primary tabular-nums mt-1.5 truncate">
             {formatCurrency(d.invoicedRevenue || 0)}
           </div>
           <span className="text-[11px] text-gray-500 font-semibold mt-1 block">
@@ -140,7 +140,7 @@ export default function DashboardPage() {
               <TrendingUp className="w-4 h-4" />
             </div>
           </div>
-          <div className="text-2xl sm:text-3xl font-black text-emerald-700 tabular-nums mt-2">
+          <div className="text-lg xs:text-xl sm:text-2xl lg:text-3xl font-black text-emerald-700 tabular-nums mt-1.5 truncate">
             {formatCurrency(d.netProfit || 0)}
           </div>
           <span className="text-[11px] text-emerald-800 font-bold mt-1 block">
@@ -156,11 +156,11 @@ export default function DashboardPage() {
               <Percent className="w-4 h-4" />
             </div>
           </div>
-          <div className="text-2xl sm:text-3xl font-black text-dark tabular-nums mt-2">
+          <div className="text-lg xs:text-xl sm:text-2xl lg:text-3xl font-black text-dark tabular-nums mt-1.5 truncate">
             {formatCurrency((d.commissionTotal || 0) + (d.serviceFeeTotal || 0))}
           </div>
           <span className="text-[11px] text-gray-500 font-semibold mt-1 block">
-            ₺{formatCurrency(d.commissionTotal || 0)} Komisyon + ₺{formatCurrency(d.serviceFeeTotal || 0)} Hizmet
+            {formatCurrency(d.commissionTotal || 0)} Komisyon + {formatCurrency(d.serviceFeeTotal || 0)} Hizmet
           </span>
         </div>
 
@@ -172,7 +172,7 @@ export default function DashboardPage() {
               <Truck className="w-4 h-4" />
             </div>
           </div>
-          <div className="text-2xl sm:text-3xl font-black text-dark tabular-nums mt-2">
+          <div className="text-lg xs:text-xl sm:text-2xl lg:text-3xl font-black text-dark tabular-nums mt-1.5 truncate">
             {formatCurrency(d.shippingTotal || 0)}
           </div>
           <span className="text-[11px] text-gray-500 font-semibold mt-1 block">
@@ -187,7 +187,7 @@ export default function DashboardPage() {
         
         {/* Monthly Revenue & Net Profit Area Chart (8 Cols) */}
         <div className="lg:col-span-8 bg-white p-4 sm:p-6 rounded-3xl border border-border shadow-xs space-y-4">
-          <div className="flex items-center justify-between pb-3 border-b border-border">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-3 border-b border-border">
             <div>
               <h4 className="text-xs sm:text-sm font-bold text-dark flex items-center gap-2">
                 <Activity className="w-4 h-4 text-primary" />
@@ -290,7 +290,7 @@ export default function DashboardPage() {
         
         {/* Hourly 24-Hour Orders & Revenue Bar Chart (8 Cols) */}
         <div className="lg:col-span-8 bg-white p-4 sm:p-6 rounded-3xl border border-border shadow-xs space-y-4">
-          <div className="flex items-center justify-between pb-3 border-b border-border">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-3 border-b border-border">
             <div>
               <h4 className="text-xs sm:text-sm font-bold text-dark flex items-center gap-2">
                 <Clock className="w-4 h-4 text-primary" />
@@ -323,7 +323,7 @@ export default function DashboardPage() {
 
         {/* Carrier Distribution Comparison (4 Cols) */}
         <div className="lg:col-span-4 bg-white p-4 sm:p-6 rounded-3xl border border-border shadow-xs space-y-4">
-          <div className="flex items-center justify-between pb-3 border-b border-border">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-3 border-b border-border">
             <h4 className="text-xs sm:text-sm font-bold text-dark flex items-center gap-2">
               <Truck className="w-4 h-4 text-primary" />
               Kargo Dağılımı
