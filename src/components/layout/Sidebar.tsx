@@ -3,6 +3,7 @@ import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import {
+  Undo2,
   LayoutDashboard,
   Activity,
   Package,
@@ -32,6 +33,7 @@ const navItems = [
   { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
   { href: '/live-analysis', label: 'Canlı Analiz', icon: Activity, badge: 'Canlı' },
   { href: '/products', label: 'Ürünlerim (Katalog)', icon: Package, badge: '283 Ürün' },
+  { href: '/returns-cancellations', label: 'İptal & İade Siparişler', icon: Undo2, badge: '156' },
   { href: '/product-profitability', label: 'Ürün Kârlılık Analizi', icon: TrendingUp },
   { href: '/product-pricing', label: 'Ürün Fiyatlandırma', icon: Calculator },
   { href: '/profit-margin-list', label: 'Kâr Marjı Listesi', icon: Percent },
