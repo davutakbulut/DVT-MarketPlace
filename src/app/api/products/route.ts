@@ -11,6 +11,7 @@ export async function GET(request: Request) {
     const storeId = searchParams.get('storeId') || 'all';
     const marketplace = searchParams.get('marketplace') || 'all';
     const stockStatus = searchParams.get('stockStatus') || 'all';
+    const tab = searchParams.get('tab') || 'all'; // 'all' | 'active' | 'pending' | 'passive'
     const hasPagination = searchParams.has('page') || searchParams.has('pageSize');
     const page = Math.max(1, parseInt(searchParams.get('page') || '1'));
     const pageSize = Math.min(500, Math.max(10, parseInt(searchParams.get('pageSize') || '50')));
@@ -50,9 +51,36 @@ export async function GET(request: Request) {
       conditions.push(`p.stock_quantity = 0`);
     }
 
+    // Tab Status Filter (Trendyol-Style Tabs)
+    if (tab === 'active') {
+      conditions.push(`(p.product_status = 'active' OR (p.is_active = true AND p.approval_status = 'approved'))`);
+    } else if (tab === 'pending' || tab === 'pending_approval' || tab === 'on_approval') {
+      conditions.push(`(p.product_status = 'pending_approval' OR p.approval_status = 'in_review')`);
+    } else if (tab === 'passive' || tab === 'inactive') {
+      conditions.push(`(p.product_status = 'passive' OR p.is_active = false)`);
+    }
+
     const whereClause = conditions.join(' AND ');
 
-    // Total Count
+    // Total Counts Breakdown across all tabs
+    const countsRes = await query(`
+      SELECT 
+        COUNT(*) as total,
+        COUNT(*) FILTER (WHERE p.product_status = 'active' OR (p.is_active = true AND p.approval_status = 'approved')) as active_count,
+        COUNT(*) FILTER (WHERE p.product_status = 'pending_approval' OR p.approval_status = 'in_review') as pending_count,
+        COUNT(*) FILTER (WHERE p.product_status = 'passive' OR p.is_active = false) as passive_count
+      FROM products p
+      WHERE ${storeId && storeId !== 'all' ? `p.store_id::text = '${storeId}'` : '1=1'}
+    `);
+
+    const statusCounts = {
+      all: parseInt(countsRes[0]?.total || '0'),
+      active: parseInt(countsRes[0]?.active_count || '0'),
+      pending: parseInt(countsRes[0]?.pending_count || '0'),
+      passive: parseInt(countsRes[0]?.passive_count || '0'),
+    };
+
+    // Filtered Total Count for current query
     const countRes = await query(`SELECT COUNT(*) as total FROM products p WHERE ${whereClause}`, params);
     const totalCount = parseInt(countRes[0]?.total || '0');
     const totalPages = Math.ceil(totalCount / pageSize);
@@ -90,6 +118,8 @@ export async function GET(request: Request) {
         p.delivery_type as "deliveryType",
         p.selected_tariff_tier as "selectedTariffTier",
         p.is_active as "isActive",
+        COALESCE(p.product_status, 'active') as "productStatus",
+        COALESCE(p.approval_status, 'approved') as "approvalStatus",
         CASE 
           WHEN p.current_sale_price <= 0 THEN 0
           ELSE ROUND((p.current_sale_price - (
@@ -119,6 +149,7 @@ export async function GET(request: Request) {
     return NextResponse.json({
       products,
       brands,
+      statusCounts,
       pagination: hasPagination ? {
         page,
         pageSize,

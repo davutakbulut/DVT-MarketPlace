@@ -7,7 +7,7 @@ import { toast } from "sonner";
 import { 
   Package, Search, Filter, RefreshCw, ExternalLink, Edit3, 
   Check, X, Eye, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight,
-  TrendingUp, Truck, Layers, DollarSign, Award, AlertCircle
+  TrendingUp, Truck, Layers, DollarSign, Award, AlertCircle, Info
 } from "lucide-react";
 import Image from "next/image";
 import { useTenantStore } from "@/stores/useTenantStore";
@@ -20,6 +20,13 @@ export default function ProductsCatalogPage() {
   const [search, setSearch] = useState("");
   const [selectedBrand, setSelectedBrand] = useState("all");
   const [stockStatus, setStockStatus] = useState("all");
+  const [activeTab, setActiveTab] = useState<'all' | 'active' | 'pending' | 'passive'>('all');
+  const [statusCounts, setStatusCounts] = useState({
+    all: 0,
+    active: 0,
+    pending: 0,
+    passive: 0,
+  });
   const [pagination, setPagination] = useState({
     page: 1,
     pageSize: 50,
@@ -38,11 +45,14 @@ export default function ProductsCatalogPage() {
   const fetchProducts = async () => {
     setLoading(true);
     try {
-      const url = `/api/products?page=${pagination.page}&pageSize=${pagination.pageSize}&search=${encodeURIComponent(search)}&brand=${selectedBrand}&stockStatus=${stockStatus}&storeId=${activeStoreId}`;
+      const url = `/api/products?page=${pagination.page}&pageSize=${pagination.pageSize}&search=${encodeURIComponent(search)}&brand=${selectedBrand}&stockStatus=${stockStatus}&tab=${activeTab}&storeId=${activeStoreId}`;
       const res = await fetch(url);
       const data = await res.json();
       setProducts(data.products || []);
       setBrands(data.brands || []);
+      if (data.statusCounts) {
+        setStatusCounts(data.statusCounts);
+      }
       if (data.pagination) setPagination(data.pagination);
     } catch (e) {
       toast.error("Ürün listesi yüklenemedi.");
@@ -76,7 +86,7 @@ export default function ProductsCatalogPage() {
 
   useEffect(() => {
     fetchProducts();
-  }, [pagination.page, pagination.pageSize, selectedBrand, stockStatus, activeStoreId]);
+  }, [pagination.page, pagination.pageSize, selectedBrand, stockStatus, activeTab, activeStoreId]);
 
   const handleSearchSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -130,10 +140,10 @@ export default function ProductsCatalogPage() {
         <div>
           <div className="flex items-center gap-2">
             <h3 className="text-base sm:text-lg font-black text-dark">Trendyol Ürün Kataloğu & Envanter</h3>
-            <Badge variant="excellent">{pagination.totalCount} Aktif Ürün</Badge>
+            <Badge variant="excellent">{statusCounts.all || pagination.totalCount} Toplam Ürün</Badge>
           </div>
           <p className="text-xs text-muted-foreground mt-0.5">
-            Ürün görselleri, stok adetleri, satış fiyatları, alış maliyetleri ve doğrudan Trendyol bağlantıları
+            Ürün durumları, onay süreçleri, satış fiyatları, alış maliyetleri ve envanter yönetimi
           </p>
         </div>
 
@@ -152,6 +162,71 @@ export default function ProductsCatalogPage() {
             <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />
             <span>Yenile</span>
           </Button>
+        </div>
+      </div>
+
+      {/* TRENDYOL PRODUCT STATUS TABS (Tüm Ürünler, Aktif Ürünler, Onay Sürecindeki Ürünler, Pasif Ürünler) */}
+      <div className="bg-white rounded-2xl sm:rounded-3xl border border-border shadow-xs overflow-hidden">
+        <div className="flex items-stretch divide-x divide-border overflow-x-auto scrollbar-none">
+          {[
+            {
+              id: 'all',
+              label: 'Tüm Ürünler',
+              count: statusCounts.all,
+              info: 'Mağazanızdaki tüm ürün ve varyantların toplam listesi',
+            },
+            {
+              id: 'active',
+              label: 'Aktif Ürünler',
+              count: statusCounts.active,
+              info: 'Trendyol üzerinde satışta ve onaylanmış olan aktif ürünler',
+            },
+            {
+              id: 'pending',
+              label: 'Onay Sürecindeki Ürünler',
+              count: statusCounts.pending,
+              info: 'Trendyol katalog incelemesinde veya güncelleme onayında bekleyen ürünler',
+            },
+            {
+              id: 'passive',
+              label: 'Pasif Ürünler',
+              count: statusCounts.passive,
+              info: 'Satışa kapatılmış veya stoğu tükenmiş pasif ürünler',
+            },
+          ].map((tab) => {
+            const isSelected = activeTab === tab.id;
+            return (
+              <button
+                key={tab.id}
+                onClick={() => {
+                  setActiveTab(tab.id as any);
+                  setPagination(prev => ({ ...prev, page: 1 }));
+                }}
+                className={`flex-1 min-w-[170px] sm:min-w-[200px] px-4 py-3.5 flex flex-col items-center justify-center text-center transition-all cursor-pointer relative group ${
+                  isSelected
+                    ? 'bg-primary-tint-50/60 text-primary font-black'
+                    : 'text-dark hover:bg-canvas font-bold'
+                }`}
+              >
+                <div className="flex items-center gap-1.5 mb-0.5">
+                  <span className={`text-xs sm:text-[13px] tracking-tight ${isSelected ? 'text-primary' : 'text-slate-800'}`}>
+                    {tab.label}
+                  </span>
+                  <div className="relative group/info cursor-help" title={tab.info}>
+                    <Info className={`w-3.5 h-3.5 ${isSelected ? 'text-primary fill-primary/20' : 'text-gray-400 group-hover:text-gray-600'}`} />
+                  </div>
+                </div>
+                <span className={`text-xs font-semibold ${isSelected ? 'text-primary' : 'text-gray-500'}`}>
+                  {tab.count} Ürün(ler)
+                </span>
+
+                {/* Active Bottom Highlight Indicator */}
+                {isSelected && (
+                  <div className="absolute bottom-0 left-6 right-6 h-0.5 bg-primary rounded-t-full shadow-xs" />
+                )}
+              </button>
+            );
+          })}
         </div>
       </div>
 
@@ -266,8 +341,23 @@ export default function ProductsCatalogPage() {
                           </div>
                         </td>
                         <td className="py-3 px-4 table-sticky-first-col font-bold text-dark">
-                          <div className="flex items-center gap-1.5">
+                          <div className="flex items-center gap-1.5 flex-wrap">
                             <span className="block truncate max-w-[280px]">{p.title}</span>
+                            {p.productStatus === 'active' && (
+                              <span className="text-[9px] bg-emerald-100 text-emerald-800 font-bold px-1.5 py-0.5 rounded-full shrink-0">
+                                Aktif
+                              </span>
+                            )}
+                            {p.productStatus === 'pending_approval' && (
+                              <span className="text-[9px] bg-amber-100 text-amber-800 font-bold px-1.5 py-0.5 rounded-full shrink-0">
+                                Onay Sürecinde
+                              </span>
+                            )}
+                            {p.productStatus === 'passive' && (
+                              <span className="text-[9px] bg-gray-100 text-gray-700 font-bold px-1.5 py-0.5 rounded-full shrink-0">
+                                Pasif
+                              </span>
+                            )}
                             {p.deliveryType === 'fast_delivery' && (
                               <span className="text-[9px] bg-sky-100 text-sky-800 font-bold px-1.5 py-0.5 rounded-full shrink-0">Hızlı</span>
                             )}
