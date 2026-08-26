@@ -523,6 +523,33 @@ export function InteractiveSpotlightGuide({
     };
   }, [updateTargetPosition, stepIndex, selectedPath]);
 
+  // Global Keyboard Navigation (Esc to close, Arrow keys to navigate)
+  useEffect(() => {
+    if (!open) return;
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        e.preventDefault();
+        onClose();
+      } else if (e.key === "ArrowRight") {
+        if (stepIndex < steps.length - 1) {
+          e.preventDefault();
+          setStepIndex((prev) => prev + 1);
+        }
+      } else if (e.key === "ArrowLeft") {
+        if (stepIndex > 0) {
+          e.preventDefault();
+          setStepIndex((prev) => prev - 1);
+        }
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => {
+      window.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [open, onClose, stepIndex, steps.length]);
+
   if (!open) return null;
 
   const handleNext = () => {
@@ -644,9 +671,11 @@ export function InteractiveSpotlightGuide({
 
             <button
               onClick={onClose}
-              className="p-1.5 rounded-xl text-gray-400 hover:text-dark hover:bg-canvas transition-colors cursor-pointer shrink-0"
+              className="p-1.5 rounded-xl text-gray-400 hover:text-dark hover:bg-canvas transition-colors cursor-pointer shrink-0 flex items-center gap-1"
               aria-label="Rehberi Kapat"
+              title="Kapatmak için ESC tuşuna basabilirsiniz"
             >
+              <kbd className="hidden sm:inline-block px-1.5 py-0.5 text-[9px] font-mono font-bold bg-canvas border border-border rounded-md text-gray-500">ESC</kbd>
               <X className="w-4 h-4" />
             </button>
           </div>
