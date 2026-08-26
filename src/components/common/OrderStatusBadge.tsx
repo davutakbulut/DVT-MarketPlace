@@ -6,12 +6,21 @@ import {
   Clock, 
   XCircle, 
   Undo2, 
-  Package, 
-  AlertCircle 
+  Package
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
-export type NormalizedOrderStatus = 'Delivered' | 'Shipped' | 'Created' | 'Picking' | 'ReadyToShip' | 'Cancelled' | 'Returned' | 'UnDeliveredAndReturned' | string;
+export type NormalizedOrderStatus = 
+  | 'Delivered' 
+  | 'Shipped' 
+  | 'Created' 
+  | 'Picking' 
+  | 'ReadyToShip' 
+  | 'Invoiced'
+  | 'Cancelled' 
+  | 'Returned' 
+  | 'UnDeliveredAndReturned' 
+  | string;
 
 interface OrderStatusBadgeProps {
   status: NormalizedOrderStatus;
@@ -28,38 +37,71 @@ export function OrderStatusBadge({
 }: OrderStatusBadgeProps) {
   const s = (status || '').toLowerCase().trim();
 
-  let label = 'Yeni';
+  let label = 'Yeni Sipariş';
   let colorClasses = 'bg-amber-100 text-amber-900 border-amber-300';
   let Icon = Clock;
 
-  if (s.includes('deliver') || s.includes('teslim') || s.includes('tamam')) {
-    // 1. TESLİM EDİLDİ - Canlı Yeşil
+  // 1. TESLİM EDİLDİ
+  if (s === 'delivered' || s.includes('teslim') || s.includes('tamamlandı')) {
     label = 'Teslim Edildi';
     colorClasses = 'bg-emerald-100 text-emerald-800 border-emerald-300';
     Icon = CheckCircle2;
-  } else if (s.includes('ship') || s.includes('kargo') || s.includes('transit') || s.includes('yolda')) {
-    // 2. KARGODA - Canlı Mavi / Gökyüzü
-    label = 'Kargoda';
-    colorClasses = 'bg-sky-100 text-sky-800 border-sky-300';
-    Icon = Truck;
-  } else if (s.includes('return') || s.includes('iade') || s.includes('undelivered')) {
-    // 3. İADE EDİLDİ - Dikkat Çekici Mor / Eflatun
+  }
+  // 2. İADE / TESLİM EDİLEMEDİ
+  else if (s.includes('return') || s.includes('iade') || s.includes('undelivered')) {
     label = s.includes('undelivered') ? 'Teslim Edilemedi (İade)' : 'İade Edildi';
     colorClasses = 'bg-purple-100 text-purple-900 border-purple-300';
     Icon = Undo2;
-  } else if (s.includes('cancel') || s.includes('iptal')) {
-    // 4. İPTAL - Dikkat Çekici Kırmızı / Gül Kurusu
+  }
+  // 3. İPTAL EDİLDİ
+  else if (s.includes('cancel') || s.includes('iptal')) {
     label = 'İptal Edildi';
     colorClasses = 'bg-red-100 text-red-800 border-red-300';
     Icon = XCircle;
-  } else if (s.includes('pick') || s.includes('hazır') || s.includes('pack') || s.includes('readytoship')) {
-    // 5. HAZIRLANIYOR / TOPLANIYOR - Turuncu / Kehribar
-    label = 'Hazırlanıyor';
+  }
+  // 4. YENİ / HAZIRLANIYOR / KARGOYA HAZIR (ReadyToShip, Picking, Created, Invoiced, New)
+  // CRITICAL: MUST BE CHECKED BEFORE 'shipped' to prevent 'readytoship' from matching 'ship'!
+  else if (
+    s === 'readytoship' || 
+    s === 'ready_to_ship' || 
+    s.includes('readyto') ||
+    s === 'picking' ||
+    s.includes('toplan') ||
+    s.includes('hazır') ||
+    s.includes('pack') ||
+    s === 'created' ||
+    s === 'invoiced' ||
+    s === 'new' ||
+    s.includes('yeni')
+  ) {
+    if (s === 'readytoship' || s === 'ready_to_ship' || s.includes('readyto')) {
+      label = 'Kargoya Hazır';
+    } else if (s === 'picking' || s.includes('toplan')) {
+      label = 'Toplanıyor';
+    } else if (s === 'invoiced') {
+      label = 'Faturalandı';
+    } else {
+      label = 'Yeni Sipariş';
+    }
     colorClasses = 'bg-amber-100 text-amber-900 border-amber-300';
     Icon = Package;
-  } else {
-    // 6. YENİ SİPARİŞ - Sarı / Kehribar
-    label = 'Yeni Sipariş';
+  }
+  // 5. KARGODA / TRANSIT / YOLDA (Only actual shipped orders)
+  else if (
+    s === 'shipped' ||
+    s === 'in_transit' ||
+    s.includes('kargo') ||
+    s.includes('transit') ||
+    s.includes('yolda') ||
+    s.includes('sevk')
+  ) {
+    label = 'Kargoda';
+    colorClasses = 'bg-sky-100 text-sky-800 border-sky-300';
+    Icon = Truck;
+  }
+  // 6. DEFAULT / FALLBACK
+  else {
+    label = status || 'Yeni Sipariş';
     colorClasses = 'bg-amber-100 text-amber-900 border-amber-300';
     Icon = Clock;
   }

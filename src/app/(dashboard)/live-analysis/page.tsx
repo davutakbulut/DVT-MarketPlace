@@ -316,8 +316,9 @@ export default function LiveAnalysisPage() {
       <div className="flex items-center bg-canvas p-1 rounded-2xl border border-border overflow-x-auto gap-1">
         {[
           { id: 'all', label: 'Tüm Durumlar' },
+          { id: 'Yeni', label: '📦 Yeni / Hazırlanıyor' },
+          { id: 'Kargoda', label: '🚚 Kargoda / Yolda' },
           { id: 'Teslim Edildi', label: '✓ Teslim Edildi' },
-          { id: 'Kargoda', label: '🚚 Kargoda / Taşımada' },
           { id: 'İade', label: '↩️ İade / İptal' },
         ].map((tab) => (
           <button

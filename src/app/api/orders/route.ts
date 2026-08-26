@@ -90,9 +90,20 @@ export async function GET(request: Request) {
     }
 
     if (status && status !== 'all') {
-      conditions.push(`o.status ILIKE $${pIdx}`);
-      params.push(`%${status}%`);
-      pIdx++;
+      const st = status.toLowerCase();
+      if (st === 'yeni' || st === 'new' || st === 'hazırlanıyor' || st === 'hazirlaniyor' || st === 'readytoship') {
+        conditions.push(`(o.status IN ('Created', 'Picking', 'Invoiced', 'ReadyToShip', 'New') OR o.status ILIKE '%ready%' OR o.status ILIKE '%pick%')`);
+      } else if (st === 'kargoda' || st === 'shipped') {
+        conditions.push(`(o.status IN ('Shipped', 'InTransit') OR (o.status ILIKE '%ship%' AND o.status NOT ILIKE '%ready%'))`);
+      } else if (st.includes('teslim') || st === 'delivered') {
+        conditions.push(`o.status ILIKE '%deliver%' OR o.status ILIKE '%teslim%'`);
+      } else if (st.includes('iade') || st.includes('iptal') || st === 'returned' || st === 'cancelled') {
+        conditions.push(`(o.status ILIKE '%return%' OR o.status ILIKE '%cancel%' OR o.status ILIKE '%iade%' OR o.status ILIKE '%iptal%')`);
+      } else {
+        conditions.push(`o.status ILIKE $${pIdx}`);
+        params.push(`%${status}%`);
+        pIdx++;
+      }
     }
 
     if (carrier && carrier !== 'all') {
