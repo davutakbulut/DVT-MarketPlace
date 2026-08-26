@@ -677,7 +677,7 @@ export default function ProductPricingPage() {
                 </div>
                 <div>
                   <h3 className="text-sm sm:text-base font-black text-dark">Katalogdan Ürün Seç</h3>
-                  <p className="text-xs text-gray-500">283 benzersiz ürün arasından arayın, filtreleyin ve tek tıkla fiyatlandırmaya aktarın</p>
+                  <p className="text-xs text-gray-500">{dbProducts.length} benzersiz ürün arasından arayın, filtreleyin ve tek tıkla fiyatlandırmaya aktarın</p>
                 </div>
               </div>
 

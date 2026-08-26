@@ -32,7 +32,7 @@ import { BrandLogo } from '@/components/common/BrandLogo';
 const navItems = [
   { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
   { href: '/live-analysis', label: 'Canlı Analiz', icon: Activity, badge: 'Canlı' },
-  { href: '/products', label: 'Ürünlerim (Katalog)', icon: Package, badge: '283 Ürün' },
+  { href: '/products', label: 'Ürünlerim (Katalog)', icon: Package, badge: '279 Ürün' },
   { href: '/returns-cancellations', label: 'İptal & İade Siparişler', icon: Undo2, badge: '156' },
   { href: '/product-profitability', label: 'Ürün Kârlılık Analizi', icon: TrendingUp },
   { href: '/product-pricing', label: 'Ürün Fiyatlandırma', icon: Calculator },
