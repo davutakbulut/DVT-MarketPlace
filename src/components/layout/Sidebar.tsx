@@ -19,6 +19,7 @@ import {
   ChevronLeft,
   ChevronRight,
   TrendingUp,
+  Store,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -41,6 +42,7 @@ const navItems = [
   { href: '/settlement-desi-audit', label: 'Hakediş & Desi Kontrol', icon: FileCheck2 },
   { href: '/reports/order-profitability', label: 'Finansal Raporlar', icon: FileSpreadsheet },
   { href: '/alerts', label: 'Uyarı Listesi', icon: AlertOctagon, badgeCount: 3 },
+  { href: '/stores', label: 'Mağazalarım & Yeni Bağla', icon: Store },
   { href: '/settings', label: 'Ayarlar', icon: Settings },
 ];
 
