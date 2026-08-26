@@ -9,3 +9,4 @@ export * from './ordersSync';
 export * from './priceUpdater';
 export * from './claimsSync';
 export * from './settlementSync';
+export * from './orderStatusSync';

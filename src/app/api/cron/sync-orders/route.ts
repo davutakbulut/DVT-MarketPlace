@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { query } from '@/lib/db';
-import { syncTrendyolOrders } from '@/lib/integrations/trendyol';
+import { syncTrendyolOrders, syncTrendyolOrderStatuses } from '@/lib/integrations/trendyol';
 import { notificationScanner } from '@/lib/notificationScanner';
 
 export const dynamic = 'force-dynamic';
@@ -28,13 +28,19 @@ export async function GET(request: Request) {
     for (const store of activeStores) {
       if (store.api_key && !store.api_key.includes('mock')) {
         try {
-          const res = await syncTrendyolOrders(store.id, { maxPages: 2 });
+          // 1. Delta Status Sync for existing orders
+          const statusRes = await syncTrendyolOrderStatuses(store.id, { maxPages: 5 });
+          // 2. Ingest brand new incoming orders
+          const orderRes = await syncTrendyolOrders(store.id, { maxPages: 2 });
+          
           results.push({
             storeId: store.id,
             storeName: store.store_name,
             status: 'synced',
-            newOrders: res.newOrdersCount,
-            updatedOrders: res.updatedOrdersCount,
+            newOrders: orderRes.newOrdersCount,
+            statusChangedCount: statusRes.changedCount,
+            statusUnchangedCount: statusRes.unchangedCount,
+            transitions: statusRes.transitionsSummary,
           });
         } catch (err: any) {
           results.push({

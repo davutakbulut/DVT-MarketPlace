@@ -211,6 +211,29 @@ export default function StoresManagementPage() {
     }
   };
 
+  const handleSyncStatus = async (id: string, name: string) => {
+    setSyncingId(id);
+    try {
+      toast.info(`${name} için sipariş durumları kontrol ediliyor...`);
+      const res = await fetch('/api/integrations/trendyol/sync-status', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ storeId: id, maxPages: 10 }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        toast.success(data.message || `${name} sipariş durumları güncellendi!`);
+        fetchStores();
+      } else {
+        toast.error(data.error || "Durum senkronizasyonu tamamlanamadı.");
+      }
+    } catch (e: any) {
+      toast.error("Durum senkronizasyonu hatası: " + e.message);
+    } finally {
+      setSyncingId(null);
+    }
+  };
+
   const handleSyncStore = async (id: string, name: string, mp: string) => {
     setSyncingId(id);
     try {
@@ -382,7 +405,7 @@ export default function StoresManagementPage() {
                 </div>
               </div>
 
-              {/* Action Buttons: Sync, Edit, Delete */}
+              {/* Action Buttons: Sync, Status Delta Sync, Edit, Delete */}
               <div className="flex items-center justify-between pt-3 border-t border-border/60 gap-1.5">
                 <Button
                   size="sm"
@@ -390,10 +413,25 @@ export default function StoresManagementPage() {
                   disabled={isSyncing}
                   onClick={() => handleSyncStore(s.id, s.storeName, s.marketplace)}
                   className="text-xs h-7 gap-1 font-bold flex-1"
+                  title="Yeni siparişleri ve tüm geçmişi senkronize et"
                 >
                   <RefreshCw className={`w-3 h-3 ${isSyncing ? 'animate-spin text-primary' : ''}`} />
                   <span>{isSyncing ? 'Çekiliyor...' : 'Senkronize Et'}</span>
                 </Button>
+
+                {s.marketplace === 'trendyol' && (
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    disabled={isSyncing}
+                    onClick={() => handleSyncStatus(s.id, s.storeName)}
+                    className="text-xs h-7 gap-1 font-semibold px-2 bg-amber-50/60 border-amber-200 text-amber-800 hover:bg-amber-100"
+                    title="Sadece değişen sipariş durumlarını hızlıca güncelle (Delta Sync)"
+                  >
+                    <Activity className="w-3.5 h-3.5 text-amber-600" />
+                    <span className="hidden sm:inline">Durumlar</span>
+                  </Button>
+                )}
 
                 <Button
                   size="sm"
