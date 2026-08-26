@@ -1,16 +1,18 @@
 "use client";
 import React, { useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
+import { Suspense } from 'react';
 import Link from 'next/link';
 import { Mail, Lock, KeyRound, ArrowRight, ArrowLeft, CheckCircle2, ShieldCheck, AlertCircle } from 'lucide-react';
 import { BrandLogo } from '@/components/common/BrandLogo';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
 
-export default function ForgotPasswordPage() {
+function ForgotPasswordContent() {
   const router = useRouter();
   const [step, setStep] = useState<'request' | 'reset'>('request');
-  const [email, setEmail] = useState('dvtakblt@gmail.com');
+  const searchParams = useSearchParams();
+  const [email, setEmail] = useState(searchParams?.get('email') || '');
   const [code, setCode] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
@@ -208,5 +210,14 @@ export default function ForgotPasswordPage() {
         </div>
       </div>
     </div>
+  );
+}
+
+
+export default function ForgotPasswordPage() {
+  return (
+    <Suspense fallback={<div className="min-h-screen bg-canvas flex items-center justify-center text-xs text-gray-500 font-bold">Yükleniyor...</div>}>
+      <ForgotPasswordContent />
+    </Suspense>
   );
 }

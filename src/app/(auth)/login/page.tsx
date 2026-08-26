@@ -9,8 +9,8 @@ import { BrandLogo } from '@/components/common/BrandLogo';
 
 export default function LoginPage() {
   const router = useRouter();
-  const [email, setEmail] = useState('dvtakblt@gmail.com');
-  const [password, setPassword] = useState('a');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
 
   const handleLogin = async (e: React.FormEvent) => {
@@ -67,8 +67,21 @@ export default function LoginPage() {
 
         {/* Live Admin Credentials Card */}
         <div className="bg-primary-tint-50 border border-primary-tint-200 p-3.5 rounded-2xl text-xs space-y-1.5">
-          <div className="font-bold text-primary flex items-center gap-1.5">
-            <ShieldCheck className="w-4 h-4" /> Tanımlı Admin Giriş Bilgileri:
+          <div className="flex items-center justify-between">
+            <div className="font-bold text-primary flex items-center gap-1.5">
+              <ShieldCheck className="w-4 h-4" /> Tanımlı Demo Admin:
+            </div>
+            <button
+              type="button"
+              onClick={() => {
+                setEmail('dvtakblt@gmail.com');
+                setPassword('a');
+                toast.success('Admin giriş bilgileri otomatik dolduruldu.');
+              }}
+              className="text-[10px] font-bold text-primary hover:underline bg-white px-2 py-0.5 rounded-lg border border-primary/20 shadow-2xs cursor-pointer"
+            >
+              Bilgileri Doldur
+            </button>
           </div>
           <div className="text-gray-700 text-[11px] font-mono flex items-center justify-between">
             <span>E-posta:</span> <strong className="text-dark">dvtakblt@gmail.com</strong>
@@ -97,7 +110,7 @@ export default function LoginPage() {
           <div>
             <div className="flex justify-between items-center mb-1">
               <label className="text-xs font-bold text-dark">Şifre</label>
-              <Link href="/forgot-password" className="text-[11px] font-semibold text-primary hover:underline">Şifremi Unuttum</Link>
+              <Link href={email ? `/forgot-password?email=${encodeURIComponent(email)}` : "/forgot-password"} className="text-[11px] font-semibold text-primary hover:underline">Şifremi Unuttum</Link>
             </div>
             <div className="relative">
               <input
