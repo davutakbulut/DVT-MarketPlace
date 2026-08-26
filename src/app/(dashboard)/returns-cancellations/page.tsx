@@ -10,7 +10,8 @@ import {
   Undo2, AlertTriangle, RefreshCw, Search, Filter, 
   Package, Truck, Calendar, DollarSign, User, ShieldAlert,
   ChevronLeft, ChevronRight, CheckCircle2, XCircle, ArrowUpRight,
-  TrendingDown, ShoppingBag, Info, ExternalLink, Hash
+  TrendingDown, ShoppingBag, Info, ExternalLink, Hash,
+  BarChart3, PieChart, Lightbulb, Sparkles, PackageX, FileText, ArrowRight
 } from "lucide-react";
 
 export default function ReturnsCancellationsPage() {
@@ -26,12 +27,13 @@ export default function ReturnsCancellationsPage() {
     totalRefundAmount: 0,
   });
   const [reasonsDistribution, setReasonsDistribution] = useState<any[]>([]);
+  const [categorizedAnalytics, setCategorizedAnalytics] = useState<any[]>([]);
   const [pagination, setPagination] = useState({ page: 1, pageSize: 25, totalPages: 1 });
   const { period, startDate, endDate, label } = useDateStore();
   const { activeStoreId } = useTenantStore();
 
   // Filters
-  const [activeTab, setActiveTab] = useState<'all' | 'return' | 'cancellation'>('all');
+  const [activeTab, setActiveTab] = useState<"all" | "return" | "cancellation">("all");
   const [search, setSearch] = useState("");
   const [selectedReason, setSelectedReason] = useState("all");
   const [searchInput, setSearchInput] = useState("");
@@ -45,8 +47,8 @@ export default function ReturnsCancellationsPage() {
         search: search,
         page: pagination.page.toString(),
         pageSize: pagination.pageSize.toString(),
-        period: period || 'all',
-        storeId: activeStoreId || 'all',
+        period: period || "all",
+        storeId: activeStoreId || "all",
       };
       if (startDate && endDate) {
         paramsObj.startDate = startDate;
@@ -61,6 +63,7 @@ export default function ReturnsCancellationsPage() {
         setOrders(data.orders || []);
         setSummary(data.summary || {});
         setReasonsDistribution(data.reasonsDistribution || []);
+        setCategorizedAnalytics(data.categorizedAnalytics || []);
         setPagination((prev) => ({
           ...prev,
           totalPages: data.pagination?.totalPages || 1,
@@ -85,6 +88,10 @@ export default function ReturnsCancellationsPage() {
     setSearch(searchInput);
     setPagination((prev) => ({ ...prev, page: 1 }));
   };
+
+  // Calculate highest reason count for relative percentage bars
+  const maxReasonCount = Math.max(...reasonsDistribution.map(r => parseInt(r.count) || 0), 1);
+  const totalReportCount = summary.totalCount || 1;
 
   return (
     <div className="space-y-4 sm:space-y-6 max-w-7xl">
@@ -112,7 +119,7 @@ export default function ReturnsCancellationsPage() {
           className="h-8 sm:h-9 px-2.5 sm:px-3 rounded-2xl text-xs gap-1.5 font-bold bg-white hover:bg-canvas text-dark border-border shadow-xs shrink-0 cursor-pointer"
           title="Verileri Yenile"
         >
-          <RefreshCw className={`w-3.5 h-3.5 text-primary ${loading ? 'animate-spin' : ''}`} />
+          <RefreshCw className={`w-3.5 h-3.5 text-primary ${loading ? "animate-spin" : ""}`} />
           <span className="hidden sm:inline">Yenile</span>
         </Button>
       </div>
@@ -192,38 +199,38 @@ export default function ReturnsCancellationsPage() {
         </div>
       </div>
 
-      {/* REASONS DISTRIBUTION BAR */}
+      {/* REASONS QUICK FILTER BAR */}
       {reasonsDistribution.length > 0 && (
         <div className="bg-white p-4 sm:p-5 rounded-3xl border border-border shadow-xs space-y-3">
           <div className="flex items-center justify-between">
             <span className="text-xs font-black text-dark flex items-center gap-1.5">
               <ShieldAlert className="w-4 h-4 text-primary" />
-              <span>En Sık Karşılaşılan İade & İptal Gerekçeleri</span>
+              <span>Hızlı Gerekçe Filtresi</span>
             </span>
-            <span className="text-[11px] text-gray-400 font-bold">Top 10 Neden</span>
+            <span className="text-[11px] text-gray-400 font-bold">Tıkla & Filtrele</span>
           </div>
 
           <div className="flex items-center gap-2 overflow-x-auto pb-1 custom-scrollbar">
-            {reasonsDistribution.map((r, idx) => {
-              const isReturn = r.type === 'return';
+            {reasonsDistribution.slice(0, 10).map((r, idx) => {
+              const isReturn = r.type === "return";
               return (
                 <button
                   key={idx}
                   onClick={() => {
-                    setSelectedReason(selectedReason === r.reasonName ? 'all' : r.reasonName);
+                    setSelectedReason(selectedReason === r.reasonName ? "all" : r.reasonName);
                     setPagination((prev) => ({ ...prev, page: 1 }));
                   }}
                   className={`px-3 py-2 rounded-2xl border text-xs font-bold shrink-0 transition-all cursor-pointer flex items-center gap-2 ${
                     selectedReason === r.reasonName
-                      ? 'bg-primary text-white border-primary shadow-xs'
+                      ? "bg-primary text-white border-primary shadow-xs"
                       : isReturn 
-                        ? 'bg-red-50/60 border-red-200 text-red-900 hover:bg-red-100/60' 
-                        : 'bg-amber-50/60 border-amber-200 text-amber-900 hover:bg-amber-100/60'
+                        ? "bg-red-50/60 border-red-200 text-red-900 hover:bg-red-100/60" 
+                        : "bg-amber-50/60 border-amber-200 text-amber-900 hover:bg-amber-100/60"
                   }`}
                 >
                   <span className="truncate max-w-[200px]">{r.reasonName}</span>
                   <span className={`px-1.5 py-0.5 rounded-lg text-[10px] font-black ${
-                    selectedReason === r.reasonName ? 'bg-white/20 text-white' : 'bg-white border border-border text-dark'
+                    selectedReason === r.reasonName ? "bg-white/20 text-white" : "bg-white border border-border text-dark"
                   }`}>
                     {r.count} Adet
                   </span>
@@ -241,26 +248,26 @@ export default function ReturnsCancellationsPage() {
           {/* TAB BUTTONS */}
           <div className="flex items-center gap-1.5 p-1 bg-canvas rounded-2xl border border-border">
             <button
-              onClick={() => { setActiveTab('all'); setPagination(p => ({ ...p, page: 1 })); }}
+              onClick={() => { setActiveTab("all"); setPagination(p => ({ ...p, page: 1 })); }}
               className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
-                activeTab === 'all' ? 'bg-white text-dark shadow-xs' : 'text-gray-500 hover:text-dark'
+                activeTab === "all" ? "bg-white text-dark shadow-xs" : "text-gray-500 hover:text-dark"
               }`}
             >
               Tümü ({summary.totalCount})
             </button>
             <button
-              onClick={() => { setActiveTab('return'); setPagination(p => ({ ...p, page: 1 })); }}
+              onClick={() => { setActiveTab("return"); setPagination(p => ({ ...p, page: 1 })); }}
               className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
-                activeTab === 'return' ? 'bg-red-50 text-red-700 shadow-xs border border-red-200' : 'text-gray-500 hover:text-dark'
+                activeTab === "return" ? "bg-red-50 text-red-700 shadow-xs border border-red-200" : "text-gray-500 hover:text-dark"
               }`}
             >
               <Undo2 className="w-3.5 h-3.5" />
               <span>İadeler ({summary.returnCount})</span>
             </button>
             <button
-              onClick={() => { setActiveTab('cancellation'); setPagination(p => ({ ...p, page: 1 })); }}
+              onClick={() => { setActiveTab("cancellation"); setPagination(p => ({ ...p, page: 1 })); }}
               className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
-                activeTab === 'cancellation' ? 'bg-amber-50 text-amber-700 shadow-xs border border-amber-200' : 'text-gray-500 hover:text-dark'
+                activeTab === "cancellation" ? "bg-amber-50 text-amber-700 shadow-xs border border-amber-200" : "text-gray-500 hover:text-dark"
               }`}
             >
               <XCircle className="w-3.5 h-3.5" />
@@ -280,7 +287,7 @@ export default function ReturnsCancellationsPage() {
                 className="w-full pl-9 pr-3 py-1.5 rounded-xl border border-border text-xs font-bold text-dark bg-white focus:ring-2 focus:ring-primary shadow-xs"
               />
             </div>
-            <Button type="submit" size="sm" className="h-8.5 text-xs font-bold bg-primary text-white rounded-xl">
+            <Button type="submit" size="sm" className="h-8.5 text-xs font-bold bg-primary text-white rounded-xl cursor-pointer">
               Ara
             </Button>
             {search && (
@@ -289,7 +296,7 @@ export default function ReturnsCancellationsPage() {
                 size="sm" 
                 variant="outline" 
                 onClick={() => { setSearch(""); setSearchInput(""); }}
-                className="h-8.5 text-xs rounded-xl"
+                className="h-8.5 text-xs rounded-xl cursor-pointer"
               >
                 Temizle
               </Button>
@@ -314,8 +321,8 @@ export default function ReturnsCancellationsPage() {
         ) : (
           <div className="divide-y divide-border">
             {orders.map((ord) => {
-              const isReturn = ord.orderType === 'return';
-              const reasonText = ord.returnReason || ord.cancellationReason || 'Gerekçe belirtilmedi';
+              const isReturn = ord.orderType === "return";
+              const reasonText = ord.returnReason || ord.cancellationReason || "Gerekçe belirtilmedi";
 
               return (
                 <div key={ord.id} className="p-4 sm:p-5 hover:bg-canvas/50 transition-colors space-y-3">
@@ -338,7 +345,7 @@ export default function ReturnsCancellationsPage() {
                       </span>
                       {(ord.returnDate || ord.cancellationDate) && (
                         <span className="text-[11px] text-gray-500 font-medium">
-                          • {isReturn ? 'İade Talebi' : 'İptal'}: <strong className="text-primary">{ord.returnDate || ord.cancellationDate}</strong>
+                          • {isReturn ? "İade Talebi" : "İptal"}: <strong className="text-primary">{ord.returnDate || ord.cancellationDate}</strong>
                         </span>
                       )}
                     </div>
@@ -368,7 +375,7 @@ export default function ReturnsCancellationsPage() {
                         <span>{ord.customerName}</span>
                       </div>
                       <span className="text-[11px] text-gray-500 block">
-                        {ord.city} • {ord.storeName || 'Trendyol Mağazası'}
+                        {ord.city} • {ord.storeName || "Trendyol Mağazası"}
                       </span>
                       {ord.trackingCode && (
                         <div className="flex items-center gap-1 text-[11px] text-gray-600 font-mono">
@@ -405,13 +412,13 @@ export default function ReturnsCancellationsPage() {
                     {/* Reason & Customer Note (4 cols) */}
                     <div className="md:col-span-4 border-t md:border-t-0 md:border-l border-border pt-2 md:pt-0 md:pl-3">
                       <div className={`p-2.5 rounded-2xl border text-xs space-y-1 ${
-                        isReturn ? 'bg-red-50/40 border-red-200' : 'bg-amber-50/40 border-amber-200'
+                        isReturn ? "bg-red-50/40 border-red-200" : "bg-amber-50/40 border-amber-200"
                       }`}>
                         <span className={`font-black flex items-center gap-1 text-[11px] ${
-                          isReturn ? 'text-red-800' : 'text-amber-800'
+                          isReturn ? "text-red-800" : "text-amber-800"
                         }`}>
                           <AlertTriangle className="w-3.5 h-3.5 shrink-0" />
-                          <span>{isReturn ? 'İade Sebebi:' : 'İptal Nedeni:'}</span>
+                          <span>{isReturn ? "İade Sebebi:" : "İptal Nedeni:"}</span>
                         </span>
                         <p className="text-[11px] text-gray-700 leading-relaxed font-medium">
                           {reasonText}
@@ -455,6 +462,211 @@ export default function ReturnsCancellationsPage() {
             </div>
           </div>
         )}
+      </div>
+
+      {/* 📊 EN SIK KARŞILAŞILAN İADE & İPTAL GEREKÇELERİ RAPORU (GÖRSELLİ & GRAFİKLİ EN ALT ALAN) */}
+      <div className="bg-white rounded-3xl border border-border shadow-xs p-5 sm:p-7 space-y-6">
+        
+        {/* Section Header */}
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-border">
+          <div className="space-y-1">
+            <div className="flex items-center gap-2.5">
+              <div className="w-10 h-10 rounded-2xl bg-red-50 text-red-600 flex items-center justify-center shrink-0 shadow-xs">
+                <BarChart3 className="w-5 h-5" />
+              </div>
+              <div>
+                <h3 className="text-base sm:text-lg font-black text-dark flex items-center gap-2">
+                  <span>En Sık Karşılaşılan İade & İptal Gerekçeleri Raporu</span>
+                  <Badge variant="danger" className="text-[10px]">Kök Neden & Zarar Analitiği</Badge>
+                </h3>
+                <p className="text-xs text-muted-foreground">
+                  Müşteri iade/iptal gerekçeleri, finansal kayıp ağırlıkları ve operasyonel önleme tavsiyeleri
+                </p>
+              </div>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-2 self-start sm:self-auto bg-canvas p-1 rounded-2xl border border-border text-xs">
+            <div className="px-3 py-1.5 rounded-xl font-bold bg-white text-dark shadow-2xs">
+              Toplam {summary.totalCount} Vaka
+            </div>
+            <div className="px-3 py-1.5 rounded-xl font-bold text-rose-600">
+              -{formatCurrency(summary.totalReturnLoss)} Net Zarar
+            </div>
+          </div>
+        </div>
+
+        {/* 1. Categorized Cluster Visual Grid */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+          {categorizedAnalytics.map((cat, idx) => {
+            const percentage = Math.round((parseInt(cat.count || 0) / totalReportCount) * 100) || 0;
+            const isHeavyLoss = parseFloat(cat.totalLoss || 0) > 300;
+
+            return (
+              <div 
+                key={idx} 
+                className="bg-canvas/50 hover:bg-canvas rounded-2xl p-4 border border-border/80 space-y-3 transition-all relative overflow-hidden group"
+              >
+                <div className="flex items-start justify-between gap-2">
+                  <div className="space-y-0.5">
+                    <span className="text-[10px] font-bold uppercase tracking-wider text-gray-400 block">
+                      Kategori #{idx + 1}
+                    </span>
+                    <h4 className="text-xs font-black text-dark group-hover:text-primary transition-colors">
+                      {cat.category}
+                    </h4>
+                  </div>
+                  <Badge 
+                    variant={isHeavyLoss ? "danger" : "secondary"}
+                    className="text-[10px] font-mono shrink-0"
+                  >
+                    %{percentage} Pay
+                  </Badge>
+                </div>
+
+                {/* Progress Visual Bar */}
+                <div className="space-y-1">
+                  <div className="w-full h-2 rounded-full bg-border/60 overflow-hidden">
+                    <div 
+                      className={`h-full rounded-full transition-all duration-500 ${
+                        idx === 0 ? "bg-rose-500" : idx === 1 ? "bg-amber-500" : "bg-primary"
+                      }`}
+                      style={{ width: `${Math.max(percentage, 5)}%` }}
+                    />
+                  </div>
+                  <div className="flex items-center justify-between text-[10px] text-gray-500 font-bold">
+                    <span>{cat.count} Sipariş</span>
+                    <span className="text-rose-600">-{formatCurrency(cat.totalLoss)} Kargo Zararı</span>
+                  </div>
+                </div>
+
+                <div className="pt-2 border-t border-border/60 flex items-center justify-between text-[11px]">
+                  <span className="text-gray-500">Ciro Etkisi:</span>
+                  <span className="font-black text-dark tabular-nums">{formatCurrency(cat.totalAmount)}</span>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+
+        {/* 2. Detailed Visual Breakdown Bars (Gerekçe Bazlı Dağılım Çubukları) */}
+        <div className="space-y-3 pt-2">
+          <div className="flex items-center justify-between">
+            <h4 className="text-xs font-black text-dark uppercase tracking-wider flex items-center gap-2">
+              <PieChart className="w-4 h-4 text-primary" />
+              <span>Gerekçe Bazlı Detay Dağılımı & Zarar Matrisi</span>
+            </h4>
+            <span className="text-[11px] text-gray-400 font-semibold">Vaka Sayısına Göre Sıralı</span>
+          </div>
+
+          <div className="space-y-2.5">
+            {reasonsDistribution.map((item, idx) => {
+              const count = parseInt(item.count) || 0;
+              const barWidthPercent = Math.min(100, Math.round((count / maxReasonCount) * 100));
+              const isReturn = item.type === "return";
+              const totalLoss = parseFloat(item.totalLoss || 0);
+
+              return (
+                <div 
+                  key={idx}
+                  onClick={() => {
+                    setSelectedReason(item.reasonName);
+                    setPagination(p => ({ ...p, page: 1 }));
+                    window.scrollTo({ top: 400, behavior: "smooth" });
+                  }}
+                  className="p-3 rounded-2xl bg-white hover:bg-canvas/70 border border-border/80 transition-all cursor-pointer space-y-2 group shadow-2xs hover:border-primary/40"
+                  title="Bu gerekçedeki siparişleri yukarıda filtrelemek için tıklayın"
+                >
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs">
+                    <div className="flex items-center gap-2 min-w-0">
+                      <span className={`w-2 h-2 rounded-full shrink-0 ${isReturn ? "bg-red-500" : "bg-amber-500"}`} />
+                      <span className="font-bold text-dark group-hover:text-primary transition-colors truncate max-w-[320px] sm:max-w-[450px]">
+                        {item.reasonName}
+                      </span>
+                      <Badge variant={isReturn ? "danger" : "warning"} className="text-[9px] py-0 px-1.5 shrink-0">
+                        {isReturn ? "İade" : "İptal"}
+                      </Badge>
+                    </div>
+
+                    <div className="flex items-center gap-3 shrink-0 self-end sm:self-auto font-mono text-[11px]">
+                      <span className="text-gray-500">
+                        <strong className="text-dark font-black">{count}</strong> vaka
+                      </span>
+                      <span>•</span>
+                      <span className="text-gray-600 font-bold">
+                        {formatCurrency(item.totalAmount)}
+                      </span>
+                      {totalLoss > 0 && (
+                        <>
+                          <span>•</span>
+                          <span className="text-rose-600 font-black">
+                            -{formatCurrency(totalLoss)} Zarar
+                          </span>
+                        </>
+                      )}
+                      <ArrowRight className="w-3.5 h-3.5 text-gray-400 group-hover:text-primary group-hover:translate-x-0.5 transition-all" />
+                    </div>
+                  </div>
+
+                  {/* Relative Visual Bar */}
+                  <div className="w-full h-2 rounded-full bg-border/40 overflow-hidden">
+                    <div 
+                      className={`h-full rounded-full transition-all duration-500 ${
+                        isReturn 
+                          ? "bg-gradient-to-r from-red-400 to-rose-600" 
+                          : "bg-gradient-to-r from-amber-400 to-orange-500"
+                      }`}
+                      style={{ width: `${Math.max(barWidthPercent, 4)}%` }}
+                    />
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* 3. Actionable Prevention Insights (Aksiyon & Önleme Rehberi) */}
+        <div className="bg-gradient-to-r from-blue-50/70 via-indigo-50/50 to-purple-50/50 rounded-2xl p-4 sm:p-5 border border-blue-200/80 space-y-3">
+          <div className="flex items-center gap-2">
+            <Lightbulb className="w-4 h-4 text-blue-600 shrink-0" />
+            <h4 className="text-xs font-black text-blue-950 uppercase tracking-wider">
+              İade & İptal Oranını Düşürmek İçin Yapay Zeka & Finans Tavsiyeleri
+            </h4>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-3 text-xs text-blue-900">
+            <div className="bg-white/80 p-3 rounded-xl border border-blue-100 space-y-1">
+              <span className="font-bold flex items-center gap-1.5 text-blue-950">
+                <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
+                <span>SKT (Son Kullanma) Kontrolü</span>
+              </span>
+              <p className="text-[11px] text-blue-800/80 leading-snug">
+                Siparişe giden ürünlerde minimum 6 ay raf ömrü protokolü uygulayarak en sık gelen iade sebebini %80 oranında engelleyin.
+              </p>
+            </div>
+
+            <div className="bg-white/80 p-3 rounded-xl border border-blue-100 space-y-1">
+              <span className="font-bold flex items-center gap-1.5 text-blue-950">
+                <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
+                <span>Barkodlu Çift Doğrulama</span>
+              </span>
+              <p className="text-[11px] text-blue-800/80 leading-snug">
+                Farklı ml veya iğne ucu kalınlığı karışıklığını önlemek için paketleme istasyonunda el terminali ile barkod okutma zorunluluğu getirin.
+              </p>
+            </div>
+
+            <div className="bg-white/80 p-3 rounded-xl border border-blue-100 space-y-1">
+              <span className="font-bold flex items-center gap-1.5 text-blue-950">
+                <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
+                <span>Görsel & Boyut Kılavuzu</span>
+              </span>
+              <p className="text-[11px] text-blue-800/80 leading-snug">
+                Müşteri yanlış siparişlerinin önüne geçmek için Trendyol ürün görsellerine net ölçü, iğne ucu (G) ve ml karşılaştırma tablosu ekleyin.
+              </p>
+            </div>
+          </div>
+        </div>
+
       </div>
     </div>
   );

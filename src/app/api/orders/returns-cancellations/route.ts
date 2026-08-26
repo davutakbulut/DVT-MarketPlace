@@ -2,6 +2,8 @@ import { NextResponse } from 'next/server';
 import { query } from '@/lib/db';
 import { buildDateConditions } from '@/lib/dateFilterHelper';
 
+export const dynamic = 'force-dynamic';
+
 export async function GET(request: Request) {
   try {
     const { searchParams } = new URL(request.url);
@@ -77,25 +79,59 @@ export async function GET(request: Request) {
     `, params);
 
     const summary = summaryRes[0] || {};
+    const totalOrdersCount = parseInt(summary.totalCount || '0') || 1;
 
     // 2. Reasons Distribution (İade & İptal Nedenleri Dağılımı)
     const reasonsRes = await query(`
       SELECT 
-        COALESCE(NULLIF(TRIM(o.return_reason), ''), NULLIF(TRIM(o.cancellation_reason), ''), 'Diğer') as "reasonName",
+        COALESCE(NULLIF(TRIM(o.return_reason), ''), NULLIF(TRIM(o.cancellation_reason), ''), 'Belirtilmemiş / Diğer') as "reasonName",
         CASE 
           WHEN o.status ILIKE '%İade%' OR o.status ILIKE '%return%' THEN 'return'
           ELSE 'cancellation'
         END as "type",
-        COUNT(*) as "count",
-        SUM(o.paid_amount) as "totalAmount"
+        COUNT(*)::int as "count",
+        ROUND(SUM(o.paid_amount)::numeric, 2) as "totalAmount",
+        ROUND(SUM(CASE WHEN o.status ILIKE '%İade%' OR o.status ILIKE '%return%' THEN (o.total_shipping_cost + o.service_fee) ELSE 0 END)::numeric, 2) as "totalLoss",
+        ROUND(AVG(o.paid_amount)::numeric, 2) as "avgAmount"
       FROM orders o
       WHERE ${whereClause}
       GROUP BY 1, 2
       ORDER BY "count" DESC
-      LIMIT 10
+      LIMIT 20
     `, params);
 
-    // 3. Orders List with items
+    // 3. Cluster Categories Analytics (Akıllı Kategori Gruplama Raporu)
+    const categorizedAnalytics = await query(`
+      SELECT 
+        CASE 
+          WHEN LOWER(COALESCE(o.return_reason, '') || ' ' || COALESCE(o.cancellation_reason, '')) LIKE '%yanlış ürün%' 
+            OR LOWER(COALESCE(o.return_reason, '') || ' ' || COALESCE(o.cancellation_reason, '')) LIKE '%farklı%' 
+            OR LOWER(COALESCE(o.return_reason, '') || ' ' || COALESCE(o.cancellation_reason, '')) LIKE '%model%' THEN 'Yanlış / Farklı Ürün Gönderimi'
+          WHEN LOWER(COALESCE(o.return_reason, '') || ' ' || COALESCE(o.cancellation_reason, '')) LIKE '%skt%' 
+            OR LOWER(COALESCE(o.return_reason, '') || ' ' || COALESCE(o.cancellation_reason, '')) LIKE '%son kullanma%' 
+            OR LOWER(COALESCE(o.return_reason, '') || ' ' || COALESCE(o.cancellation_reason, '')) LIKE '%raf ömrü%' THEN 'SKT (Son Kullanma Tarihi) Yakınlığı'
+          WHEN LOWER(COALESCE(o.return_reason, '') || ' ' || COALESCE(o.cancellation_reason, '')) LIKE '%kusurlu%' 
+            OR LOWER(COALESCE(o.return_reason, '') || ' ' || COALESCE(o.cancellation_reason, '')) LIKE '%hasar%' 
+            OR LOWER(COALESCE(o.return_reason, '') || ' ' || COALESCE(o.cancellation_reason, '')) LIKE '%kırık%' 
+            OR LOWER(COALESCE(o.return_reason, '') || ' ' || COALESCE(o.cancellation_reason, '')) LIKE '%bozuk%' THEN 'Kusurlu / Hasarlı Ürün & Ambalaj'
+          WHEN LOWER(COALESCE(o.return_reason, '') || ' ' || COALESCE(o.cancellation_reason, '')) LIKE '%yanlış sipariş%' 
+            OR LOWER(COALESCE(o.return_reason, '') || ' ' || COALESCE(o.cancellation_reason, '')) LIKE '%vazgeç%' 
+            OR LOWER(COALESCE(o.return_reason, '') || ' ' || COALESCE(o.cancellation_reason, '')) LIKE '%beğenmedim%' 
+            OR LOWER(COALESCE(o.return_reason, '') || ' ' || COALESCE(o.cancellation_reason, '')) LIKE '%ebat%' 
+            OR LOWER(COALESCE(o.return_reason, '') || ' ' || COALESCE(o.cancellation_reason, '')) LIKE '%büyük%' THEN 'Müşteri Vazgeçme & Yanlış Sipariş'
+          WHEN LOWER(COALESCE(o.return_reason, '') || ' ' || COALESCE(o.cancellation_reason, '')) LIKE '%eksik%' THEN 'Eksik Parça / Aksesuar Gönderimi'
+          ELSE 'Diğer Operasyonel & Müşteri Nedenleri'
+        END as "category",
+        COUNT(*)::int as "count",
+        ROUND(SUM(o.paid_amount)::numeric, 2) as "totalAmount",
+        ROUND(SUM(CASE WHEN o.status ILIKE '%İade%' OR o.status ILIKE '%return%' THEN (o.total_shipping_cost + o.service_fee) ELSE 0 END)::numeric, 2) as "totalLoss"
+      FROM orders o
+      WHERE ${whereClause}
+      GROUP BY 1
+      ORDER BY "count" DESC
+    `, params);
+
+    // 4. Orders List with items
     const ordersRes = await query(`
       SELECT 
         o.id,
@@ -162,6 +198,7 @@ export async function GET(request: Request) {
         totalRefundAmount: parseFloat(summary.totalRefundAmount || '0'),
       },
       reasonsDistribution: reasonsRes,
+      categorizedAnalytics,
       pagination: {
         page,
         pageSize,
