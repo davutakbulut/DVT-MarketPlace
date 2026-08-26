@@ -183,7 +183,7 @@ export interface TrendyolOrderPackage {
     createdDate: number;
     status: string;
   }>;
-  shipmentPackageStatus: 'Created' | 'Picking' | 'Invoiced' | 'Shipped' | 'Delivered' | 'UnDelivered' | 'Returned' | 'Cancelled';
+  shipmentPackageStatus: 'Created' | 'Picking' | 'Invoiced' | 'Shipped' | 'Delivered' | 'UnDelivered' | 'Returned' | 'Cancelled' | 'UnDeliveredAndReturned' | 'ReadyToShip' | string;
   status: string;
   deliveryType?: string;
   timeSlotId?: number;

@@ -1,7 +1,8 @@
 /**
  * Trendyol Orders Synchronization & Real-time Financial Engine
- * Pulls live orders, calculates official 10 August 2026 cargo barem & desi rates,
- * computes line-by-line net profit, and UPSERTs into PostgreSQL.
+ * Pulls live and full historical orders (including Delivered, Cancelled, Returned)
+ * using 14-day sliding windows to bypass Trendyol API window limitations.
+ * Computes official cargo barem, desi rates, and line-by-line net profit.
  */
 
 import { query } from '@/lib/db';
@@ -18,6 +19,9 @@ export interface OrdersSyncResult {
   totalOrdersFetched: number;
   newOrdersCount: number;
   updatedOrdersCount: number;
+  deliveredCount: number;
+  cancelledCount: number;
+  returnedCount: number;
   totalRevenue: number;
   errors: string[];
   durationMs: number;
@@ -31,6 +35,8 @@ export async function syncTrendyolOrders(
     status?: any;
     maxPages?: number;
     pageSize?: number;
+    daysBack?: number;
+    fullHistory?: boolean;
   } = {}
 ): Promise<OrdersSyncResult> {
   const startTime = Date.now();
@@ -81,428 +87,500 @@ export async function syncTrendyolOrders(
     apiSecret,
   });
 
-  const pageSize = Math.min(100, Math.max(10, options.pageSize || 50));
-  const maxPages = options.maxPages || 50;
+  const pageSize = Math.min(50, Math.max(10, options.pageSize || 50));
+  const nowMs = Date.now();
+  const DAY_MS = 24 * 60 * 60 * 1000;
 
-  let page = 0;
-  let hasMore = true;
+  // Build 14-day sliding intervals to pull complete history from Trendyol
+  interface TimeInterval {
+    startMs?: number;
+    endMs?: number;
+  }
+
+  const intervals: TimeInterval[] = [];
+
+  if (options.startDate && options.endDate) {
+    intervals.push({ startMs: options.startDate, endMs: options.endDate });
+  } else {
+    // Default to full 180 days (6 months) in 14-day chunks
+    const totalDays = options.daysBack || 180;
+    for (let daysAgo = 0; daysAgo < totalDays; daysAgo += 14) {
+      const end = nowMs - (daysAgo * DAY_MS);
+      const start = nowMs - (Math.min(totalDays, daysAgo + 14) * DAY_MS);
+      intervals.push({ startMs: start, endMs: end });
+    }
+  }
+
   let totalOrdersFetched = 0;
   let newOrdersCount = 0;
   let updatedOrdersCount = 0;
+  let deliveredCount = 0;
+  let cancelledCount = 0;
+  let returnedCount = 0;
   let totalRevenue = 0;
   const affectedDates = new Set<string>();
+  const seenOrderNumbers = new Set<string>();
 
-  while (hasMore && page < maxPages) {
-    try {
-      const queryParams: any = {
-        page,
-        size: pageSize,
-        status: options.status,
-      };
+  for (const interval of intervals) {
+    let page = 0;
+    let hasMore = true;
+    const maxPagesPerInterval = options.maxPages || 20;
 
-      if (options.startDate) {
-        queryParams.startDate = options.startDate;
-      }
-      if (options.endDate) {
-        queryParams.endDate = options.endDate;
-      }
+    while (hasMore && page < maxPagesPerInterval) {
+      try {
+        const queryParams: any = {
+          page,
+          size: pageSize,
+          status: options.status,
+          orderByField: 'CreatedDate',
+          orderByDirection: 'DESC',
+        };
 
-      const response = await client.getOrders(queryParams);
+        if (interval.startMs) queryParams.startDate = interval.startMs;
+        if (interval.endMs) queryParams.endDate = interval.endMs;
 
-      const packages: TrendyolOrderPackage[] = response?.content || [];
-      if (packages.length === 0) {
-        break;
-      }
+        const response = await client.getOrders(queryParams);
+        const packages: TrendyolOrderPackage[] = response?.content || [];
 
-      totalOrdersFetched += packages.length;
+        if (packages.length === 0) {
+          break;
+        }
 
-      for (const pkg of packages) {
-        try {
-          const orderNumber = String(pkg.orderNumber || pkg.id);
-          const packageNumber = String(pkg.id || pkg.orderNumber);
-          const orderDate = pkg.orderDate ? new Date(pkg.orderDate) : new Date();
-          const orderDateStr = orderDate.toISOString().split('T')[0];
-          affectedDates.add(orderDateStr);
+        for (const pkg of packages) {
+          try {
+            const orderNumber = String(pkg.orderNumber || pkg.id);
+            if (seenOrderNumbers.has(orderNumber)) {
+              continue; // Avoid duplicate processing in overlapping intervals
+            }
+            seenOrderNumbers.add(orderNumber);
+            totalOrdersFetched++;
 
-          const status = pkg.shipmentPackageStatus || pkg.status || 'Created';
-          const deliveryType = pkg.deliveryType || (pkg.fastDelivery ? 'fast_delivery' : 'standard');
-          const isFastDelivery = pkg.fastDelivery === true;
+            const packageNumber = String(pkg.id || pkg.orderNumber);
+            const orderDate = pkg.orderDate ? new Date(pkg.orderDate) : new Date();
+            const orderDateStr = orderDate.toISOString().split('T')[0];
+            affectedDates.add(orderDateStr);
 
-          // Customer info
-          const customerName = `${pkg.customerFirstName || ''} ${pkg.customerLastName || ''}`.trim() || 'Trendyol Müşterisi';
-          const customerCity = pkg.shipmentAddress?.city || 'Bilinmiyor';
-          const customerDistrict = pkg.shipmentAddress?.district || '';
-          const deliveryAddress = pkg.shipmentAddress?.fullAddress || pkg.shipmentAddress?.address1 || '';
-          const customerEmail = pkg.customerEmail || null;
+            const rawStatus = pkg.shipmentPackageStatus || pkg.status || 'Created';
+            let status = rawStatus;
+            let returnReason: string | null = null;
+            let returnStatus: string | null = null;
+            let returnDate: Date | null = null;
+            let cancellationReason: string | null = null;
+            let cancellationDate: Date | null = null;
 
-          // Corporate Invoice info
-          const invoiceRecipient = pkg.invoiceAddress?.fullName || customerName;
-          const invoiceAddress = pkg.invoiceAddress?.fullAddress || deliveryAddress;
-          const isCorporateInvoice = Boolean(pkg.invoiceAddress?.taxNumber && pkg.invoiceAddress?.company);
-          const taxId = pkg.invoiceAddress?.taxNumber || null;
-          const taxOffice = pkg.invoiceAddress?.taxOffice || null;
-          const companyName = pkg.invoiceAddress?.company || null;
+            if (rawStatus === 'Cancelled') {
+              status = 'Cancelled';
+              cancellationReason = 'Trendyol Sipariş İptali';
+              cancellationDate = orderDate;
+              cancelledCount++;
+            } else if (rawStatus === 'Returned' || rawStatus === 'UnDeliveredAndReturned') {
+              status = 'Returned';
+              returnReason = 'Müşteri İadesi / Teslim Edilemedi';
+              returnStatus = 'Approved';
+              returnDate = orderDate;
+              returnedCount++;
+            } else if (rawStatus === 'Delivered') {
+              status = 'Delivered';
+              deliveredCount++;
+            }
 
-          // Carrier & Shipping info
-          const carrierRaw = pkg.cargoProviderName || 'TEX';
-          const trackingCode = pkg.cargoTrackingNumber || null;
+            const deliveryType = pkg.deliveryType || (pkg.fastDelivery ? 'fast_delivery' : 'standard');
+            const isFastDelivery = pkg.fastDelivery === true;
 
-          // Money amounts
-          const grossAmount = Number(pkg.grossAmount || pkg.totalPrice) || 0;
-          const discountAmount = Number(pkg.totalDiscount) || 0;
-          const paidAmount = Number(pkg.totalPrice || pkg.grossAmount) || 0;
-          totalRevenue += paidAmount;
+            // Customer info
+            const customerName = `${pkg.customerFirstName || ''} ${pkg.customerLastName || ''}`.trim() || 'Trendyol Müşterisi';
+            const customerCity = pkg.shipmentAddress?.city || 'Bilinmiyor';
+            const customerDistrict = pkg.shipmentAddress?.district || '';
+            const deliveryAddress = pkg.shipmentAddress?.fullAddress || pkg.shipmentAddress?.address1 || '';
+            const customerEmail = pkg.customerEmail || null;
 
-          // Fetch products for all barcodes in this order to get accurate cost and vat
-          const lines: TrendyolOrderLine[] = pkg.lines || [];
-          let orderTotalDesi = 0;
-          let orderTotalCogs = 0;
-          let orderTotalCommission = 0;
-          let orderHasMissingCost = false;
+            // Corporate Invoice info
+            const invoiceRecipient = pkg.invoiceAddress?.fullName || customerName;
+            const invoiceAddress = pkg.invoiceAddress?.fullAddress || deliveryAddress;
+            const isCorporateInvoice = Boolean(pkg.invoiceAddress?.taxNumber && pkg.invoiceAddress?.company);
+            const taxId = pkg.invoiceAddress?.taxNumber || null;
+            const taxOffice = pkg.invoiceAddress?.taxOffice || null;
+            const companyName = pkg.invoiceAddress?.company || null;
 
-          interface ProcessedLine {
-            line: TrendyolOrderLine;
-            productId: string | null;
-            unitCost: number;
-            vatRate: number;
-            commissionRate: number;
-            commissionAmount: number;
-            desi: number;
-            shippingShare: number;
-            financials: any;
-          }
+            // Carrier & Shipping info
+            const carrierRaw = pkg.cargoProviderName || 'TEX';
+            const trackingCode = pkg.cargoTrackingNumber || null;
 
-          const processedLines: ProcessedLine[] = [];
+            // Money amounts
+            const grossAmount = Number(pkg.grossAmount || pkg.totalPrice) || 0;
+            const discountAmount = Number(pkg.totalDiscount) || 0;
+            const paidAmount = Number(pkg.totalPrice || pkg.grossAmount) || 0;
+            if (status !== 'Cancelled') {
+              totalRevenue += paidAmount;
+            }
 
-          for (const line of lines) {
-            const barcode = (line.barcode || '').trim();
-            const quantity = Math.max(1, Number(line.quantity) || 1);
-            const unitSalePrice = Number(line.price) || 0;
+            // Process lines
+            const lines: TrendyolOrderLine[] = pkg.lines || [];
+            let orderTotalDesi = 0;
+            let orderTotalCogs = 0;
+            let orderTotalCommission = 0;
+            let orderHasMissingCost = false;
 
-            // Find product in DB
-            const prodRows = await query(
-              `SELECT id, current_cost, vat_rate, commission_rate, shipment_desi, category_id
-               FROM products
-               WHERE store_id = $1 AND barcode = $2
-               LIMIT 1`,
-              [store.id, barcode]
+            interface ProcessedLine {
+              line: TrendyolOrderLine;
+              productId: string | null;
+              unitCost: number;
+              vatRate: number;
+              commissionRate: number;
+              commissionAmount: number;
+              desi: number;
+              shippingShare: number;
+              financials: any;
+            }
+
+            const processedLines: ProcessedLine[] = [];
+
+            for (const line of lines) {
+              const barcode = (line.barcode || '').trim();
+              const quantity = Math.max(1, Number(line.quantity) || 1);
+              const unitSalePrice = Number(line.price) || 0;
+
+              // Find product in DB
+              const prodRows = await query(
+                `SELECT id, current_cost, vat_rate, commission_rate, shipment_desi, category_id
+                 FROM products
+                 WHERE store_id = $1 AND barcode = $2
+                 LIMIT 1`,
+                [store.id, barcode]
+              );
+
+              let productId: string | null = null;
+              let unitCost = 0;
+              let vatRate = 20;
+              let commRate = Number(line.commissionRate) || 15.0;
+              let lineDesi = 1.0;
+
+              if (prodRows.length > 0) {
+                const prod = prodRows[0];
+                productId = prod.id;
+                unitCost = Number(prod.current_cost) || 0;
+                vatRate = Number(prod.vat_rate) || 20;
+                commRate = Number(line.commissionRate ?? prod.commission_rate) || 15.0;
+                lineDesi = Math.max(0.5, Number(prod.shipment_desi) || 1.0);
+              } else if (barcode) {
+                // Auto-insert product into database products catalog
+                const newProd = await query(
+                  `INSERT INTO products (
+                     store_id, company_id, barcode, sku, model_code, title,
+                     current_sale_price, current_cost, vat_rate, shipment_desi,
+                     measured_desi, commission_rate, stock_quantity, delivery_type,
+                     is_active, marketplace, created_at, updated_at
+                   ) VALUES ($1, $2, $3, $4, $5, $6, $7, 0, 20, 1.0, 1.0, $8, 10, 'standard', true, 'trendyol', NOW(), NOW())
+                   ON CONFLICT (store_id, barcode) DO UPDATE SET current_sale_price = EXCLUDED.current_sale_price
+                   RETURNING id`,
+                  [
+                    store.id,
+                    companyId,
+                    barcode,
+                    line.sku || line.merchantSku || barcode,
+                    line.productCode ? String(line.productCode) : null,
+                    line.productName || 'Trendyol Ürünü',
+                    unitSalePrice,
+                    commRate,
+                  ]
+                );
+                if (newProd.length > 0) {
+                  productId = newProd[0].id;
+                }
+                orderHasMissingCost = true;
+              } else {
+                orderHasMissingCost = true;
+              }
+
+              if (unitCost <= 0) {
+                orderHasMissingCost = true;
+              }
+
+              const totalLineCost = unitCost * quantity;
+              const lineCommAmount = (unitSalePrice * quantity) * (commRate / 100);
+
+              orderTotalCogs += totalLineCost;
+              orderTotalCommission += lineCommAmount;
+              orderTotalDesi += lineDesi * quantity;
+
+              processedLines.push({
+                line,
+                productId,
+                unitCost,
+                vatRate,
+                commissionRate: commRate,
+                commissionAmount: lineCommAmount,
+                desi: lineDesi,
+                shippingShare: 0,
+                financials: null,
+              });
+            }
+
+            // Compute Official Shipping Cost
+            const leadTimeDays = isFastDelivery ? 1 : 2;
+            const shippingResult = calculateTrendyolShipping(
+              paidAmount,
+              orderTotalDesi,
+              carrierRaw,
+              leadTimeDays,
+              baremRows,
+              desiRows
             );
 
-            let productId: string | null = null;
-            let unitCost = 0;
-            let vatRate = 20;
-            let commRate = Number(line.commissionRate) || 15.0;
-            let lineDesi = 1.0;
+            const totalShippingCost = status === 'Cancelled' ? 0 : shippingResult.appliedPriceIncVat;
 
-            if (prodRows.length > 0) {
-              const prod = prodRows[0];
-              productId = prod.id;
-              unitCost = Number(prod.current_cost) || 0;
-              vatRate = Number(prod.vat_rate) || 20;
-              commRate = Number(line.commissionRate ?? prod.commission_rate) || 15.0;
-              lineDesi = Math.max(0.5, Number(prod.shipment_desi) || 1.0);
-            } else if (barcode) {
-              // Auto-insert product into database products catalog
-              const newProd = await query(
-                `INSERT INTO products (
-                   store_id, company_id, barcode, sku, model_code, title,
-                   current_sale_price, current_cost, vat_rate, shipment_desi,
-                   measured_desi, commission_rate, stock_quantity, delivery_type,
-                   is_active, marketplace, created_at, updated_at
-                 ) VALUES ($1, $2, $3, $4, $5, $6, $7, 0, 20, 1.0, 1.0, $8, 10, 'standard', true, 'trendyol', NOW(), NOW())
-                 ON CONFLICT (store_id, barcode) DO UPDATE SET current_sale_price = EXCLUDED.current_sale_price
-                 RETURNING id`,
+            // Distribute shipping and compute line financials
+            const totalLineAmount = lines.reduce((acc, l) => acc + (Number(l.price) * (Number(l.quantity) || 1)), 0) || 1;
+
+            for (const pl of processedLines) {
+              const lineTotalSale = (Number(pl.line.price) || 0) * (Number(pl.line.quantity) || 1);
+              const lineRatio = lineTotalSale / totalLineAmount;
+              pl.shippingShare = Math.round(totalShippingCost * lineRatio * 100) / 100;
+
+              pl.financials = calculateOrderFinancials({
+                paidAmount: status === 'Cancelled' ? 0 : lineTotalSale,
+                grossAmount: status === 'Cancelled' ? 0 : lineTotalSale,
+                cogs: pl.unitCost * (Number(pl.line.quantity) || 1),
+                commission: status === 'Cancelled' ? 0 : pl.commissionAmount,
+                shippingCost: pl.shippingShare,
+                serviceFee: status === 'Cancelled' ? 0 : 13.19 * lineRatio,
+                stopaj: (status === 'Cancelled' ? 0 : lineTotalSale) * 0.01,
+                netVat: status === 'Cancelled' ? 0 : (lineTotalSale / 1.20) * 0.20 - ((pl.unitCost * (Number(pl.line.quantity) || 1)) / 1.20) * 0.20,
+                extraOperationRate: status === 'Cancelled' ? 0 : 6.00,
+              });
+            }
+
+            // Order-level financial calculation
+            const orderFinancials = calculateOrderFinancials({
+              paidAmount: status === 'Cancelled' ? 0 : paidAmount,
+              grossAmount: status === 'Cancelled' ? 0 : grossAmount,
+              cogs: orderTotalCogs,
+              commission: status === 'Cancelled' ? 0 : orderTotalCommission,
+              shippingCost: totalShippingCost,
+              serviceFee: status === 'Cancelled' ? 0 : 13.19,
+              stopaj: (status === 'Cancelled' ? 0 : paidAmount) * 0.01,
+              netVat: status === 'Cancelled' ? 0 : (paidAmount / 1.20) * 0.20 - (orderTotalCogs / 1.20) * 0.20,
+              extraOperationRate: status === 'Cancelled' ? 0 : 6.00,
+            });
+
+            // Check existing in DB
+            const existingOrder = await query(
+              `SELECT id FROM orders WHERE store_id = $1 AND marketplace_order_number = $2`,
+              [store.id, orderNumber]
+            );
+
+            let orderDbId: string;
+
+            if (existingOrder.length > 0) {
+              orderDbId = existingOrder[0].id;
+              await query(
+                `UPDATE orders
+                 SET package_number = $1,
+                     order_date = $2,
+                     status = $3,
+                     delivery_type = $4,
+                     customer_name = $5,
+                     customer_city = $6,
+                     customer_district = $7,
+                     customer_email = $8,
+                     delivery_address = $9,
+                     invoice_address = $10,
+                     invoice_recipient = $11,
+                     carrier_name = $12,
+                     tracking_code = $13,
+                     is_fast_delivery = $14,
+                     is_corporate_invoice = $15,
+                     tax_id = $16,
+                     tax_office = $17,
+                     company_name = $18,
+                     gross_amount = $19,
+                     discount_amount = $20,
+                     paid_amount = $21,
+                     total_cost = $22,
+                     total_commission = $23,
+                     total_shipping_cost = $24,
+                     service_fee = $25,
+                     withholding_tax = $26,
+                     net_vat = $27,
+                     extra_cost = $28,
+                     net_profit = $29,
+                     profit_margin_percent = $30,
+                     has_missing_cost = $31,
+                     calculated_desi = $32,
+                     return_reason = $33,
+                     return_status = $34,
+                     return_date = $35,
+                     cancellation_reason = $36,
+                     cancellation_date = $37,
+                     marketplace = 'trendyol',
+                     updated_at = NOW()
+                 WHERE id = $38`,
+                [
+                  packageNumber,
+                  orderDate,
+                  status,
+                  deliveryType,
+                  customerName,
+                  customerCity,
+                  customerDistrict,
+                  customerEmail,
+                  deliveryAddress,
+                  invoiceAddress,
+                  invoiceRecipient,
+                  carrierRaw,
+                  trackingCode,
+                  isFastDelivery,
+                  isCorporateInvoice,
+                  taxId,
+                  taxOffice,
+                  companyName,
+                  grossAmount,
+                  discountAmount,
+                  paidAmount,
+                  orderFinancials.cogs,
+                  orderFinancials.commission,
+                  orderFinancials.shippingCost,
+                  orderFinancials.serviceFee,
+                  orderFinancials.stopaj,
+                  orderFinancials.netVat,
+                  orderFinancials.extraOperationCost,
+                  orderFinancials.netProfit,
+                  orderFinancials.marginPercent,
+                  orderHasMissingCost,
+                  orderTotalDesi,
+                  returnReason,
+                  returnStatus,
+                  returnDate,
+                  cancellationReason,
+                  cancellationDate,
+                  orderDbId,
+                ]
+              );
+              updatedOrdersCount++;
+            } else {
+              const insRes = await query(
+                `INSERT INTO orders (
+                   store_id, company_id, marketplace_order_number, package_number,
+                   order_date, status, delivery_type, customer_name, customer_city,
+                   customer_district, customer_email, delivery_address, invoice_address,
+                   invoice_recipient, carrier_name, tracking_code, is_fast_delivery,
+                   is_corporate_invoice, tax_id, tax_office, company_name, gross_amount,
+                   discount_amount, paid_amount, total_cost, total_commission,
+                   total_shipping_cost, service_fee, withholding_tax, net_vat,
+                   extra_cost, net_profit, profit_margin_percent, has_missing_cost,
+                   calculated_desi, return_reason, return_status, return_date,
+                   cancellation_reason, cancellation_date, marketplace, created_at, updated_at
+                 ) VALUES (
+                   $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15,
+                   $16, $17, $18, $19, $20, $21, $22, $23, $24, $25, $26, $27, $28,
+                   $29, $30, $31, $32, $33, $34, $35, $36, $37, $38, $39, $40, 'trendyol', NOW(), NOW()
+                 ) RETURNING id`,
                 [
                   store.id,
                   companyId,
-                  barcode,
-                  line.sku || line.merchantSku || barcode,
-                  line.productCode ? String(line.productCode) : null,
-                  line.productName || 'Trendyol Ürünü',
-                  unitSalePrice,
-                  commRate,
+                  orderNumber,
+                  packageNumber,
+                  orderDate,
+                  status,
+                  deliveryType,
+                  customerName,
+                  customerCity,
+                  customerDistrict,
+                  customerEmail,
+                  deliveryAddress,
+                  invoiceAddress,
+                  invoiceRecipient,
+                  carrierRaw,
+                  trackingCode,
+                  isFastDelivery,
+                  isCorporateInvoice,
+                  taxId,
+                  taxOffice,
+                  companyName,
+                  grossAmount,
+                  discountAmount,
+                  paidAmount,
+                  orderFinancials.cogs,
+                  orderFinancials.commission,
+                  orderFinancials.shippingCost,
+                  orderFinancials.serviceFee,
+                  orderFinancials.stopaj,
+                  orderFinancials.netVat,
+                  orderFinancials.extraOperationCost,
+                  orderFinancials.netProfit,
+                  orderFinancials.marginPercent,
+                  orderHasMissingCost,
+                  orderTotalDesi,
+                  returnReason,
+                  returnStatus,
+                  returnDate,
+                  cancellationReason,
+                  cancellationDate,
                 ]
               );
-              if (newProd.length > 0) {
-                productId = newProd[0].id;
+              orderDbId = insRes[0]?.id;
+              newOrdersCount++;
+            }
+
+            // Clean & Insert order_items
+            if (orderDbId) {
+              await query(`DELETE FROM order_items WHERE order_id = $1`, [orderDbId]);
+
+              for (const pl of processedLines) {
+                const qty = Math.max(1, Number(pl.line.quantity) || 1);
+                const unitPrice = Number(pl.line.price) || 0;
+                const title = pl.line.productName || 'Trendyol Ürünü';
+                const sku = pl.line.sku || pl.line.merchantSku || null;
+                const barcode = pl.line.barcode || 'NO_BARCODE';
+
+                await query(
+                  `INSERT INTO order_items (
+                     order_id, product_id, barcode, sku, title, quantity,
+                     unit_sale_price, unit_cost_price, unit_cost_vat_rate, sale_vat_rate,
+                     commission_rate, commission_amount, shipping_desi, shipping_amount,
+                     service_fee_share, withholding_tax, net_vat, extra_cost,
+                     net_profit, margin_percent, has_missing_cost, status
+                   ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, 'active')`,
+                  [
+                    orderDbId,
+                    pl.productId,
+                    barcode,
+                    sku,
+                    title,
+                    qty,
+                    unitPrice,
+                    pl.unitCost,
+                    pl.vatRate,
+                    pl.vatRate,
+                    pl.commissionRate,
+                    pl.commissionAmount,
+                    pl.desi,
+                    pl.shippingShare,
+                    pl.financials.serviceFee,
+                    pl.financials.stopaj,
+                    pl.financials.netVat,
+                    pl.financials.extraOperationCost,
+                    pl.financials.netProfit,
+                    pl.financials.marginPercent,
+                    pl.unitCost <= 0,
+                  ]
+                );
               }
-              orderHasMissingCost = true;
-            } else {
-              orderHasMissingCost = true;
             }
-
-            if (unitCost <= 0) {
-              orderHasMissingCost = true;
-            }
-
-            const totalLineCost = unitCost * quantity;
-            const lineCommAmount = (unitSalePrice * quantity) * (commRate / 100);
-
-            orderTotalCogs += totalLineCost;
-            orderTotalCommission += lineCommAmount;
-            orderTotalDesi += lineDesi * quantity;
-
-            processedLines.push({
-              line,
-              productId,
-              unitCost,
-              vatRate,
-              commissionRate: commRate,
-              commissionAmount: lineCommAmount,
-              desi: lineDesi,
-              shippingShare: 0,
-              financials: null,
-            });
+          } catch (orderErr: any) {
+            errors.push(`Sipariş ${pkg.orderNumber} kaydedilirken hata: ${orderErr.message}`);
           }
-
-          // Compute Official Shipping Cost using 10 August 2026 Engine
-          const leadTimeDays = isFastDelivery ? 1 : 2;
-          const shippingResult = calculateTrendyolShipping(
-            paidAmount,
-            orderTotalDesi,
-            carrierRaw,
-            leadTimeDays,
-            baremRows,
-            desiRows
-          );
-
-          const totalShippingCost = shippingResult.appliedPriceIncVat;
-
-          // Distribute shipping and compute line financials
-          const totalLineAmount = lines.reduce((acc, l) => acc + (Number(l.price) * (Number(l.quantity) || 1)), 0) || 1;
-
-          for (const pl of processedLines) {
-            const lineTotalSale = (Number(pl.line.price) || 0) * (Number(pl.line.quantity) || 1);
-            const lineRatio = lineTotalSale / totalLineAmount;
-            pl.shippingShare = Math.round(totalShippingCost * lineRatio * 100) / 100;
-
-            pl.financials = calculateOrderFinancials({
-              paidAmount: lineTotalSale,
-              grossAmount: lineTotalSale,
-              cogs: pl.unitCost * (Number(pl.line.quantity) || 1),
-              commission: pl.commissionAmount,
-              shippingCost: pl.shippingShare,
-              serviceFee: 13.19 * lineRatio,
-              stopaj: lineTotalSale * 0.01,
-              netVat: (lineTotalSale / 1.20) * 0.20 - ((pl.unitCost * (Number(pl.line.quantity) || 1)) / 1.20) * 0.20,
-              extraOperationRate: 6.00,
-            });
-          }
-
-          // Order-level complete financial calculation
-          const orderFinancials = calculateOrderFinancials({
-            paidAmount,
-            grossAmount,
-            cogs: orderTotalCogs,
-            commission: orderTotalCommission,
-            shippingCost: totalShippingCost,
-            serviceFee: 13.19,
-            stopaj: paidAmount * 0.01,
-            netVat: (paidAmount / 1.20) * 0.20 - (orderTotalCogs / 1.20) * 0.20,
-            extraOperationRate: 6.00,
-          });
-
-          // Check if order already exists in DB
-          const existingOrder = await query(
-            `SELECT id FROM orders WHERE store_id = $1 AND marketplace_order_number = $2`,
-            [store.id, orderNumber]
-          );
-
-          let orderDbId: string;
-
-          if (existingOrder.length > 0) {
-            orderDbId = existingOrder[0].id;
-            await query(
-              `UPDATE orders
-               SET package_number = $1,
-                   order_date = $2,
-                   status = $3,
-                   delivery_type = $4,
-                   customer_name = $5,
-                   customer_city = $6,
-                   customer_district = $7,
-                   customer_email = $8,
-                   delivery_address = $9,
-                   invoice_address = $10,
-                   invoice_recipient = $11,
-                   carrier_name = $12,
-                   tracking_code = $13,
-                   is_fast_delivery = $14,
-                   is_corporate_invoice = $15,
-                   tax_id = $16,
-                   tax_office = $17,
-                   company_name = $18,
-                   gross_amount = $19,
-                   discount_amount = $20,
-                   paid_amount = $21,
-                   total_cost = $22,
-                   total_commission = $23,
-                   total_shipping_cost = $24,
-                   service_fee = $25,
-                   withholding_tax = $26,
-                   net_vat = $27,
-                   extra_cost = $28,
-                   net_profit = $29,
-                   profit_margin_percent = $30,
-                   has_missing_cost = $31,
-                   calculated_desi = $32,
-                   marketplace = 'trendyol',
-                   updated_at = NOW()
-               WHERE id = $33`,
-              [
-                packageNumber,
-                orderDate,
-                status,
-                deliveryType,
-                customerName,
-                customerCity,
-                customerDistrict,
-                customerEmail,
-                deliveryAddress,
-                invoiceAddress,
-                invoiceRecipient,
-                carrierRaw,
-                trackingCode,
-                isFastDelivery,
-                isCorporateInvoice,
-                taxId,
-                taxOffice,
-                companyName,
-                grossAmount,
-                discountAmount,
-                paidAmount,
-                orderFinancials.cogs,
-                orderFinancials.commission,
-                orderFinancials.shippingCost,
-                orderFinancials.serviceFee,
-                orderFinancials.stopaj,
-                orderFinancials.netVat,
-                orderFinancials.extraOperationCost,
-                orderFinancials.netProfit,
-                orderFinancials.marginPercent,
-                orderHasMissingCost,
-                orderTotalDesi,
-                orderDbId,
-              ]
-            );
-            updatedOrdersCount++;
-          } else {
-            const insRes = await query(
-              `INSERT INTO orders (
-                 store_id, company_id, marketplace_order_number, package_number,
-                 order_date, status, delivery_type, customer_name, customer_city,
-                 customer_district, customer_email, delivery_address, invoice_address,
-                 invoice_recipient, carrier_name, tracking_code, is_fast_delivery,
-                 is_corporate_invoice, tax_id, tax_office, company_name, gross_amount,
-                 discount_amount, paid_amount, total_cost, total_commission,
-                 total_shipping_cost, service_fee, withholding_tax, net_vat,
-                 extra_cost, net_profit, profit_margin_percent, has_missing_cost,
-                 calculated_desi, marketplace, created_at, updated_at
-               ) VALUES (
-                 $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15,
-                 $16, $17, $18, $19, $20, $21, $22, $23, $24, $25, $26, $27, $28,
-                 $29, $30, $31, $32, $33, $34, $35, 'trendyol', NOW(), NOW()
-               ) RETURNING id`,
-              [
-                store.id,
-                companyId,
-                orderNumber,
-                packageNumber,
-                orderDate,
-                status,
-                deliveryType,
-                customerName,
-                customerCity,
-                customerDistrict,
-                customerEmail,
-                deliveryAddress,
-                invoiceAddress,
-                invoiceRecipient,
-                carrierRaw,
-                trackingCode,
-                isFastDelivery,
-                isCorporateInvoice,
-                taxId,
-                taxOffice,
-                companyName,
-                grossAmount,
-                discountAmount,
-                paidAmount,
-                orderFinancials.cogs,
-                orderFinancials.commission,
-                orderFinancials.shippingCost,
-                orderFinancials.serviceFee,
-                orderFinancials.stopaj,
-                orderFinancials.netVat,
-                orderFinancials.extraOperationCost,
-                orderFinancials.netProfit,
-                orderFinancials.marginPercent,
-                orderHasMissingCost,
-                orderTotalDesi,
-              ]
-            );
-            orderDbId = insRes[0]?.id;
-            newOrdersCount++;
-          }
-
-          // Clean & Insert order_items
-          if (orderDbId) {
-            await query(`DELETE FROM order_items WHERE order_id = $1`, [orderDbId]);
-
-            for (const pl of processedLines) {
-              const qty = Math.max(1, Number(pl.line.quantity) || 1);
-              const unitPrice = Number(pl.line.price) || 0;
-              const title = pl.line.productName || 'Trendyol Ürünü';
-              const sku = pl.line.sku || pl.line.merchantSku || null;
-              const barcode = pl.line.barcode || 'NO_BARCODE';
-
-              await query(
-                `INSERT INTO order_items (
-                   order_id, product_id, barcode, sku, title, quantity,
-                   unit_sale_price, unit_cost_price, unit_cost_vat_rate, sale_vat_rate,
-                   commission_rate, commission_amount, shipping_desi, shipping_amount,
-                   service_fee_share, withholding_tax, net_vat, extra_cost,
-                   net_profit, margin_percent, has_missing_cost, status
-                 ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, 'active')`,
-                [
-                  orderDbId,
-                  pl.productId,
-                  barcode,
-                  sku,
-                  title,
-                  qty,
-                  unitPrice,
-                  pl.unitCost,
-                  pl.vatRate,
-                  pl.vatRate,
-                  pl.commissionRate,
-                  pl.commissionAmount,
-                  pl.desi,
-                  pl.shippingShare,
-                  pl.financials.serviceFee,
-                  pl.financials.stopaj,
-                  pl.financials.netVat,
-                  pl.financials.extraOperationCost,
-                  pl.financials.netProfit,
-                  pl.financials.marginPercent,
-                  pl.unitCost <= 0,
-                ]
-              );
-            }
-          }
-        } catch (orderErr: any) {
-          errors.push(`Sipariş ${pkg.orderNumber} kaydedilirken hata: ${orderErr.message}`);
         }
-      }
 
-      if (page >= (response.totalPages || 1) - 1) {
-        hasMore = false;
-      } else {
-        page++;
+        if (page >= (response.totalPages || 1) - 1) {
+          hasMore = false;
+        } else {
+          page++;
+        }
+      } catch (pageErr: any) {
+        errors.push(`Interval ${interval.startMs} - ${interval.endMs} sayfa ${page} API hatası: ${pageErr.message}`);
+        break;
       }
-    } catch (pageErr: any) {
-      errors.push(`Siparişler sayfa ${page} çekilirken API hatası: ${pageErr.message}`);
-      break;
     }
   }
 
@@ -576,12 +654,15 @@ export async function syncTrendyolOrders(
   const durationMs = Date.now() - startTime;
 
   return {
-    success: errors.length === 0 || newOrdersCount + updatedOrdersCount > 0,
+    success: errors.length === 0 || totalOrdersFetched > 0,
     storeId: store.id,
     storeName: store.store_name,
     totalOrdersFetched,
     newOrdersCount,
     updatedOrdersCount,
+    deliveredCount,
+    cancelledCount,
+    returnedCount,
     totalRevenue: Math.round(totalRevenue * 100) / 100,
     errors,
     durationMs,
