@@ -75,7 +75,7 @@ export class TrendyolClient {
 
     const headers: Record<string, string> = {
       'Authorization': this.getAuthHeader(),
-      'User-Agent': `DVT-MarketPlace/1.0.0 (${this.supplierId})`,
+      'User-Agent': `${this.supplierId} - SelfIntegration`,
       'Accept': 'application/json',
     };
 
