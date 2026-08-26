@@ -127,6 +127,24 @@ export default function CargoBaremPage() {
     }
   };
 
+  // Dynamic KPI Metrics calculated directly from DB tiers
+  const tier1List = baremTiers.filter(t => parseFloat(t.minAmount || 0) === 0 || t.tierName?.includes("199"));
+  const tier2List = baremTiers.filter(t => parseFloat(t.minAmount || 0) >= 200 || t.tierName?.includes("349"));
+
+  const minTier1Ex = tier1List.length > 0 
+    ? Math.min(...tier1List.map(t => parseFloat(t.discountedPriceExVat || 0))) 
+    : 38.74;
+  const minTier1Inc = minTier1Ex * 1.20;
+
+  const minTier2Ex = tier2List.length > 0 
+    ? Math.min(...tier2List.map(t => parseFloat(t.discountedPriceExVat || 0))) 
+    : 70.41;
+  const minTier2Inc = minTier2Ex * 1.20;
+
+  const maxSaving = baremTiers.length > 0
+    ? Math.max(...baremTiers.map(t => (parseFloat(t.standardPriceExVat || 0) - parseFloat(t.discountedPriceExVat || 0)) * 1.20))
+    : 41.51;
+
   return (
     <div className="space-y-4 sm:space-y-6 max-w-7xl">
       {/* Top Banner */}
@@ -179,20 +197,30 @@ export default function CargoBaremPage() {
 
         <div className="bg-white p-4 sm:p-5 rounded-3xl border border-border shadow-xs space-y-1">
           <span className="text-[11px] font-bold text-gray-500 uppercase tracking-wide">En Uygun Barem (1. Kademe)</span>
-          <div className="text-xl sm:text-2xl font-black text-emerald-700 tabular-nums">₺38,50 <span className="text-xs font-bold text-gray-400">+KDV</span></div>
-          <span className="text-[11px] text-emerald-700 font-bold block">₺46,20 KDV Dahil (TEX)</span>
+          <div className="text-xl sm:text-2xl font-black text-emerald-700 tabular-nums">
+            ₺{minTier1Ex.toFixed(2).replace('.', ',')} <span className="text-xs font-bold text-gray-400">+KDV</span>
+          </div>
+          <span className="text-[11px] text-emerald-700 font-bold block">
+            ₺{minTier1Inc.toFixed(2).replace('.', ',')} KDV Dahil (TEX / PTT)
+          </span>
         </div>
 
         <div className="bg-white p-4 sm:p-5 rounded-3xl border border-border shadow-xs space-y-1">
           <span className="text-[11px] font-bold text-gray-500 uppercase tracking-wide">2. Kademe Avantajı</span>
-          <div className="text-xl sm:text-2xl font-black text-primary tabular-nums">₺46,50 <span className="text-xs font-bold text-gray-400">+KDV</span></div>
-          <span className="text-[11px] text-primary font-bold block">₺55,80 KDV Dahil (TEX)</span>
+          <div className="text-xl sm:text-2xl font-black text-primary tabular-nums">
+            ₺{minTier2Ex.toFixed(2).replace('.', ',')} <span className="text-xs font-bold text-gray-400">+KDV</span>
+          </div>
+          <span className="text-[11px] text-primary font-bold block">
+            ₺{minTier2Inc.toFixed(2).replace('.', ',')} KDV Dahil (TEX / PTT)
+          </span>
         </div>
 
         <div className="bg-white p-4 sm:p-5 rounded-3xl border border-border shadow-xs space-y-1">
-          <span className="text-[11px] font-bold text-gray-500 uppercase tracking-wide">Barem KDV Oranı</span>
-          <div className="text-xl sm:text-2xl font-black text-dark tabular-nums">%20</div>
-          <span className="text-[11px] text-gray-500 font-medium block">Resmi Kargo KDV Oranı</span>
+          <span className="text-[11px] font-bold text-gray-500 uppercase tracking-wide">Maks. Barem Tasarrufu</span>
+          <div className="text-xl sm:text-2xl font-black text-emerald-700 tabular-nums">
+            +₺{maxSaving.toFixed(2).replace('.', ',')}
+          </div>
+          <span className="text-[11px] text-gray-500 font-medium block">Sipariş Başına Avantaj</span>
         </div>
       </div>
 
