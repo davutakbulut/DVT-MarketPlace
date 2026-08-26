@@ -52,7 +52,7 @@ export async function GET(request: Request) {
       return NextResponse.json({ orders: customerOrders });
     }
 
-    // Aggregate unique customer metrics from orders
+    // 1. Aggregate unique customer metrics from orders
     const customers = await query(`
       SELECT 
         COALESCE(o.customer_name, 'Bilinmeyen Müşteri') as "name",
@@ -62,17 +62,20 @@ export async function GET(request: Request) {
         COALESCE(o.customer_phone, '-') as "phone",
         COUNT(o.id) as "totalOrdersCount",
         SUM(COALESCE(o.paid_amount, o.gross_amount)) as "totalSpendAmount",
+        ROUND((SUM(COALESCE(o.paid_amount, o.gross_amount)) / NULLIF(COUNT(o.id), 0))::numeric, 2) as "avgOrderValue",
         SUM(COALESCE(o.net_profit, 0)) as "totalNetProfit",
+        ROUND(((SUM(COALESCE(o.net_profit, 0)) / NULLIF(SUM(COALESCE(o.paid_amount, o.gross_amount)), 0)) * 100)::numeric, 1) as "marginPercent",
         MAX(TO_CHAR(o.order_date, 'YYYY-MM-DD HH24:MI')) as "lastOrderDate"
       FROM orders o
       WHERE ${storeCondition}
       GROUP BY o.customer_name, o.customer_city, o.customer_district, o.customer_email, o.customer_phone
       ORDER BY SUM(COALESCE(o.paid_amount, o.gross_amount)) DESC
-      LIMIT 100
+      LIMIT 150
     `, storeParams);
 
     const subCondition = storeId && storeId !== 'all' ? `store_id::text = '${storeId}'` : '1=1';
 
+    // 2. Aggregate KPI Summary
     const summaryRes = await query(`
       SELECT 
         COUNT(DISTINCT o.customer_name) as "totalCustomers",
@@ -81,7 +84,7 @@ export async function GET(request: Request) {
         COALESCE(SUM(o.paid_amount), 0) as "totalRevenue",
         COALESCE(SUM(o.paid_amount), 0) as "totalLTV",
         COALESCE(SUM(o.net_profit), 0) as "totalProfit",
-        ROUND(COALESCE(AVG(o.paid_amount), 0)::numeric, 2) as "avgOrderValue",
+        ROUND((COALESCE(SUM(o.paid_amount), 0) / NULLIF(COUNT(o.id), 0))::numeric, 2) as "avgOrderValue",
         (
           SELECT COUNT(*) FROM (
             SELECT customer_name FROM orders 
@@ -92,6 +95,22 @@ export async function GET(request: Request) {
         ) as "vipCustomersCount"
       FROM orders o
       WHERE ${storeCondition}
+    `, storeParams);
+
+    // 3. City Breakdown Analytics (İllere Göre Analiz ve Sepet Tutarları)
+    const cityBreakdown = await query(`
+      SELECT 
+        COALESCE(NULLIF(TRIM(o.customer_city), ''), 'Belirtilmedi') as "city",
+        COUNT(DISTINCT o.id) as "orderCount",
+        COUNT(DISTINCT o.customer_name) as "customerCount",
+        COALESCE(SUM(o.paid_amount), 0) as "totalRevenue",
+        COALESCE(SUM(o.net_profit), 0) as "totalProfit",
+        ROUND((COALESCE(SUM(o.paid_amount), 0) / NULLIF(COUNT(DISTINCT o.id), 0))::numeric, 2) as "avgOrderValue",
+        ROUND(((COALESCE(SUM(o.net_profit), 0) / NULLIF(SUM(o.paid_amount), 0)) * 100)::numeric, 1) as "marginPercent"
+      FROM orders o
+      WHERE ${storeCondition}
+      GROUP BY COALESCE(NULLIF(TRIM(o.customer_city), ''), 'Belirtilmedi')
+      ORDER BY SUM(o.paid_amount) DESC
     `, storeParams);
 
     const summary = summaryRes[0] || {
@@ -107,7 +126,8 @@ export async function GET(request: Request) {
 
     return NextResponse.json({
       customers,
-      summary
+      summary,
+      cityBreakdown
     });
   } catch (error: any) {
     console.error('Customers API error:', error);
