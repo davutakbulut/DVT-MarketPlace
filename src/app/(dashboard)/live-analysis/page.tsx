@@ -182,10 +182,24 @@ export default function LiveAnalysisPage() {
           <span className="text-[11px] text-gray-500 font-semibold mt-1 block">Faturalanan Tutar</span>
         </div>
 
-        <div className="bg-white p-4 sm:p-5 rounded-3xl border border-border shadow-xs">
-          <span className="text-[11px] font-bold text-muted-foreground uppercase tracking-wide block">Filtrelenen Net Kâr</span>
-          <div className="text-2xl font-black text-emerald-700 tabular-nums mt-1">{formatCurrencyNoCents(parseFloat(summary.totalNetProfit || 0))}</div>
-          <span className="text-[11px] text-emerald-700 font-bold mt-1 block">Tüm Kesintiler Sonrası</span>
+        <div className={`bg-white p-4 sm:p-5 rounded-3xl border shadow-xs transition-all ${
+          parseFloat(summary.totalNetProfit || 0) < 0 ? 'border-red-200 bg-red-50/20' : 'border-border'
+        }`}>
+          <span className={`text-[11px] font-bold uppercase tracking-wide block ${
+            parseFloat(summary.totalNetProfit || 0) < 0 ? 'text-red-800' : 'text-muted-foreground'
+          }`}>
+            {parseFloat(summary.totalNetProfit || 0) < 0 ? 'Filtrelenen Net Zarar' : 'Filtrelenen Net Kâr'}
+          </span>
+          <div className={`text-2xl font-black tabular-nums mt-1 ${
+            parseFloat(summary.totalNetProfit || 0) < 0 ? 'text-red-600' : 'text-emerald-700'
+          }`}>
+            {formatCurrencyNoCents(parseFloat(summary.totalNetProfit || 0))}
+          </div>
+          <span className={`text-[11px] font-bold mt-1 block ${
+            parseFloat(summary.totalNetProfit || 0) < 0 ? 'text-red-800' : 'text-emerald-700'
+          }`}>
+            Tüm Kesintiler Sonrası
+          </span>
         </div>
 
         <div className="bg-white p-4 sm:p-5 rounded-3xl border border-border shadow-xs">
