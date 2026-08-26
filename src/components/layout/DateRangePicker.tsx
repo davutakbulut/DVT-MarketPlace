@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button';
 
 export function DateRangePicker({ isMobileRow = false }: { isMobileRow?: boolean }) {
   const { period, startDate, endDate, label, setPreset, setCustomRange } = useDateStore();
+  const [mounted, setMounted] = useState(false);
   const [isOpen, setIsOpen] = useState(false);
   const [currentYear, setCurrentYear] = useState(2026);
   const [currentMonth, setCurrentMonth] = useState(7); // 0-indexed: 7 = August
@@ -16,6 +17,10 @@ export function DateRangePicker({ isMobileRow = false }: { isMobileRow?: boolean
   const [hoveredDate, setHoveredDate] = useState<string | null>(null);
 
   const containerRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   // Sync state when store updates
   useEffect(() => {
