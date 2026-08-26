@@ -21,7 +21,7 @@ export async function POST(request: Request) {
     return NextResponse.json({
       success: true,
       result,
-      message: `${result.storeName} için ${result.totalFetched} adet ürün Trendyol'dan senkronize edildi (${result.insertedCount} yeni, ${result.updatedCount} güncellendi).`,
+      message: result.message || `${result.storeName} için ${result.totalConsolidated || 0} adet ürün Trendyol ile birleştirildi ve senkronize edildi.`,
     });
   } catch (error: any) {
     console.error('Trendyol product sync API error:', error);
