@@ -82,7 +82,7 @@ export default function RegisterPage() {
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 className="w-full px-3.5 py-2.5 rounded-xl border border-border text-xs font-semibold text-dark focus:outline-none focus:ring-2 focus:ring-primary pl-9"
-                placeholder="dvtakblt@gmail.com"
+                placeholder="bilgi@davutakbulut.co"
               />
               <Mail className="w-4 h-4 text-gray-400 absolute left-3 top-3" />
             </div>

@@ -97,7 +97,7 @@ export function Header({ onMobileMenuToggle }: { onMobileMenuToggle: () => void 
                     <div className="text-xs font-bold text-dark flex items-center gap-1">
                       Davut Akbulut <ShieldCheck className="w-3.5 h-3.5 text-primary" />
                     </div>
-                    <div className="text-[10px] text-gray-500 font-mono">dvtakblt@gmail.com</div>
+                    <div className="text-[10px] text-gray-500 font-mono">bilgi@davutakbulut.co</div>
                     <div className="text-[10px] text-primary font-bold mt-0.5">Admin (Firma Yöneticisi)</div>
                   </div>
 

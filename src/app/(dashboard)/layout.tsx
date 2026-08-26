@@ -2,6 +2,7 @@
 import React, { useState } from 'react';
 import { Header } from '@/components/layout/Header';
 import { Sidebar } from '@/components/layout/Sidebar';
+import { FloatingWhatsAppModal } from '@/components/layout/FloatingWhatsAppModal';
 import { AuthProvider } from '@/lib/auth-context';
 import { Toaster } from 'sonner';
 
@@ -20,6 +21,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           </main>
         </div>
 
+        <FloatingWhatsAppModal />
         <Toaster position="top-right" richColors />
       </div>
     </AuthProvider>

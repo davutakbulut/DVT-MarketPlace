@@ -22,13 +22,13 @@ export default function SettingsPage() {
   // 1. HESAP AYARLARI (Screenshot 1)
   const [firstName, setFirstName] = useState("Davut");
   const [lastName, setLastName] = useState("Akbulut");
-  const [phone, setPhone] = useState("+90 532 000 00 00");
-  const [email, setEmail] = useState("dvtakblt@gmail.com");
+  const [phone, setPhone] = useState("0 537 882 68 58");
+  const [email, setEmail] = useState("bilgi@davutakbulut.co");
   const [country, setCountry] = useState("Türkiye");
   const [city, setCity] = useState("İstanbul");
-  const [district, setDistrict] = useState("Kadıköy");
-  const [postalCode, setPostalCode] = useState("34710");
-  const [address, setAddress] = useState("Bağdat Caddesi No:123/4");
+  const [district, setDistrict] = useState("Fatih");
+  const [postalCode, setPostalCode] = useState("34093");
+  const [address, setAddress] = useState("Molla Gürani, Uygar Sokağı No:17/A");
   const registrationDate = "26 Haz 2026 – 00:02";
 
   // 2. GENEL AYARLAR (Screenshot 2)
@@ -103,13 +103,13 @@ export default function SettingsPage() {
         const s = data.settings;
         setFirstName(s.firstName || "Davut");
         setLastName(s.lastName || "Akbulut");
-        setPhone(s.phone || "+90 532 000 00 00");
-        setEmail(s.email || "dvtakblt@gmail.com");
+        setPhone(s.phone || "0 537 882 68 58");
+        setEmail(s.email || "bilgi@davutakbulut.co");
         setCountry(s.country || "Türkiye");
         setCity(s.city || "İstanbul");
-        setDistrict(s.district || "Kadıköy");
-        setPostalCode(s.postalCode || "34710");
-        setAddress(s.address || "Bağdat Caddesi No:123/4");
+        setDistrict(s.district || "Fatih");
+        setPostalCode(s.postalCode || "34093");
+        setAddress(s.address || "Molla Gürani, Uygar Sokağı No:17/A");
 
         setNetVatMode(s.netVatMode || "exclude_negative");
         setDefaultCurrency(s.defaultCurrency || "TRY");
