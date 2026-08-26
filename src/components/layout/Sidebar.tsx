@@ -29,7 +29,7 @@ import { BrandLogo } from '@/components/common/BrandLogo';
 const navItems = [
   { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
   { href: '/live-analysis', label: 'Canlı Analiz', icon: Activity, badge: 'Canlı' },
-  { href: '/products', label: 'Ürünlerim (Katalog)', icon: Package, badge: '245 Ürün' },
+  { href: '/products', label: 'Ürünlerim (Katalog)', icon: Package, badge: '283 Ürün' },
   { href: '/product-profitability', label: 'Ürün Kârlılık Analizi', icon: TrendingUp },
   { href: '/product-pricing', label: 'Ürün Fiyatlandırma', icon: Calculator },
   { href: '/profit-margin-list', label: 'Kâr Marjı Listesi', icon: Percent },
