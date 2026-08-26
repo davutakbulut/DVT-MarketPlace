@@ -4,7 +4,7 @@ import { StoreSelector } from './StoreSelector';
 import { CountrySelector } from './CountrySelector';
 import { DateRangePicker } from './DateRangePicker';
 import { NotificationCenter } from './NotificationCenter';
-import { PageGuideModal } from './PageGuideModal';
+import { InteractiveSpotlightGuide } from './InteractiveSpotlightGuide';
 import { Menu, Compass, User, LogOut, ShieldCheck } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useRouter } from 'next/navigation';
@@ -62,17 +62,16 @@ export function Header({ onMobileMenuToggle }: { onMobileMenuToggle: () => void 
             <DateRangePicker />
           </div>
 
-          {/* Page-Specific Guide Button (Visible on sm+) */}
+          {/* Rehber Spotlight Button */}
           <Button
             variant="secondary"
             size="sm"
             onClick={() => setGuideOpen(true)}
-            className="flex items-center gap-1 h-8 text-[11px] rounded-xl font-bold px-2 sm:px-2.5 shrink-0 bg-primary-tint-50 hover:bg-primary-tint-100 text-primary border border-primary-tint-200 shadow-2xs"
-            title="Aktif Sayfa Rehberini Aç"
+            className="flex items-center gap-1.5 h-8 text-[11px] rounded-xl font-bold px-2.5 sm:px-3 shrink-0 bg-primary-tint-50 hover:bg-primary-tint-100 text-primary border border-primary-tint-200 shadow-2xs"
+            title="İnteraktif Rehberi Başlat"
           >
             <Compass className="w-3.5 h-3.5 text-primary" />
-            <span className="hidden sm:inline">Sayfa Rehberi</span>
-            <span className="sm:hidden">Rehber</span>
+            <span>Rehber</span>
           </Button>
 
           {/* Notifications Center */}
@@ -121,8 +120,8 @@ export function Header({ onMobileMenuToggle }: { onMobileMenuToggle: () => void 
         <DateRangePicker isMobileRow={true} />
       </div>
 
-      {/* Dynamic Page-Aware Interactive Guide Modal */}
-      <PageGuideModal open={guideOpen} onClose={() => setGuideOpen(false)} />
+      {/* Dynamic Page-Aware Spotlight Tour Guide */}
+      <InteractiveSpotlightGuide open={guideOpen} onClose={() => setGuideOpen(false)} />
     </header>
   );
 }

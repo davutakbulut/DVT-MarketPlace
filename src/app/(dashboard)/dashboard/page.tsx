@@ -71,10 +71,10 @@ export default function DashboardPage() {
 
   const grossRev = parseFloat(d.invoicedRevenue || 1);
   const costBreakdownData = [
-    { name: "Net Nakit Kâr", value: parseFloat(d.netProfit || 0), color: "#10B981" },
+    { name: "Net Nakit Kâr", value: Math.max(0, parseFloat(d.netProfit || 0)), color: "#10B981" },
     { name: "Pazaryeri Komisyonu", value: parseFloat(d.commissionTotal || 0), color: "#F59E0B" },
     { name: "Kargo Gideri", value: parseFloat(d.shippingTotal || 0), color: "#38BDF8" },
-    { name: "Ürün Alış (COGS)", value: Math.max(0, grossRev - parseFloat(d.grossProfit || 0)), color: "#EF4444" },
+    { name: "Ürün Alış (COGS)", value: parseFloat(exp.cogs || Math.max(0, grossRev - parseFloat(d.grossProfit || 0))), color: "#EF4444" },
     { name: `Ekstra Operasyon (%${d.extraOperationRate || 6})`, value: parseFloat(d.extraOperationTotal || 0), color: "#EC4899" },
     { name: "Hizmet Bedeli", value: parseFloat(d.serviceFeeTotal || 0), color: "#8B5CF6" },
     { name: "Vergi & Stopaj", value: parseFloat(d.taxesTotal || 0), color: "#64748B" },
@@ -156,7 +156,7 @@ export default function DashboardPage() {
       {/* ========================================================= */}
       {/* 1. ORIGINAL 4 MAIN KPI CARDS (Kuruşsuz Tam TL Formatı) */}
       {/* ========================================================= */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+      <div data-tour="dashboard-kpis" className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
         
         {/* Total Invoiced Revenue */}
         <div className="bg-white p-4 sm:p-5 rounded-3xl border border-border shadow-xs hover:border-primary/40 transition-all">
@@ -226,9 +226,8 @@ export default function DashboardPage() {
 
       {/* ========================================================= */}
       {/* 2. [EK ALAN] AÇILIR-KAPANIR (COLLAPSIBLE) MASRAF KALEMLERİ (₺) */}
-      {/* (Kuruşsuz Tam TL Formatında) */}
       {/* ========================================================= */}
-      <div className="bg-white rounded-3xl border border-border shadow-xs overflow-hidden transition-all">
+      <div data-tour="dashboard-expenses" className="bg-white rounded-3xl border border-border shadow-xs overflow-hidden transition-all">
         {/* Header Bar */}
         <div 
           onClick={() => setIsExpensesExpanded(!isExpensesExpanded)}
@@ -317,9 +316,9 @@ export default function DashboardPage() {
       </div>
 
       {/* ========================================================= */}
-      {/* 3. [EK ALAN] CHART: GÜNLÜK KÂR PERFORMANSI (Kuruşsuz) */}
+      {/* 3. [EK ALAN] CHART: GÜNLÜK KÂR PERFORMANSI (Spline Curve) */}
       {/* ========================================================= */}
-      <div className="bg-white p-4 sm:p-6 rounded-3xl border border-border shadow-xs space-y-4">
+      <div data-tour="dashboard-daily-profit" className="bg-white p-4 sm:p-6 rounded-3xl border border-border shadow-xs space-y-4">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-3 border-b border-border gap-2">
           <div className="flex items-center gap-2">
             <span className="text-base">📈</span>
@@ -391,7 +390,7 @@ export default function DashboardPage() {
       {/* ========================================================= */}
       {/* 4. CHARTS ROW 1 (3d9cc39): Monthly Trend + Cost Breakdown */}
       {/* ========================================================= */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 sm:gap-6">
+      <div data-tour="dashboard-monthly-trend" className="grid grid-cols-1 lg:grid-cols-12 gap-4 sm:gap-6">
         
         {/* Monthly Revenue & Net Profit Area Chart (8 Cols) */}
         <div className="lg:col-span-8 bg-white p-4 sm:p-6 rounded-3xl border border-border shadow-xs space-y-4">
@@ -496,7 +495,7 @@ export default function DashboardPage() {
       {/* ========================================================= */}
       {/* 5. CHARTS ROW 2 (3d9cc39): Hourly Bar Chart + Carrier Cards */}
       {/* ========================================================= */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 sm:gap-6">
+      <div data-tour="dashboard-hourly-carrier" className="grid grid-cols-1 lg:grid-cols-12 gap-4 sm:gap-6">
         
         {/* Hourly 24-Hour Orders & Revenue Bar Chart (8 Cols) */}
         <div className="lg:col-span-8 bg-white p-4 sm:p-6 rounded-3xl border border-border shadow-xs space-y-4">
@@ -561,7 +560,7 @@ export default function DashboardPage() {
       {/* ========================================================= */}
       {/* 6. BOTTOM ROW (3d9cc39): Top Products & Recent Live Orders */}
       {/* ========================================================= */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 sm:gap-6">
+      <div data-tour="dashboard-top-products" className="grid grid-cols-1 lg:grid-cols-12 gap-4 sm:gap-6">
         
         {/* Top Profitable Products */}
         <div className="lg:col-span-6 bg-white p-4 sm:p-6 rounded-3xl border border-border shadow-xs space-y-3">
