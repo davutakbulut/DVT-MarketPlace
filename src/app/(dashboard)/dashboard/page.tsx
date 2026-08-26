@@ -28,7 +28,6 @@ export default function DashboardPage() {
   const [loading, setLoading] = useState(true);
   const [mounted, setMounted] = useState(false);
   const [isExpensesExpanded, setIsExpensesExpanded] = useState(false);
-  const [velocityTab, setVelocityTab] = useState<"weekly" | "monthly">("weekly");
   const { period, startDate, endDate, label } = useDateStore();
   const { activeStoreId } = useTenantStore();
   const { user } = useAuth();
@@ -422,112 +421,7 @@ export default function DashboardPage() {
       </div>
 
       {/* ========================================================= */}
-      {/* 4. NEW: HAFTALIK & AYLIK SİPARİŞ HIZI VE ORTALAMA SEPET ANALİZİ */}
-      {/* ========================================================= */}
-      <div className="bg-white p-4 sm:p-6 rounded-3xl border border-border shadow-xs space-y-4">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-3 border-b border-border gap-2">
-          <div>
-            <h4 className="text-xs sm:text-sm font-black text-dark flex items-center gap-2">
-              <BarChart3 className="w-4 h-4 text-primary" />
-              <span>Haftalık & Aylık Sipariş Hacmi ve Ortalama Sepet Analizi</span>
-            </h4>
-            <p className="text-[11px] text-gray-500">
-              Haftalar ve aylar bazında sipariş sayıları ve sepet büyüklüğü (AOV) trendleri
-            </p>
-          </div>
-
-          <div className="flex items-center gap-2">
-            <div className="flex items-center p-1 bg-canvas rounded-xl border border-border text-xs">
-              <button
-                onClick={() => setVelocityTab("weekly")}
-                className={`px-3 py-1.5 rounded-lg font-bold transition-all cursor-pointer ${
-                  velocityTab === "weekly"
-                    ? "bg-primary text-white shadow-xs"
-                    : "text-dark hover:bg-white"
-                }`}
-              >
-                Haftalık Trend ({weeklyTrends.length} Hafta)
-              </button>
-              <button
-                onClick={() => setVelocityTab("monthly")}
-                className={`px-3 py-1.5 rounded-lg font-bold transition-all cursor-pointer ${
-                  velocityTab === "monthly"
-                    ? "bg-primary text-white shadow-xs"
-                    : "text-dark hover:bg-white"
-                }`}
-              >
-                Aylık Trend ({monthlyTrends.length} Ay)
-              </button>
-            </div>
-          </div>
-        </div>
-
-        {/* 4 Velocity Summary Metrics */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 bg-canvas/60 p-3 rounded-2xl border border-border/80 text-xs">
-          <div>
-            <span className="text-[10px] text-gray-500 font-semibold block">Genel Ortalama Sepet</span>
-            <span className="text-sm sm:text-base font-black text-indigo-700 tabular-nums">
-              {formatCurrency(d.avgOrderValue || 0)}
-            </span>
-          </div>
-          <div>
-            <span className="text-[10px] text-gray-500 font-semibold block">Haftalık Ortalama Sipariş</span>
-            <span className="text-sm sm:text-base font-black text-sky-800 tabular-nums">
-              {velocity.avgWeeklyOrders || 0} Sipariş / Hafta
-            </span>
-          </div>
-          <div>
-            <span className="text-[10px] text-gray-500 font-semibold block">Aylık Ortalama Sipariş</span>
-            <span className="text-sm sm:text-base font-black text-amber-800 tabular-nums">
-              {velocity.avgMonthlyOrders || 0} Sipariş / Ay
-            </span>
-          </div>
-          <div>
-            <span className="text-[10px] text-gray-500 font-semibold block">Günlük Ortalama Sipariş</span>
-            <span className="text-sm sm:text-base font-black text-emerald-700 tabular-nums">
-              {velocity.avgDailyOrders || 0} Sipariş / Gün
-            </span>
-          </div>
-        </div>
-
-        {/* Chart View */}
-        <div className="h-64 sm:h-72 w-full">
-          {mounted && (
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart 
-                data={velocityTab === "weekly" ? weeklyTrends : monthlyTrends} 
-                margin={{ top: 10, right: 10, left: -20, bottom: 0 }}
-              >
-                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E5E7EB" />
-                <XAxis 
-                  dataKey={velocityTab === "weekly" ? "weekLabel" : "monthLabel"} 
-                  stroke="#6B7280" 
-                  fontSize={11} 
-                  tickLine={false} 
-                />
-                <YAxis 
-                  stroke="#6B7280" 
-                  fontSize={11} 
-                  tickLine={false} 
-                  tickFormatter={(v) => `${v} Adet`} 
-                />
-                <Tooltip 
-                  formatter={(val: any, name: any) => [
-                    name === "orderCount" ? `${val} Sipariş` : formatCurrency(parseFloat(val || 0)),
-                    name === "orderCount" ? "Sipariş Sayısı" : name === "avgOrderValue" ? "Ortalama Sepet (AOV)" : "Ciro"
-                  ]}
-                  contentStyle={{ backgroundColor: "#FFFFFF", borderRadius: "16px", border: "1px solid #E5E7EB", boxShadow: "0 10px 25px -5px rgba(0,0,0,0.1)" }}
-                />
-                <Legend wrapperStyle={{ fontSize: "11px", paddingTop: "8px" }} />
-                <Bar dataKey="orderCount" name="Sipariş Sayısı" fill="#FF7855" radius={[6, 6, 0, 0]} />
-              </BarChart>
-            </ResponsiveContainer>
-          )}
-        </div>
-      </div>
-
-      {/* ========================================================= */}
-      {/* 5. CHARTS ROW 1: Monthly Trend + Cost Breakdown */}
+      {/* 4. CHARTS ROW 1: Monthly Trend + Cost Breakdown */}
       {/* ========================================================= */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 sm:gap-6">
         
