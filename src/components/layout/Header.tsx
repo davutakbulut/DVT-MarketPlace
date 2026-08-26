@@ -4,7 +4,7 @@ import { StoreSelector } from './StoreSelector';
 import { CountrySelector } from './CountrySelector';
 import { DateRangePicker } from './DateRangePicker';
 import { NotificationCenter } from './NotificationCenter';
-import { VirtualTourModal } from './VirtualTourModal';
+import { PageGuideModal } from './PageGuideModal';
 import { Menu, Compass, User, LogOut, ShieldCheck } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useRouter } from 'next/navigation';
@@ -13,7 +13,7 @@ import { BrandLogo } from '@/components/common/BrandLogo';
 
 export function Header({ onMobileMenuToggle }: { onMobileMenuToggle: () => void }) {
   const router = useRouter();
-  const [tourOpen, setTourOpen] = useState(false);
+  const [guideOpen, setGuideOpen] = useState(false);
   const [userDropdown, setUserDropdown] = useState(false);
 
   const handleLogout = async () => {
@@ -62,15 +62,17 @@ export function Header({ onMobileMenuToggle }: { onMobileMenuToggle: () => void 
             <DateRangePicker />
           </div>
 
-          {/* Guide / Virtual Tour (Visible on xl+) */}
+          {/* Page-Specific Guide Button (Visible on sm+) */}
           <Button
             variant="secondary"
             size="sm"
-            onClick={() => setTourOpen(true)}
-            className="hidden xl:flex items-center gap-1 h-8 text-[11px] rounded-xl font-semibold px-2.5 shrink-0"
+            onClick={() => setGuideOpen(true)}
+            className="flex items-center gap-1 h-8 text-[11px] rounded-xl font-bold px-2 sm:px-2.5 shrink-0 bg-primary-tint-50 hover:bg-primary-tint-100 text-primary border border-primary-tint-200 shadow-2xs"
+            title="Aktif Sayfa Rehberini Aç"
           >
             <Compass className="w-3.5 h-3.5 text-primary" />
-            <span>Rehber</span>
+            <span className="hidden sm:inline">Sayfa Rehberi</span>
+            <span className="sm:hidden">Rehber</span>
           </Button>
 
           {/* Notifications Center */}
@@ -119,7 +121,8 @@ export function Header({ onMobileMenuToggle }: { onMobileMenuToggle: () => void 
         <DateRangePicker isMobileRow={true} />
       </div>
 
-      <VirtualTourModal open={tourOpen} onClose={() => setTourOpen(false)} />
+      {/* Dynamic Page-Aware Interactive Guide Modal */}
+      <PageGuideModal open={guideOpen} onClose={() => setGuideOpen(false)} />
     </header>
   );
 }
