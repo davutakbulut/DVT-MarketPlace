@@ -1,5 +1,5 @@
 "use client";
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import {
@@ -23,6 +23,7 @@ import {
   Store,
   Users,
   ShieldAlert,
+  X,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { BrandLogo } from '@/components/common/BrandLogo';
@@ -50,7 +51,7 @@ const navItems = [
   { href: '/customers', label: 'Müşterilerim', icon: Users },
   { href: '/alerts', label: 'Uyarı Listesi', icon: AlertOctagon, badgeCount: 3 },
   { href: '/stores', label: 'Mağazalarım & Yeni Bağla', icon: Store },
-    { href: '/system/analytics', label: 'Sayfa Analytics & Isı Haritası', icon: Activity, badge: 'Canlı' },
+  { href: '/system/analytics', label: 'Sayfa Analytics & Isı Haritası', icon: Activity, badge: 'Canlı' },
   { href: '/system/crashes', label: 'Çökme & Hata Takibi', icon: ShieldAlert, badge: 'Yeni' },
   { href: '/settings', label: 'Ayarlar', icon: Settings },
 ];
@@ -59,12 +60,24 @@ export function Sidebar({ mobileOpen, onMobileClose }: { mobileOpen: boolean; on
   const pathname = usePathname();
   const [collapsed, setCollapsed] = useState(false);
 
+  // Lock body scroll when mobile sidebar is active
+  useEffect(() => {
+    if (mobileOpen) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = '';
+    }
+    return () => {
+      document.body.style.overflow = '';
+    };
+  }, [mobileOpen]);
+
   return (
     <>
       {/* Mobile Backdrop */}
       {mobileOpen && (
         <div
-          className="fixed inset-0 z-50 bg-black/40 backdrop-blur-xs lg:hidden"
+          className="fixed inset-0 z-50 bg-black/50 backdrop-blur-xs lg:hidden animate-in fade-in duration-200"
           onClick={onMobileClose}
         />
       )}
@@ -72,26 +85,36 @@ export function Sidebar({ mobileOpen, onMobileClose }: { mobileOpen: boolean; on
       {/* Sidebar Container */}
       <aside
         className={cn(
-          'fixed top-0 left-0 z-50 h-full bg-white border-r border-border flex flex-col justify-between transition-all duration-300 ease-in-out',
-          collapsed ? 'w-20' : 'w-64',
+          'fixed top-0 left-0 z-50 h-full bg-white border-r border-border flex flex-col justify-between transition-all duration-300 ease-in-out shadow-2xl lg:shadow-none',
+          collapsed ? 'w-20' : 'w-64 sm:w-72 lg:w-64',
           mobileOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'
         )}
       >
         {/* Brand Header */}
-        <div className="flex items-center justify-between px-4 sm:px-5 h-16 border-b border-border">
+        <div className="flex items-center justify-between px-4 sm:px-5 h-16 border-b border-border shrink-0">
           <BrandLogo 
             size="md" 
-            showText={!collapsed} 
-            showSlogan={!collapsed}
-            showBadge={!collapsed}
+            showText={!collapsed || mobileOpen} 
+            showSlogan={!collapsed || mobileOpen}
+            showBadge={!collapsed || mobileOpen}
             href="/dashboard"
           />
 
+          {/* Desktop Collapse Toggle */}
           <button
             onClick={() => setCollapsed(!collapsed)}
             className="hidden lg:flex p-1.5 rounded-xl text-muted-foreground hover:bg-canvas hover:text-dark transition-colors"
           >
             {collapsed ? <ChevronRight className="w-4 h-4" /> : <ChevronLeft className="w-4 h-4" />}
+          </button>
+
+          {/* Mobile Close Button */}
+          <button
+            onClick={onMobileClose}
+            className="lg:hidden p-2 rounded-xl text-gray-400 hover:text-dark hover:bg-canvas transition-colors cursor-pointer"
+            aria-label="Menüyü Kapat"
+          >
+            <X className="w-5 h-5" />
           </button>
         </div>
 
@@ -101,7 +124,7 @@ export function Sidebar({ mobileOpen, onMobileClose }: { mobileOpen: boolean; on
             if (item.children) {
               return (
                 <div key={idx} className="space-y-1 pt-1">
-                  {!collapsed && (
+                  {(!collapsed || mobileOpen) && (
                     <span className="px-3 text-[10px] font-bold text-muted-foreground uppercase tracking-wider block">
                       {item.label}
                     </span>
@@ -119,10 +142,10 @@ export function Sidebar({ mobileOpen, onMobileClose }: { mobileOpen: boolean; on
                             ? 'bg-primary text-white shadow-xs font-bold'
                             : 'text-gray-600 hover:bg-canvas hover:text-dark'
                         )}
-                        title={collapsed ? child.label : undefined}
+                        title={collapsed && !mobileOpen ? child.label : undefined}
                       >
                         <span className="w-1.5 h-1.5 rounded-full bg-current opacity-60" />
-                        {!collapsed && <span>{child.label}</span>}
+                        {(!collapsed || mobileOpen) && <span>{child.label}</span>}
                       </Link>
                     );
                   })}
@@ -139,53 +162,52 @@ export function Sidebar({ mobileOpen, onMobileClose }: { mobileOpen: boolean; on
                 href={item.href!}
                 onClick={onMobileClose}
                 className={cn(
-                  'flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-semibold transition-all group relative',
+                  'flex items-center justify-between px-3 py-2 rounded-xl text-xs font-semibold transition-all',
                   isActive
                     ? 'bg-primary text-white shadow-xs font-bold'
-                    : 'text-dark hover:bg-canvas'
+                    : 'text-gray-600 hover:bg-canvas hover:text-dark'
                 )}
-                title={collapsed ? item.label : undefined}
+                title={collapsed && !mobileOpen ? item.label : undefined}
               >
-                <Icon className={cn('w-4 h-4 shrink-0', isActive ? 'text-white' : 'text-gray-500 group-hover:text-dark')} />
-                {!collapsed && (
-                  <div className="flex items-center justify-between flex-1 overflow-hidden">
-                    <span className="truncate">{item.label}</span>
+                <div className="flex items-center gap-3">
+                  <Icon className="w-4 h-4 shrink-0" />
+                  {(!collapsed || mobileOpen) && <span>{item.label}</span>}
+                </div>
+
+                {(!collapsed || mobileOpen) && (
+                  <>
                     {item.badge && (
-                      <span className={cn(
-                        "text-[9px] font-bold px-1.5 py-0.5 rounded-md",
-                        isActive ? "bg-white/20 text-white" : "bg-primary-tint-100 text-primary"
-                      )}>
+                      <span
+                        className={cn(
+                          'text-[9px] font-bold px-1.5 py-0.5 rounded-full uppercase leading-none tracking-wide',
+                          isActive ? 'bg-white/20 text-white' : 'bg-primary-tint-100 text-primary'
+                        )}
+                      >
                         {item.badge}
                       </span>
                     )}
                     {item.badgeCount && (
-                      <span className="bg-red-500 text-white text-[9px] font-black px-1.5 py-0.5 rounded-full">
+                      <span className="bg-red-500 text-white text-[10px] font-bold px-1.5 py-0.2 rounded-full leading-none">
                         {item.badgeCount}
                       </span>
                     )}
-                  </div>
+                  </>
                 )}
               </Link>
             );
           })}
         </div>
 
-        {/* Sidebar Footer */}
-        <div className="p-3 border-t border-border">
-          <div className={cn(
-            'flex items-center gap-3 p-2 rounded-2xl bg-canvas border border-border/80',
-            collapsed && 'justify-center p-2'
-          )}>
-            <div className="w-7 h-7 rounded-xl bg-primary/10 text-primary flex items-center justify-center font-black text-xs shrink-0">
-              DA
+        {/* Footer info in sidebar */}
+        <div className="p-3 border-t border-border bg-canvas/40 shrink-0">
+          {(!collapsed || mobileOpen) ? (
+            <div className="flex items-center justify-between text-[11px] text-gray-500">
+              <span className="font-semibold">v2.6 Live Engine</span>
+              <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
             </div>
-            {!collapsed && (
-              <div className="flex flex-col flex-1 overflow-hidden">
-                <span className="text-xs font-bold text-dark truncate">Davut Akbulut</span>
-                <span className="text-[10px] text-gray-500 truncate font-mono">dvtakblt@gmail.com</span>
-              </div>
-            )}
-          </div>
+          ) : (
+            <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse mx-auto" />
+          )}
         </div>
       </aside>
     </>
