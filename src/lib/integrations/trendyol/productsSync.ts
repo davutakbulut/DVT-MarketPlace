@@ -9,6 +9,7 @@
  */
 
 import { query } from '@/lib/db';
+import { extractPackageQuantity } from '@/lib/packageParser';
 import { TrendyolClient } from './client';
 import { TrendyolProductItem } from './types';
 
@@ -133,17 +134,19 @@ export async function syncTrendyolProducts(
                  store_id, company_id, barcode, sku, model_code, title, brand,
                  image_url, current_sale_price, current_cost, vat_rate, shipment_desi,
                  measured_desi, commission_rate, stock_quantity, delivery_type,
-                 is_active, marketplace, created_at, updated_at
-               ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, 0.0, $10, $11, $11, 15.0, $12, 'standard', $13, 'trendyol', NOW(), NOW())
+                 package_quantity, is_active, marketplace, created_at, updated_at
+               ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, 0.0, $10, $11, $11, 15.0, $12, 'standard', $13, $14, 'trendyol', NOW(), NOW())
                ON CONFLICT (store_id, barcode) DO UPDATE SET
                  title = EXCLUDED.title,
                  current_sale_price = EXCLUDED.current_sale_price,
                  stock_quantity = EXCLUDED.stock_quantity,
                  shipment_desi = EXCLUDED.shipment_desi,
+                 package_quantity = EXCLUDED.package_quantity,
                  updated_at = NOW()`,
               [
                 store.id, companyId, barcode, sku, modelCode, title, brand,
-                imageUrl, salePrice, vatRate, shipmentDesi, stockQuantity, isActive
+                imageUrl, salePrice, vatRate, shipmentDesi, stockQuantity,
+                extractPackageQuantity(title), isActive
               ]
             );
             insertedCount++;
@@ -218,21 +221,22 @@ export async function syncTrendyolProducts(
              store_id, company_id, barcode, sku, model_code, title,
              current_sale_price, current_cost, vat_rate, shipment_desi,
              measured_desi, commission_rate, stock_quantity, delivery_type,
-             is_active, marketplace, created_at, updated_at
+             package_quantity, is_active, marketplace, created_at, updated_at
            ) VALUES (
              $1, $2, $3, $4, $4, $5,
              $6, 0.0, 20, $7,
              $7, $8, 20, 'standard',
-             true, 'trendyol', NOW(), NOW()
+             $9, true, 'trendyol', NOW(), NOW()
            )
            ON CONFLICT (store_id, barcode) DO UPDATE SET
              title = EXCLUDED.title,
              current_sale_price = EXCLUDED.current_sale_price,
              commission_rate = EXCLUDED.commission_rate,
+             package_quantity = EXCLUDED.package_quantity,
              updated_at = NOW()`,
           [
             store.id, companyId, barcode, sku, title,
-            salePrice, desi, commRate
+            salePrice, desi, commRate, extractPackageQuantity(title)
           ]
         );
         insertedCount++;

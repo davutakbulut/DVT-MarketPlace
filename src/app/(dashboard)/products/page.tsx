@@ -9,7 +9,7 @@ import {
   Package, Search, Filter, RefreshCw, ExternalLink, Edit3, 
   Check, X, Eye, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight,
   TrendingUp, Truck, Layers, DollarSign, Award, AlertCircle, Info,
-  ChevronDown, ChevronUp, FileSpreadsheet, SlidersHorizontal, RotateCcw
+  ChevronDown, ChevronUp, FileSpreadsheet, SlidersHorizontal, RotateCcw, Box
 } from "lucide-react";
 import Image from "next/image";
 import { useTenantStore } from "@/stores/useTenantStore";
@@ -69,6 +69,7 @@ export default function ProductsCatalogPage() {
   const [editPrice, setEditPrice] = useState<number>(0);
   const [editCost, setEditCost] = useState<number>(0);
   const [editStock, setEditStock] = useState<number>(0);
+  const [editPackageQty, setEditPackageQty] = useState<number>(1);
   const [saving, setSaving] = useState(false);
   const [syncing, setSyncing] = useState(false);
 
@@ -161,20 +162,28 @@ export default function ProductsCatalogPage() {
       toast.error("Dışa aktarılacak ürün bulunamadı.");
       return;
     }
-    const headers = ["Barkod", "Ürün Adı", "Model Kodu", "Stok Kodu", "Marka", "Durum", "Stok", "Satış Fiyatı (TL)", "Alış Maliyeti (TL)", "Net Kâr (TL)", "Kâr Marjı (%)"];
-    const rows = products.map(p => [
-      `"${p.barcode || ''}"`,
-      `"${(p.title || '').replace(/"/g, '""')}"`,
-      `"${p.modelCode || ''}"`,
-      `"${p.sku || ''}"`,
-      `"${p.brand || ''}"`,
-      `"${p.productStatus || 'active'}"`,
-      p.stockQuantity || 0,
-      p.salePrice || 0,
-      p.costPrice || 0,
-      p.calculatedNetProfit || 0,
-      `${p.calculatedMarginPercent || 0}%`
-    ]);
+    const headers = ["Barkod", "Ürün Adı", "Model Kodu", "Stok Kodu", "Marka", "Paket İçeriği", "Durum", "Stok", "Satış Fiyatı (TL)", "Alış Maliyeti (TL)", "Birim Başı Maliyet (TL)", "Net Kâr (TL)", "Birim Başı Kâr (TL)", "Kâr Marjı (%)"];
+    const rows = products.map(p => {
+      const pkgQty = parseInt(p.packageQuantity || 1);
+      const cost = parseFloat(p.costPrice || 0);
+      const profit = parseFloat(p.calculatedNetProfit || 0);
+      return [
+        `"${p.barcode || ''}"`,
+        `"${(p.title || '').replace(/"/g, '""')}"`,
+        `"${p.modelCode || ''}"`,
+        `"${p.sku || ''}"`,
+        `"${p.brand || ''}"`,
+        `"${pkgQty} Adet"`,
+        `"${p.productStatus || 'active'}"`,
+        p.stockQuantity || 0,
+        p.salePrice || 0,
+        cost,
+        (cost / pkgQty).toFixed(2),
+        profit,
+        (profit / pkgQty).toFixed(2),
+        `${p.calculatedMarginPercent || 0}%`
+      ];
+    });
 
     const csvContent = "data:text/csv;charset=utf-8,\uFEFF" + [headers.join(","), ...rows.map(e => e.join(","))].join("\n");
     const encodedUri = encodeURI(csvContent);
@@ -203,6 +212,7 @@ export default function ProductsCatalogPage() {
     setEditPrice(parseFloat(p.salePrice || 0));
     setEditCost(parseFloat(p.costPrice ?? p.currentCost ?? 0));
     setEditStock(parseInt(p.stockQuantity || 0));
+    setEditPackageQty(parseInt(p.packageQuantity || 1));
   };
 
   const handleSaveEdit = async (productId: string) => {
@@ -215,7 +225,8 @@ export default function ProductsCatalogPage() {
           productId,
           salePrice: editPrice,
           costPrice: editCost,
-          stockQuantity: editStock
+          stockQuantity: editStock,
+          packageQuantity: editPackageQty
         }),
       });
       if (res.ok) {
@@ -638,6 +649,7 @@ export default function ProductsCatalogPage() {
                   <th className="py-3 px-4 w-12 text-center">Görsel</th>
                   <th className="py-3 px-4 table-sticky-first-col bg-canvas">Ürün Adı & Model</th>
                   <th className="py-3 px-4">Marka</th>
+                  <th className="py-3 px-4 text-center font-bold text-dark">Paket İçeriği</th>
                   <th className="py-3 px-4 text-center font-bold">Stok</th>
                   <th className="py-3 px-4 text-primary font-bold">Satış Fiyatı (₺)</th>
                   <th className="py-3 px-4 font-bold text-red-700">Alış Maliyeti (₺)</th>
@@ -651,6 +663,7 @@ export default function ProductsCatalogPage() {
                 {products.map((p) => {
                   const isEditing = editingId === p.id;
                   const hasStock = parseInt(p.stockQuantity || 0) > 0;
+                  const pkgQty = Math.max(1, parseInt(p.packageQuantity || 1));
 
                   return (
                     <tr key={p.id} className="hover:bg-canvas/50 transition-colors">
@@ -703,6 +716,33 @@ export default function ProductsCatalogPage() {
                       <td className="py-3 px-4 font-semibold text-gray-700">
                         {p.brand || 'Genject'}
                       </td>
+                      
+                      {/* Paket İçeriği (Adet) */}
+                      <td className="py-3 px-4 text-center">
+                        {isEditing ? (
+                          <div className="flex items-center justify-center gap-1">
+                            <input
+                              type="number"
+                              min="1"
+                              step="1"
+                              value={editPackageQty}
+                              onChange={(e) => setEditPackageQty(Math.max(1, parseInt(e.target.value) || 1))}
+                              className="w-16 px-2 py-1 rounded-lg border border-primary text-center font-bold text-dark bg-white shadow-2xs"
+                            />
+                            <span className="text-[10px] text-gray-500 font-bold">Ad.</span>
+                          </div>
+                        ) : (
+                          <span 
+                            onClick={() => handleStartEdit(p)}
+                            className="px-2.5 py-1 rounded-xl bg-slate-100/90 text-gray-800 font-bold border border-border text-[11px] inline-flex items-center gap-1.5 cursor-pointer hover:border-primary hover:text-primary transition-colors"
+                            title="Paket içeriğini düzenlemek için tıkla"
+                          >
+                            <Box className="w-3 h-3 text-primary shrink-0" />
+                            <span>{pkgQty} Adet</span>
+                          </span>
+                        )}
+                      </td>
+
                       <td className="py-3 px-4 text-center">
                         {isEditing ? (
                           <input
@@ -740,7 +780,14 @@ export default function ProductsCatalogPage() {
                             className="w-20 px-2 py-1 rounded-lg border border-red-500 font-bold text-red-700"
                           />
                         ) : p.costPrice !== null && p.costPrice !== undefined && p.costPrice > 0 ? (
-                          `₺${parseFloat(p.costPrice).toFixed(2)}`
+                          <div>
+                            <span>₺{parseFloat(p.costPrice).toFixed(2)}</span>
+                            {pkgQty > 1 && (
+                              <span className="text-[10px] text-gray-500 font-semibold block mt-0.5">
+                                (₺{(parseFloat(p.costPrice) / pkgQty).toFixed(2)} / ad.)
+                              </span>
+                            )}
+                          </div>
                         ) : (
                           <span className="text-amber-600 font-semibold bg-amber-50 px-1.5 py-0.5 rounded text-[10px]">
                             Maliyet Girilmedi
@@ -749,9 +796,23 @@ export default function ProductsCatalogPage() {
                       </td>
                       <td className="py-3 px-4 font-black tabular-nums">
                         {parseFloat(p.calculatedNetProfit || 0) > 0 ? (
-                          <span className="text-emerald-700 font-bold">₺{parseFloat(p.calculatedNetProfit || 0).toFixed(2)}</span>
+                          <div>
+                            <span className="text-emerald-700 font-bold">₺{parseFloat(p.calculatedNetProfit || 0).toFixed(2)}</span>
+                            {pkgQty > 1 && (
+                              <span className="text-[10px] text-emerald-800 font-semibold block mt-0.5">
+                                (₺{(parseFloat(p.calculatedNetProfit || 0) / pkgQty).toFixed(2)} / ad.)
+                              </span>
+                            )}
+                          </div>
                         ) : parseFloat(p.calculatedNetProfit || 0) < 0 ? (
-                          <span className="text-red-600 font-bold">₺{parseFloat(p.calculatedNetProfit || 0).toFixed(2)}</span>
+                          <div>
+                            <span className="text-red-600 font-bold">₺{parseFloat(p.calculatedNetProfit || 0).toFixed(2)}</span>
+                            {pkgQty > 1 && (
+                              <span className="text-[10px] text-red-600 font-semibold block mt-0.5">
+                                (₺{(parseFloat(p.calculatedNetProfit || 0) / pkgQty).toFixed(2)} / ad.)
+                              </span>
+                            )}
+                          </div>
                         ) : (
                           <span className="text-gray-400 font-semibold">-</span>
                         )}

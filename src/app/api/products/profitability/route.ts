@@ -119,6 +119,7 @@ export async function GET(request: Request) {
         MAX(p.marketplace_product_url) as "marketplaceUrl",
         COALESCE(MAX(p.current_sale_price), AVG(oi.unit_sale_price)) as "currentSalePrice",
         COALESCE(MAX(p.current_cost), AVG(COALESCE(oi.unit_cost_price, 0))) as "unitCost",
+        COALESCE(MAX(p.package_quantity), 1) as "packageQuantity",
         SUM(oi.quantity) as "unitsSold",
         SUM(COALESCE(oi.invoiced_amount, oi.unit_sale_price * oi.quantity, 0)) as "totalRevenue",
         SUM(COALESCE(oi.unit_cost_price, 0) * oi.quantity) as "totalCogs",
