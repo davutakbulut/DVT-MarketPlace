@@ -44,15 +44,34 @@ export default function RootLayout({
             __html: `
               (function() {
                 try {
-                  // Capture & suppress web-vitals / devtools startTime undefined errors
+                  // 1. Direct window.onerror handler for VM and Chrome Extension errors
+                  var origOnError = window.onerror;
+                  window.onerror = function(msg, url, lineNo, columnNo, error) {
+                    var strMsg = String(msg || '');
+                    var strUrl = String(url || '');
+                    if (
+                      strMsg.indexOf('startTime') !== -1 || 
+                      strMsg.indexOf('reportAllChanges') !== -1 ||
+                      strUrl.indexOf('chrome-extension') !== -1 ||
+                      strUrl.indexOf('moz-extension') !== -1 ||
+                      strUrl.indexOf('VM') !== -1
+                    ) {
+                      return true; // Suppress from console
+                    }
+                    if (origOnError) return origOnError.apply(this, arguments);
+                    return false;
+                  };
+
+                  // 2. Global Event Listener Capture
                   window.addEventListener('error', function(event) {
-                    var msg = (event && event.message) ? event.message : '';
-                    var fn = (event && event.filename) ? event.filename : '';
+                    var msg = (event && event.message) ? String(event.message) : '';
+                    var fn = (event && event.filename) ? String(event.filename) : '';
                     if (
                       msg.indexOf('startTime') !== -1 || 
                       msg.indexOf('reportAllChanges') !== -1 ||
                       fn.indexOf('chrome-extension') !== -1 ||
-                      fn.indexOf('moz-extension') !== -1
+                      fn.indexOf('moz-extension') !== -1 ||
+                      fn.indexOf('VM') !== -1
                     ) {
                       if (event.preventDefault) event.preventDefault();
                       if (event.stopPropagation) event.stopPropagation();
@@ -63,13 +82,43 @@ export default function RootLayout({
 
                   window.addEventListener('unhandledrejection', function(event) {
                     var reason = event && event.reason;
-                    var msg = (typeof reason === 'string') ? reason : (reason && reason.message ? reason.message : '');
+                    var msg = (typeof reason === 'string') ? reason : (reason && reason.message ? String(reason.message) : '');
                     if (msg.indexOf('startTime') !== -1 || msg.indexOf('reportAllChanges') !== -1) {
                       if (event.preventDefault) event.preventDefault();
                       if (event.stopPropagation) event.stopPropagation();
                       return true;
                     }
                   }, true);
+
+                  // 3. PerformanceObserver Guard: Ensure entries are never undefined
+                  if (typeof window.PerformanceObserver !== 'undefined') {
+                    var OrigPerfObs = window.PerformanceObserver;
+                    window.PerformanceObserver = function(callback) {
+                      var guardedCallback = function(list, observer) {
+                        try {
+                          if (list && typeof list.getEntries === 'function') {
+                            var rawEntries = list.getEntries() || [];
+                            var validEntries = rawEntries.filter(function(e) { return e && typeof e.startTime !== 'undefined'; });
+                            // If entries were cleaned, create safe proxy
+                            var safeList = {
+                              getEntries: function() { return validEntries; },
+                              getEntriesByName: function(name, type) { 
+                                return (list.getEntriesByName(name, type) || []).filter(function(e) { return e && typeof e.startTime !== 'undefined'; }); 
+                              },
+                              getEntriesByType: function(type) { 
+                                return (list.getEntriesByType(type) || []).filter(function(e) { return e && typeof e.startTime !== 'undefined'; }); 
+                              }
+                            };
+                            return callback(safeList, observer);
+                          }
+                        } catch (err) {}
+                        return callback(list, observer);
+                      };
+                      return new OrigPerfObs(guardedCallback);
+                    };
+                    window.PerformanceObserver.prototype = OrigPerfObs.prototype;
+                    window.PerformanceObserver.supportedEntryTypes = OrigPerfObs.supportedEntryTypes;
+                  }
                 } catch(e) {}
               })();
             `,
