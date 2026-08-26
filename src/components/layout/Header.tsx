@@ -37,12 +37,13 @@ export function Header({ onMobileMenuToggle }: { onMobileMenuToggle: () => void 
             <Menu className="w-5 h-5" />
           </button>
 
-          {/* Full Brand Logo with Text and PRO badge */}
-          <div className="shrink-0">
+          {/* Full Brand Logo with Text and PRO badge (ONLY on Mobile/Tablet < lg when Sidebar is hidden) */}
+          <div className="shrink-0 lg:hidden">
             <BrandLogo size="sm" showText={true} showBadge={true} showSlogan={false} href="/dashboard" />
           </div>
 
-          <div className="hidden lg:flex items-center gap-1.5 ml-2">
+          {/* Desktop Left Toolbar (Store & Country Selector) */}
+          <div className="hidden lg:flex items-center gap-2">
             <StoreSelector />
             <CountrySelector />
           </div>
