@@ -44,6 +44,7 @@ export async function GET() {
         invoice_fixed_cost as "invoiceFixedCost",
         extra_operation_cost as "extraOperationCost",
         extra_operation_rate as "extraOperationRate",
+        early_payout_rate as "earlyPayoutRate",
 
         email_daily_summary_enabled as "emailDailySummaryEnabled",
         email_negative_profit_alert as "emailNegativeProfitAlert",
@@ -72,7 +73,7 @@ export async function POST(request: Request) {
       disableBarem0199, disableBarem200349,
       minOrderQty025, minOrderQty2535, minOrderQty3550, minOrderQty5075,
       disableAllMarginAlerts, marginCalcType,
-      defaultPackagingCost, invoiceFixedCost, extraOperationCost, extraOperationRate,
+      defaultPackagingCost, invoiceFixedCost, extraOperationCost, extraOperationRate, earlyPayoutRate,
       emailDailySummaryEnabled, emailNegativeProfitAlert, emailNotificationPreferences,
       xmlFeedSettings, customCategoryCommissions
     } = body;
@@ -117,13 +118,14 @@ export async function POST(request: Request) {
         invoice_fixed_cost = COALESCE($29, invoice_fixed_cost),
         extra_operation_cost = COALESCE($30, extra_operation_cost),
         extra_operation_rate = COALESCE($31, extra_operation_rate),
+        early_payout_rate = COALESCE($32, early_payout_rate),
 
-        email_daily_summary_enabled = COALESCE($32, email_daily_summary_enabled),
-        email_negative_profit_alert = COALESCE($33, email_negative_profit_alert),
-        email_notification_preferences = COALESCE($34, email_notification_preferences),
+        email_daily_summary_enabled = COALESCE($33, email_daily_summary_enabled),
+        email_negative_profit_alert = COALESCE($34, email_negative_profit_alert),
+        email_notification_preferences = COALESCE($35, email_notification_preferences),
 
-        xml_feed_settings = COALESCE($35, xml_feed_settings),
-        custom_category_commissions = COALESCE($36, custom_category_commissions),
+        xml_feed_settings = COALESCE($36, xml_feed_settings),
+        custom_category_commissions = COALESCE($37, custom_category_commissions),
         updated_at = now()
       WHERE TRUE
     `, [
@@ -133,7 +135,7 @@ export async function POST(request: Request) {
       disableBarem0199, disableBarem200349,
       minOrderQty025, minOrderQty2535, minOrderQty3550, minOrderQty5075,
       disableAllMarginAlerts, marginCalcType,
-      defaultPackagingCost, invoiceFixedCost, extraOperationCost, extraOperationRate,
+      defaultPackagingCost, invoiceFixedCost, extraOperationCost, extraOperationRate, earlyPayoutRate,
       emailDailySummaryEnabled, emailNegativeProfitAlert, 
       emailNotificationPreferences ? JSON.stringify(emailNotificationPreferences) : null,
       xmlFeedSettings ? JSON.stringify(xmlFeedSettings) : null,

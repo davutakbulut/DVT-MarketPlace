@@ -63,6 +63,7 @@ export default function SettingsPage() {
   const [invoiceFixedCost, setInvoiceFixedCost] = useState(0);
   const [extraOperationCost, setExtraOperationCost] = useState(0);
   const [extraOperationRate, setExtraOperationRate] = useState(6.0);
+  const [earlyPayoutRate, setEarlyPayoutRate] = useState(0.16);
 
   // 7. E-POSTA BİLDİRİM AYARLARI (Screenshot 7 - 9 Toggles)
   const [emailPrefs, setEmailPrefs] = useState({
@@ -136,6 +137,7 @@ export default function SettingsPage() {
         setInvoiceFixedCost(s.invoiceFixedCost ? parseFloat(s.invoiceFixedCost) : 0);
         setExtraOperationCost(s.extraOperationCost ? parseFloat(s.extraOperationCost) : 0);
         setExtraOperationRate(s.extraOperationRate !== undefined && s.extraOperationRate !== null ? parseFloat(s.extraOperationRate) : 6.0);
+        setEarlyPayoutRate(s.earlyPayoutRate !== undefined && s.earlyPayoutRate !== null ? parseFloat(s.earlyPayoutRate) : 0.16);
 
         if (s.emailNotificationPreferences) {
           setEmailPrefs(prev => ({ ...prev, ...s.emailNotificationPreferences }));
@@ -178,7 +180,7 @@ export default function SettingsPage() {
           minOrderQty025, minOrderQty2535, minOrderQty3550, minOrderQty5075,
           disableAllMarginAlerts, minProfitMarginWarning, marginCalcType,
           defaultServiceFee, defaultWithholdingRate, defaultVatRate,
-          defaultPackagingCost: packagingCost, invoiceFixedCost, extraOperationCost, extraOperationRate,
+          defaultPackagingCost: packagingCost, invoiceFixedCost, extraOperationCost, extraOperationRate, earlyPayoutRate,
           emailDailySummaryEnabled: emailDailySummary, emailNegativeProfitAlert,
           emailNotificationPreferences: emailPrefs,
           xmlFeedSettings: xmlFeed,
@@ -818,9 +820,44 @@ export default function SettingsPage() {
                     </div>
                   </div>
 
+                  <div className="p-4 rounded-2xl bg-canvas/60 border border-border space-y-3">
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1">
+                      <h5 className="text-xs font-black text-dark">3. Toplam Erken Ödeme Kesintisi (Finansman)</h5>
+                      <span className="text-[10px] text-amber-700 font-bold bg-amber-50 px-2 py-0.5 rounded-md border border-amber-200">
+                        ⚡ Günlük Finansman Kesintisi
+                      </span>
+                    </div>
+
+                    <div className="p-3.5 rounded-xl bg-white border border-amber-300/60 space-y-2 shadow-2xs">
+                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                        <div>
+                          <label className="text-xs font-bold text-dark flex items-center gap-1.5">
+                            <span>Toplam Erken Ödeme Kesintisi Oranı (Günlük %0.16)</span>
+                            <Badge variant="secondary" className="text-[10px] py-0 px-1.5 bg-amber-100 text-amber-800">Günlük %</Badge>
+                          </label>
+                          <p className="text-[11px] text-gray-500 mt-0.5">
+                            Erken hakediş ödemesi alan satıcılar için günlük erken ödeme finansman kesinti oranı (Örn: Günlük %0.16). Hakediş vadesinden önce çekildiğinde geçen gün sayısı kadar otomatik düşülür.
+                          </p>
+                        </div>
+                        <div className="flex items-center gap-1 shrink-0">
+                          <span className="text-xs font-bold text-gray-500">%</span>
+                          <input
+                            type="number"
+                            step="0.01"
+                            min="0"
+                            max="10"
+                            value={earlyPayoutRate}
+                            onChange={(e) => setEarlyPayoutRate(parseFloat(e.target.value) || 0)}
+                            className="w-24 px-3 py-1.5 rounded-xl border-2 border-amber-500 text-xs font-black text-amber-700 bg-amber-50/20 focus:ring-2 focus:ring-amber-500 shadow-2xs text-center"
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
                   <div className="p-4 rounded-2xl bg-canvas/60 border border-border space-y-4">
                     <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1">
-                      <h5 className="text-xs font-black text-dark">3. Operasyonel & Sabit Giderler</h5>
+                      <h5 className="text-xs font-black text-dark">4. Operasyonel & Sabit Giderler</h5>
                       <span className="text-[10px] text-emerald-700 font-bold bg-emerald-50 px-2 py-0.5 rounded-md border border-emerald-200">
                         ⚡ Otomatik Sipariş Yüzdesi Hesaplama Aktif
                       </span>
