@@ -1,6 +1,6 @@
 "use client";
 import React, { useState, useEffect } from "react";
-import { formatCurrency, formatPercentage } from "@/lib/formatters";
+import { formatCurrency, formatCurrencyNoCents, formatPercentage } from "@/lib/formatters";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
@@ -154,7 +154,7 @@ export default function DashboardPage() {
       </div>
 
       {/* ========================================================= */}
-      {/* 1. ORIGINAL 4 MAIN KPI CARDS */}
+      {/* 1. ORIGINAL 4 MAIN KPI CARDS (Kuruşsuz Tam TL Formatı) */}
       {/* ========================================================= */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
         
@@ -167,7 +167,7 @@ export default function DashboardPage() {
             </div>
           </div>
           <div className="text-lg xs:text-xl sm:text-2xl lg:text-3xl font-black text-primary tabular-nums mt-1.5 truncate">
-            {formatCurrency(d.invoicedRevenue || 0)}
+            {formatCurrencyNoCents(d.invoicedRevenue || 0)}
           </div>
           <span className="text-[11px] text-gray-500 font-semibold mt-1 block">
             {d.totalOrders || 0} Siparişten Toplandı
@@ -183,7 +183,7 @@ export default function DashboardPage() {
             </div>
           </div>
           <div className="text-lg xs:text-xl sm:text-2xl lg:text-3xl font-black text-emerald-700 tabular-nums mt-1.5 truncate">
-            {formatCurrency(d.netProfit || 0)}
+            {formatCurrencyNoCents(d.netProfit || 0)}
           </div>
           <span className="text-[11px] text-emerald-800 font-bold mt-1 block">
             Net Marj: %{d.netProfitMargin || 0}
@@ -199,10 +199,10 @@ export default function DashboardPage() {
             </div>
           </div>
           <div className="text-lg xs:text-xl sm:text-2xl lg:text-3xl font-black text-dark tabular-nums mt-1.5 truncate">
-            {formatCurrency((d.commissionTotal || 0) + (d.serviceFeeTotal || 0))}
+            {formatCurrencyNoCents((d.commissionTotal || 0) + (d.serviceFeeTotal || 0))}
           </div>
           <span className="text-[11px] text-gray-500 font-semibold mt-1 block">
-            {formatCurrency(d.commissionTotal || 0)} Komisyon + {formatCurrency(d.serviceFeeTotal || 0)} Hizmet
+            {formatCurrencyNoCents(d.commissionTotal || 0)} Komisyon + {formatCurrencyNoCents(d.serviceFeeTotal || 0)} Hizmet
           </span>
         </div>
 
@@ -215,7 +215,7 @@ export default function DashboardPage() {
             </div>
           </div>
           <div className="text-lg xs:text-xl sm:text-2xl lg:text-3xl font-black text-dark tabular-nums mt-1.5 truncate">
-            {formatCurrency(d.shippingTotal || 0)}
+            {formatCurrencyNoCents(d.shippingTotal || 0)}
           </div>
           <span className="text-[11px] text-gray-500 font-semibold mt-1 block">
             Faturalanan Kargo Bedelleri
@@ -226,7 +226,7 @@ export default function DashboardPage() {
 
       {/* ========================================================= */}
       {/* 2. [EK ALAN] AÇILIR-KAPANIR (COLLAPSIBLE) MASRAF KALEMLERİ (₺) */}
-      {/* (Varsayılan Olarak KAPALI gelir, alandan kazanır) */}
+      {/* (Kuruşsuz Tam TL Formatında) */}
       {/* ========================================================= */}
       <div className="bg-white rounded-3xl border border-border shadow-xs overflow-hidden transition-all">
         {/* Header Bar */}
@@ -243,7 +243,7 @@ export default function DashboardPage() {
           <div className="flex items-center gap-3">
             <div className="hidden sm:flex items-center gap-1.5 text-xs font-bold text-gray-600">
               <span>Toplam Masraf:</span>
-              <strong className="text-dark font-black tabular-nums">{formatCurrency(exp.totalCostSum || 0)}</strong>
+              <strong className="text-dark font-black tabular-nums">{formatCurrencyNoCents(exp.totalCostSum || 0)}</strong>
             </div>
 
             <Button size="sm" variant="ghost" className="h-7 text-xs font-bold gap-1 text-gray-600 hover:text-primary">
@@ -278,7 +278,7 @@ export default function DashboardPage() {
                           ))}
                         </Pie>
                         <Tooltip 
-                          formatter={(val: any) => formatCurrency(parseFloat(val || 0))}
+                          formatter={(val: any) => formatCurrencyNoCents(parseFloat(val || 0))}
                           contentStyle={{ borderRadius: '16px', border: '1px solid #E5E7EB', fontWeight: 'bold', fontSize: '11px' }}
                         />
                       </PieChart>
@@ -288,7 +288,7 @@ export default function DashboardPage() {
                   <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none text-center px-4">
                     <span className="text-[11px] font-bold text-gray-500">Toplam Maliyet</span>
                     <span className="text-base sm:text-lg font-black text-dark tabular-nums mt-0.5">
-                      {formatCurrency(exp.totalCostSum || 0)}
+                      {formatCurrencyNoCents(exp.totalCostSum || 0)}
                     </span>
                   </div>
                 </div>
@@ -304,7 +304,7 @@ export default function DashboardPage() {
                         <span className="text-[11px] font-bold text-gray-600 truncate" title={item.name}>{item.name}</span>
                       </div>
                       <div className="text-sm font-black text-dark tabular-nums pl-4">
-                        {formatCurrency(item.value || 0)}
+                        {formatCurrencyNoCents(item.value || 0)}
                       </div>
                     </div>
                   ))}
@@ -317,7 +317,7 @@ export default function DashboardPage() {
       </div>
 
       {/* ========================================================= */}
-      {/* 3. [EK ALAN] CHART: GÜNLÜK KÂR PERFORMANSI (Spline Curve) */}
+      {/* 3. [EK ALAN] CHART: GÜNLÜK KÂR PERFORMANSI (Kuruşsuz) */}
       {/* ========================================================= */}
       <div className="bg-white p-4 sm:p-6 rounded-3xl border border-border shadow-xs space-y-4">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-3 border-b border-border gap-2">
@@ -361,10 +361,10 @@ export default function DashboardPage() {
                   tickFormatter={(v) => `₺${v >= 1000 ? `${(v / 1000).toFixed(0)}k` : v}`}
                 />
                 <Tooltip 
-                  formatter={(value: any, name: any) => [formatCurrency(parseFloat(value || 0)), name === 'kar' ? 'Net Kâr' : name]}
+                  formatter={(value: any, name: any) => [formatCurrencyNoCents(parseFloat(value || 0)), name === 'kar' ? 'Net Kâr' : name]}
                   labelFormatter={(lbl, items) => {
                     const item = items?.[0]?.payload;
-                    return item ? `${item.fullDate || lbl} (${item.siparis || 0} Sipariş • Ciro: ${formatCurrency(item.ciro || 0)})` : lbl;
+                    return item ? `${item.fullDate || lbl} (${item.siparis || 0} Sipariş • Ciro: ${formatCurrencyNoCents(item.ciro || 0)})` : lbl;
                   }}
                   contentStyle={{ borderRadius: '16px', border: '1px solid #E5E7EB', fontWeight: 'bold', fontSize: '11px' }}
                 />
@@ -434,7 +434,7 @@ export default function DashboardPage() {
                   <YAxis stroke="#9CA3AF" fontSize={11} tickLine={false} tickFormatter={(val) => `₺${val >= 1000 ? (val/1000).toFixed(0) + 'k' : val}`} />
                   <Tooltip 
                     contentStyle={{ backgroundColor: "#FFFFFF", borderRadius: "1rem", border: "1px solid #E5E7EB", boxShadow: "0 10px 25px -5px rgba(0, 0, 0, 0.1)" }}
-                    formatter={(val: any, name: string) => [formatCurrency(parseFloat(val || 0)), name === "revenue" ? "Toplam Ciro" : "Net Kâr"]}
+                    formatter={(val: any, name: string) => [formatCurrencyNoCents(parseFloat(val || 0)), name === "revenue" ? "Toplam Ciro" : "Net Kâr"]}
                     labelFormatter={(label) => `Dönem: ${label}`}
                   />
                   <Area type="monotone" dataKey="revenue" stroke="#FF7855" strokeWidth={3} fillOpacity={1} fill="url(#colorRevenue)" name="revenue" />
@@ -474,7 +474,7 @@ export default function DashboardPage() {
                   </Pie>
                   <Tooltip 
                     contentStyle={{ backgroundColor: "#FFFFFF", borderRadius: "0.75rem", border: "1px solid #E5E7EB" }}
-                    formatter={(val: any) => [formatCurrency(parseFloat(val || 0)), "Tutar"]}
+                    formatter={(val: any) => [formatCurrencyNoCents(parseFloat(val || 0)), "Tutar"]}
                   />
                 </PieChart>
               </ResponsiveContainer>
@@ -520,7 +520,7 @@ export default function DashboardPage() {
                   <Tooltip 
                     contentStyle={{ backgroundColor: "#FFFFFF", borderRadius: "1rem", border: "1px solid #E5E7EB" }}
                     formatter={(val: any, name: string) => [
-                      name === "siparis" ? `${val} Adet` : formatCurrency(parseFloat(val || 0)),
+                      name === "siparis" ? `${val} Adet` : formatCurrencyNoCents(parseFloat(val || 0)),
                       name === "siparis" ? "Sipariş Sayısı" : "Saatlik Ciro"
                     ]}
                   />
@@ -548,8 +548,8 @@ export default function DashboardPage() {
                   <span className="text-[10px] text-gray-500">{c.orderCount} Sipariş • Ort. {c.avgDesi} Desi</span>
                 </div>
                 <div className="text-right">
-                  <span className="font-black text-primary block tabular-nums">{formatCurrency(parseFloat(c.totalShippingCost || 0))}</span>
-                  <span className="text-[10px] font-bold text-emerald-700">Kâr: {formatCurrency(parseFloat(c.profit || 0))}</span>
+                  <span className="font-black text-primary block tabular-nums">{formatCurrencyNoCents(parseFloat(c.totalShippingCost || 0))}</span>
+                  <span className="text-[10px] font-bold text-emerald-700">Kâr: {formatCurrencyNoCents(parseFloat(c.profit || 0))}</span>
                 </div>
               </div>
             ))}
@@ -583,7 +583,7 @@ export default function DashboardPage() {
                   <span className="text-[10px] text-gray-400 font-mono">{p.barcode} • {p.totalQuantity} Adet Satıldı</span>
                 </div>
                 <div className="text-right">
-                  <span className="font-black text-emerald-700 block tabular-nums">{formatCurrency(parseFloat(p.totalProfit || 0))}</span>
+                  <span className="font-black text-emerald-700 block tabular-nums">{formatCurrencyNoCents(parseFloat(p.totalProfit || 0))}</span>
                   <span className="text-[10px] font-bold text-gray-500">Marj: %{p.avgMargin}</span>
                 </div>
               </div>
@@ -620,8 +620,8 @@ export default function DashboardPage() {
 
                 <div className="text-right flex items-center gap-2">
                   <div>
-                    <span className="font-black text-primary block tabular-nums">₺{parseFloat(o.paidAmount || 0).toFixed(2)}</span>
-                    <span className="text-[10px] font-black text-emerald-700 block">Kâr: ₺{parseFloat(o.netProfit || 0).toFixed(2)}</span>
+                    <span className="font-black text-primary block tabular-nums">{formatCurrencyNoCents(parseFloat(o.paidAmount || 0))}</span>
+                    <span className="text-[10px] font-black text-emerald-700 block">Kâr: {formatCurrencyNoCents(parseFloat(o.netProfit || 0))}</span>
                   </div>
                   <Eye className="w-3.5 h-3.5 text-gray-400 hover:text-primary" />
                 </div>
