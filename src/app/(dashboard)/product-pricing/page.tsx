@@ -8,7 +8,8 @@ import {
   Calculator, TrendingUp, DollarSign, Truck, ShieldCheck, 
   HelpCircle, RefreshCw, Send, CheckCircle2, AlertTriangle, 
   Clock, ArrowRight, Zap, Target, Package, Award, Sparkles,
-  Layers, Check, ChevronRight, Eye, Info, Sliders, ArrowDownRight
+  Layers, Check, ChevronRight, Eye, Info, Sliders, ArrowDownRight,
+  TrendingDown
 } from "lucide-react";
 import { calculateTrendyolShipping, BaremTier, DesiRate } from "@/lib/shippingCalculator";
 
@@ -88,16 +89,14 @@ export default function ProductPricingPage() {
   const effectiveCommission = commissionRate / 100;
 
   // 1. REVERSE PRICING CALCULATION (Target Margin % -> Required Sale Price)
-  // Iterative convergence to find the exact price matching cargo barem / desi
   let calculatedTargetPrice = 0;
   const denominator = 1 - effectiveCommission - withholdingTaxRate - effectiveMargin;
 
   if (denominator > 0) {
-    // Initial guess
     let currentGuess = (costPrice + 46.50 + serviceFee) / denominator;
     for (let i = 0; i < 4; i++) {
       const shipGuess = calculateTrendyolShipping(currentGuess, desi, carrier, leadTimeDays, baremTiers, desiRates);
-      currentGuess = (costPrice + shipGuess.finalShippingCostIncVat + serviceFee) / denominator;
+      currentGuess = (costPrice + shipGuess.appliedPriceIncVat + serviceFee) / denominator;
     }
     calculatedTargetPrice = Math.round(currentGuess * 100) / 100;
   } else {
@@ -111,7 +110,7 @@ export default function ProductPricingPage() {
 
   // 3. EXACT SHIPPING COST FOR ACTIVE SALE PRICE (Using Official Engine)
   const activeShipping = calculateTrendyolShipping(activeSalePrice, desi, carrier, leadTimeDays, baremTiers, desiRates);
-  const effectiveShippingCost = activeShipping.finalShippingCostIncVat;
+  const effectiveShippingCost = activeShipping.appliedPriceIncVat;
 
   // Cost Breakdown for Active Sale Price
   const commissionAmount = activeSalePrice * effectiveCommission;
@@ -134,7 +133,7 @@ export default function ProductPricingPage() {
   const buyboxWithholding = competitorBuyboxPrice * withholdingTaxRate;
   const buyboxSaleVat = (competitorBuyboxPrice / kdvMultiplier) * (vatRate / 100);
   const buyboxNetVat = Math.max(0, buyboxSaleVat - costVat);
-  const buyboxProfit = competitorBuyboxPrice - (costPrice + buyboxCommission + buyboxShipping.finalShippingCostIncVat + serviceFee + buyboxWithholding + buyboxNetVat);
+  const buyboxProfit = competitorBuyboxPrice - (costPrice + buyboxCommission + buyboxShipping.appliedPriceIncVat + serviceFee + buyboxWithholding + buyboxNetVat);
   const buyboxMargin = competitorBuyboxPrice > 0 ? (buyboxProfit / competitorBuyboxPrice) * 100 : 0;
 
   const handlePushPriceToTrendyol = async () => {
@@ -166,11 +165,11 @@ export default function ProductPricingPage() {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-white p-4 sm:p-6 rounded-3xl border border-border shadow-xs">
         <div>
           <div className="flex items-center gap-2">
-            <h3 className="text-base sm:text-lg font-black text-dark">Trendyol Akıllı Fiyatlandırma & Kârlılık Motoru</h3>
-            <Badge variant="excellent">İki Yönlü Hesaplama</Badge>
+            <h3 className="text-base sm:text-lg font-black text-dark">Trendyol Kargo Barem Desteği & Fiyatlandırma Motoru</h3>
+            <Badge variant="excellent">10 Ağustos 2026 Resmi Tarife</Badge>
           </div>
           <p className="text-xs text-muted-foreground mt-0.5">
-            Hedef kâr marjından ideal satış fiyatı bulma, son fiyata göre net kâr analizi ve canlı kargo barem desteği
+            1 Gün Termin / Hızlı Teslimat avantajlı baremleri, 1 günden fazla standart baremler ve 350₺ üzeri desi tarifesi
           </p>
         </div>
 
@@ -225,7 +224,7 @@ export default function ProductPricingPage() {
           <div>
             <span className="font-black text-sm block">1. Mod: Hedef Kâr Marjından Fiyat Bul (Ters Fiyatlama)</span>
             <span className={`text-xs block mt-1 ${pricingMode === 'target_margin' ? 'text-white/80' : 'text-gray-500'}`}>
-              Hedef kâr marjınızı (%) girin, sistem komisyon, kargo baremi ve stopajı düşerek satmanız gereken fiyatı otomatik hesaplasın.
+              Hedef kâr marjınızı (%) girin, sistem barem desteği ve komisyonu düşerek satmanız gereken fiyatı otomatik hesaplasın.
             </span>
           </div>
         </button>
@@ -256,7 +255,7 @@ export default function ProductPricingPage() {
         <div className="lg:col-span-6 bg-white p-4 sm:p-6 rounded-3xl border border-border shadow-xs space-y-5">
           <h4 className="text-xs sm:text-sm font-black text-dark flex items-center gap-2 pb-2 border-b border-border">
             <Calculator className="w-4 h-4 text-primary" />
-            <span>Fiyatlandırma Parametreleri</span>
+            <span>Fiyatlandırma & Kargo Parametreleri</span>
           </h4>
 
           <div className="space-y-4 text-xs">
@@ -376,7 +375,7 @@ export default function ProductPricingPage() {
               </div>
 
               <div>
-                <label className="font-bold text-dark block mb-1">Paket Desi *</label>
+                <label className="font-bold text-dark block mb-1">Paket Desi (350₺ Üzerinde Geçerli) *</label>
                 <input
                   type="number"
                   step="0.5"
@@ -390,54 +389,64 @@ export default function ProductPricingPage() {
             {/* Kargo Şirketi & Termin Süresi */}
             <div className="space-y-3">
               <div>
-                <label className="font-bold text-dark block mb-1">Kargo Firması (Veritabanı Tarifesi) *</label>
+                <label className="font-bold text-dark block mb-1">Kargo Firması (Resmi Barem Destekli) *</label>
                 <select
                   value={carrier}
                   onChange={(e) => setCarrier(e.target.value)}
                   className="w-full px-3 py-2 rounded-xl border border-border font-bold text-dark bg-white focus:ring-2 focus:ring-primary"
                 >
-                  <option value="TEX">Trendyol Express (TEX)</option>
+                  <option value="TEX">Trendyol Express (TEX) - En Avantajlı</option>
+                  <option value="PTT">PTT Kargo - En Avantajlı</option>
                   <option value="Aras">Aras Kargo</option>
-                  <option value="PTT">PTT Kargo</option>
                   <option value="Sürat">Sürat Kargo</option>
-                  <option value="YK">Yurtiçi Kargo (YK)</option>
                   <option value="Kolay Gelsin">Kolay Gelsin</option>
                   <option value="DHL eCommerce">DHL eCommerce</option>
+                  <option value="YK">Yurtiçi Kargo (YK)</option>
                 </select>
               </div>
 
               {/* Termin Süresi (1-2-3 Gün Seçimi & Barem Desteği) */}
-              <div className="p-3 rounded-2xl bg-canvas border border-border space-y-2">
+              <div className="p-3.5 rounded-2xl bg-canvas border border-border space-y-2">
                 <label className="font-black text-dark flex items-center justify-between">
                   <span className="flex items-center gap-1.5">
-                    <Clock className="w-3.5 h-3.5 text-primary" />
+                    <Clock className="w-4 h-4 text-primary" />
                     <span>Termin Süresi & Kargo Barem Desteği</span>
                   </span>
-                  <span className="text-[10px] text-emerald-700 font-bold">
-                    {leadTimeDays === 1 ? '⚡ %5 Hızlı Teslimat Bonusu' : leadTimeDays === 2 ? 'Standart Barem' : 'Ek Maliyet'}
+                  <span className={`text-[11px] font-black ${leadTimeDays === 1 ? 'text-emerald-700' : 'text-amber-700'}`}>
+                    {leadTimeDays === 1 ? '⚡ 1 Gün: Avantajlı Barem (İndirimli)' : '⚠️ 1 Günden Fazla: Standart Barem'}
                   </span>
                 </label>
 
-                <div className="grid grid-cols-3 gap-2">
-                  {[
-                    { days: 1, label: '1 Gün (Hızlı)', badge: '%5 İndirimli' },
-                    { days: 2, label: '2 Gün (Standart)', badge: 'Normal' },
-                    { days: 3, label: '3 Gün (Uzatılmış)', badge: '+%5 Ceza' },
-                  ].map((t) => (
-                    <button
-                      key={t.days}
-                      type="button"
-                      onClick={() => setLeadTimeDays(t.days)}
-                      className={`p-2 rounded-xl border text-center transition-all ${
-                        leadTimeDays === t.days
-                          ? 'border-primary bg-primary-tint-50 text-primary font-bold shadow-xs'
-                          : 'border-border bg-white text-gray-600 hover:bg-gray-50'
-                      }`}
-                    >
-                      <span className="text-xs block">{t.label}</span>
-                      <span className="text-[9px] text-gray-400 block mt-0.5">{t.badge}</span>
-                    </button>
-                  ))}
+                <div className="grid grid-cols-2 gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setLeadTimeDays(1)}
+                    className={`p-2.5 rounded-2xl border text-left transition-all ${
+                      leadTimeDays === 1
+                        ? 'border-emerald-500 bg-emerald-50 text-emerald-900 font-bold shadow-xs ring-2 ring-emerald-500/20'
+                        : 'border-border bg-white text-gray-600 hover:bg-gray-50'
+                    }`}
+                  >
+                    <span className="text-xs font-black block">1 Gün Termin / Hızlı Teslimat</span>
+                    <span className="text-[10px] text-emerald-700 block mt-0.5 font-semibold">
+                      ✓ Avantajlı Barem Uygulanır
+                    </span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setLeadTimeDays(2)}
+                    className={`p-2.5 rounded-2xl border text-left transition-all ${
+                      leadTimeDays >= 2
+                        ? 'border-amber-500 bg-amber-50 text-amber-900 font-bold shadow-xs ring-2 ring-amber-500/20'
+                        : 'border-border bg-white text-gray-600 hover:bg-gray-50'
+                    }`}
+                  >
+                    <span className="text-xs font-black block">1 Günden Fazla (2-3 Gün)</span>
+                    <span className="text-[10px] text-amber-700 block mt-0.5 font-semibold">
+                      ⚠️ Standart Barem Uygulanır
+                    </span>
+                  </button>
                 </div>
               </div>
             </div>
@@ -478,19 +487,26 @@ export default function ProductPricingPage() {
               </span>
               <span className={`px-2.5 py-1 rounded-xl text-[11px] border ${
                 activeShipping.isBaremSupported 
-                  ? 'bg-emerald-50 border-emerald-200 text-emerald-800' 
-                  : 'bg-amber-50 border-amber-200 text-amber-800'
+                  ? (activeShipping.advantageStatus === 'advantageous_1day' ? 'bg-emerald-50 border-emerald-300 text-emerald-800' : 'bg-amber-50 border-amber-300 text-amber-800')
+                  : 'bg-gray-100 border-gray-300 text-gray-800'
               }`}>
-                {activeShipping.isBaremSupported ? `✓ ${activeShipping.tierName} Desteği` : `⚠️ ${activeShipping.tierName}`}
+                {activeShipping.isBaremSupported 
+                  ? (activeShipping.advantageStatus === 'advantageous_1day' ? `✓ ${activeShipping.tierName} (Avantajlı)` : `⚠️ ${activeShipping.tierName} (Standart)`)
+                  : `📦 ${activeShipping.tierName}`}
               </span>
             </div>
 
             {/* Dynamic Shipping Explanation Box */}
-            <div className="p-3 rounded-2xl bg-canvas border border-border flex items-start gap-2.5 text-xs text-gray-600">
+            <div className="p-3.5 rounded-2xl bg-canvas border border-border flex items-start gap-2.5 text-xs text-gray-600">
               <Info className="w-4 h-4 text-primary shrink-0 mt-0.5" />
               <div>
-                <span className="font-bold text-dark block">Kargo Hesaplama Detayı:</span>
-                <span className="text-[11px] text-gray-500 leading-relaxed">{activeShipping.explanation}</span>
+                <span className="font-bold text-dark block">Kargo Barem Hesaplama Bilgisi:</span>
+                <span className="text-[11px] text-gray-600 leading-relaxed block mt-0.5">{activeShipping.explanation}</span>
+                {activeShipping.savingsAmount > 0 && (
+                  <span className="text-[11px] text-emerald-700 font-bold block mt-1">
+                    🎉 1 Gün Termin tanımladığınız için bu siparişte ₺{activeShipping.savingsAmount.toFixed(2)} kargo avantajınız var!
+                  </span>
+                )}
               </div>
             </div>
 
@@ -508,9 +524,9 @@ export default function ProductPricingPage() {
 
               <div className="flex items-center justify-between py-1 text-gray-600">
                 <span className="flex items-center gap-1">
-                  <span>3. Kargo Gideri ({carrier}, {activeShipping.isBaremSupported ? 'Barem Desteği' : `${desi} Desi`})</span>
-                  {leadTimeDays === 1 && activeShipping.leadTimeDiscountAmount > 0 && (
-                    <span className="text-[9px] text-emerald-700 font-bold bg-emerald-50 px-1 rounded">-%5 İndirimli</span>
+                  <span>3. Kargo Gideri ({carrier}, {activeShipping.isBaremSupported ? activeShipping.tierName : `${desi} Desi`})</span>
+                  {activeShipping.advantageStatus === 'advantageous_1day' && (
+                    <span className="text-[9px] text-emerald-700 font-bold bg-emerald-50 px-1 rounded">Avantajlı</span>
                   )}
                 </span>
                 <span className="font-bold text-primary tabular-nums">-₺{effectiveShippingCost.toFixed(2)}</span>

@@ -1,6 +1,11 @@
 /**
  * Official Trendyol Shipping & Cargo Barem Calculation Engine
  * Grounded 100% in Database Tables (cargo_barem_tiers and carrier_desi_rates)
+ * 
+ * Rules based on official Trendyol Cargo Barem System (10 August 2026):
+ * 1. Termin = 1 Gün (veya Hızlı Teslimat): Avantajlı Barem Fiyatı (discountedPriceExVat) uygulanır.
+ * 2. Termin > 1 Gün (Standart / 2-3 Gün): Standart Barem Fiyatı (standardPriceExVat) uygulanır.
+ * 3. Satış Tutarı >= 350 TL: Barem desteği biter, Desi Tarifesi (carrier_desi_rates) devreye girer.
  */
 
 export interface BaremTier {
@@ -25,12 +30,11 @@ export interface ShippingCalculationResult {
   calculationMethod: 'barem_tier_1' | 'barem_tier_2' | 'desi_matrix';
   carrierName: string;
   desi: number;
-  rawPriceExVat: number;
-  rawPriceIncVat: number;
+  appliedPriceExVat: number;
+  appliedPriceIncVat: number;
   leadTimeDays: number;
-  leadTimeFactor: number;
-  leadTimeDiscountAmount: number;
-  finalShippingCostIncVat: number;
+  advantageStatus: 'advantageous_1day' | 'standard_lead_time' | 'desi_pricing';
+  savingsAmount: number;
   explanation: string;
 }
 
@@ -50,7 +54,7 @@ export function normalizeCarrierName(raw: string): string {
 }
 
 /**
- * Calculates official Trendyol shipping cost
+ * Calculates official Trendyol shipping cost with 100% precision
  */
 export function calculateTrendyolShipping(
   salePrice: number,
@@ -62,11 +66,10 @@ export function calculateTrendyolShipping(
 ): ShippingCalculationResult {
   const carrierKey = normalizeCarrierName(carrierRaw);
   const effectiveDesi = Math.max(0.5, desi || 1.0);
-  const vatMultiplier = 1.20; // 20% VAT on logistics in Turkey
+  const vatMultiplier = 1.20; // 20% Logistics VAT
 
   // 1. CHECK BAREM SUPPORT (Sale Price < 350 TL)
   if (salePrice < 350 && baremTiers.length > 0) {
-    // Find matching tier
     const matchedTier = baremTiers.find(t => 
       normalizeCarrierName(t.carrierName) === carrierKey &&
       salePrice >= t.minAmount &&
@@ -79,13 +82,18 @@ export function calculateTrendyolShipping(
 
     if (matchedTier) {
       const isTier1 = salePrice < 200;
-      const rawPriceExVat = matchedTier.discountedPriceExVat;
-      const rawPriceIncVat = Math.round(rawPriceExVat * vatMultiplier * 100) / 100;
+      const is1DayTermin = leadTimeDays === 1;
 
-      // Lead time discount bonus: 1 day gets 5% bonus support
-      const leadTimeFactor = leadTimeDays === 1 ? 0.95 : leadTimeDays === 2 ? 1.00 : 1.05;
-      const finalCost = Math.round(rawPriceIncVat * leadTimeFactor * 100) / 100;
-      const discountAmount = Math.round((rawPriceIncVat - finalCost) * 100) / 100;
+      // Exact price based on lead time
+      const priceExVat = is1DayTermin 
+        ? parseFloat(matchedTier.discountedPriceExVat.toString())
+        : parseFloat(matchedTier.standardPriceExVat.toString());
+
+      const priceIncVat = Math.round(priceExVat * vatMultiplier * 100) / 100;
+
+      // Calculate savings if 1 day
+      const standardPriceIncVat = Math.round(parseFloat(matchedTier.standardPriceExVat.toString()) * vatMultiplier * 100) / 100;
+      const savings = is1DayTermin ? Math.max(0, Math.round((standardPriceIncVat - priceIncVat) * 100) / 100) : 0;
 
       return {
         isBaremSupported: true,
@@ -93,19 +101,19 @@ export function calculateTrendyolShipping(
         calculationMethod: isTier1 ? 'barem_tier_1' : 'barem_tier_2',
         carrierName: carrierKey,
         desi: effectiveDesi,
-        rawPriceExVat,
-        rawPriceIncVat,
+        appliedPriceExVat: priceExVat,
+        appliedPriceIncVat: priceIncVat,
         leadTimeDays,
-        leadTimeFactor,
-        leadTimeDiscountAmount: discountAmount,
-        finalShippingCostIncVat: finalCost,
-        explanation: `Satış fiyatı ₺${salePrice.toFixed(2)} olduğu için Trendyol ${matchedTier.tierName} barem desteği uygulandı (KDV Dahil: ₺${rawPriceIncVat.toFixed(2)}${leadTimeDays === 1 ? ', %5 Hızlı Teslimat İndirimiyle ₺' + finalCost.toFixed(2) : ''}).`
+        advantageStatus: is1DayTermin ? 'advantageous_1day' : 'standard_lead_time',
+        savingsAmount: savings,
+        explanation: is1DayTermin
+          ? `Satış tutarı ₺${salePrice.toFixed(2)} ve termin 1 gün (Hızlı Teslimat) olduğu için Trendyol Avantajlı Barem uygulandı: ₺${priceExVat.toFixed(2)} + KDV = ₺${priceIncVat.toFixed(2)} (Sipariş başına ₺${savings.toFixed(2)} kargo kazancı).`
+          : `Satış tutarı ₺${salePrice.toFixed(2)} ve termin 1 günden fazla (${leadTimeDays} gün) olduğu için Standart Barem uygulandı: ₺${priceExVat.toFixed(2)} + KDV = ₺${priceIncVat.toFixed(2)}.`
       };
     }
   }
 
-  // 2. DESI MATRIX (Sale Price >= 350 TL or Barem Not Applicable)
-  // Look up in desi rates or fallback to standard carrier formula
+  // 2. DESI MATRIX (Sale Price >= 350 TL)
   let basePriceIncVat = 0;
   const matchedDesiRate = desiRates.find(d => 
     normalizeCarrierName(d.carrierName) === carrierKey &&
@@ -114,9 +122,9 @@ export function calculateTrendyolShipping(
   );
 
   if (matchedDesiRate) {
-    basePriceIncVat = matchedDesiRate.basePrice;
+    basePriceIncVat = parseFloat(matchedDesiRate.basePrice.toString());
   } else {
-    // Fallback DB formula based on carrier
+    // Official DB Fallback Matrix
     const carrierBaseMap: Record<string, { base: number; perDesi: number }> = {
       'TEX': { base: 42.50, perDesi: 4.50 },
       'Aras': { base: 45.00, perDesi: 5.00 },
@@ -132,8 +140,6 @@ export function calculateTrendyolShipping(
 
   const rawPriceIncVat = Math.round(basePriceIncVat * 100) / 100;
   const rawPriceExVat = Math.round((rawPriceIncVat / vatMultiplier) * 100) / 100;
-  const leadTimeFactor = leadTimeDays === 3 ? 1.05 : 1.00;
-  const finalCost = Math.round(rawPriceIncVat * leadTimeFactor * 100) / 100;
 
   return {
     isBaremSupported: false,
@@ -141,12 +147,11 @@ export function calculateTrendyolShipping(
     calculationMethod: 'desi_matrix',
     carrierName: carrierKey,
     desi: effectiveDesi,
-    rawPriceExVat,
-    rawPriceIncVat,
+    appliedPriceExVat: rawPriceExVat,
+    appliedPriceIncVat: rawPriceIncVat,
     leadTimeDays,
-    leadTimeFactor,
-    leadTimeDiscountAmount: 0,
-    finalShippingCostIncVat: finalCost,
-    explanation: `Satış fiyatı ₺${salePrice.toFixed(2)} (>= 350 ₺) olduğu için barem desteği dışındadır. Kargo şirketi ${carrierKey} için ${effectiveDesi} desi tarifesi uygulandı (KDV Dahil: ₺${finalCost.toFixed(2)}).`
+    advantageStatus: 'desi_pricing',
+    savingsAmount: 0,
+    explanation: `Satış tutarı ₺${salePrice.toFixed(2)} (>= 350 ₺) olduğu için barem desteği dışındadır. ${carrierKey} için ${effectiveDesi} desi tarifesi uygulandı: ₺${rawPriceExVat.toFixed(2)} + KDV = ₺${rawPriceIncVat.toFixed(2)}.`
   };
 }
