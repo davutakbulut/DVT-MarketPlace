@@ -1,26 +1,33 @@
 import { NextResponse } from 'next/server';
 import { query } from '@/lib/db';
+import { getOrderNetProfitSQL } from '@/lib/financialEngine';
+
+export const dynamic = 'force-dynamic';
 
 export async function GET() {
   try {
-    // 1. Negative Profit Orders from live orders
+    const settingsRes = await query(`SELECT extra_operation_rate as "extraOperationRate" FROM company_settings LIMIT 1`);
+    const extraOpRate = parseFloat(settingsRes[0]?.extraOperationRate ?? 6.00);
+    const extraOpFraction = extraOpRate / 100.0;
+
+    // 1. Negative Profit Orders calculated dynamically
     const negativeOrders = await query(`
       SELECT 
         o.id,
         'negative_profit' as "alertType",
         'critical' as severity,
         'Zararına Sipariş Satışı' as title,
-        CONCAT('Sipariş #', o.marketplace_order_number, ' (Müşteri: ', o.customer_name, ') kargo ve komisyon kesintileri sonrası ₺', ABS(o.net_profit), ' zarar üretmiştir.') as description,
+        CONCAT('Sipariş #', o.marketplace_order_number, ' (Müşteri: ', o.customer_name, ') kargo ve komisyon kesintileri sonrası ₺', ABS(ROUND(${getOrderNetProfitSQL(1)}::numeric, 2)), ' zarar üretmiştir.') as description,
         'order' as "relatedEntityType",
         o.marketplace_order_number as "relatedEntityId",
-        ABS(o.net_profit) as "lossAmount",
+        ABS(ROUND(${getOrderNetProfitSQL(1)}::numeric, 2)) as "lossAmount",
         false as "isResolved",
         TO_CHAR(o.order_date, 'YYYY-MM-DD HH24:MI') as "createdAt"
       FROM orders o
-      WHERE o.net_profit < 0
-      ORDER BY o.net_profit ASC
+      WHERE ${getOrderNetProfitSQL(1)} < 0
+      ORDER BY ${getOrderNetProfitSQL(1)} ASC
       LIMIT 20
-    `);
+    `, [extraOpFraction]);
 
     // 2. Desi Overcharge alerts from orders
     const desiAlerts = await query(`
