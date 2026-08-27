@@ -9,7 +9,8 @@ import {
   Package, Search, Filter, RefreshCw, ExternalLink, Edit3, 
   Check, X, Eye, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight,
   TrendingUp, Truck, Layers, DollarSign, Award, AlertCircle, Info,
-  ChevronDown, ChevronUp, FileSpreadsheet, SlidersHorizontal, RotateCcw, Box
+  ChevronDown, ChevronUp, FileSpreadsheet, SlidersHorizontal, RotateCcw, Box,
+  Database
 } from "lucide-react";
 import Image from "next/image";
 import { useTenantStore } from "@/stores/useTenantStore";
@@ -241,6 +242,31 @@ export default function ProductsCatalogPage() {
     }
   };
 
+  const [syncingMssql, setSyncingMssql] = useState(false);
+
+  const handleSyncMssqlCosts = async () => {
+    setSyncingMssql(true);
+    try {
+      toast.info("SQL Server'dan maliyetler çekiliyor...", { duration: 3000 });
+      const res = await fetch('/api/integrations/mssql/sync-costs', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'sync_all', storeId: activeStoreId })
+      });
+      const data = await res.json();
+      if (data.success) {
+        toast.success(data.message || 'Maliyetler başarıyla güncellendi!');
+        fetchProducts();
+      } else {
+        toast.error(data.error || data.message || 'MSSQL bağlantı hatası.');
+      }
+    } catch (e: any) {
+      toast.error('Maliyet senkronizasyonu hatası: ' + (e.message || e));
+    } finally {
+      setSyncingMssql(false);
+    }
+  };
+
   // Sub-status segments configuration per tab
   const getSubStatusOptions = () => {
     if (activeTab === 'passive') {
@@ -291,6 +317,37 @@ export default function ProductsCatalogPage() {
 
   return (
     <div className="space-y-4 sm:space-y-5 max-w-7xl pb-12">
+      {/* TOP ACTION BAR: SQL Server Maliyet Senkronizasyonu */}
+      <div className="flex items-center justify-between flex-wrap gap-3 bg-white p-3.5 sm:p-4 rounded-2xl sm:rounded-3xl border border-border shadow-xs">
+        <div className="flex items-center gap-2.5">
+          <div className="w-8 h-8 rounded-xl bg-blue-50 border border-blue-200 flex items-center justify-center text-blue-600">
+            <Database className="w-4 h-4" />
+          </div>
+          <div>
+            <h3 className="text-xs sm:text-sm font-black text-dark flex items-center gap-1.5">
+              <span>SQL Server (MSSQL) Maliyet Entegrasyonu</span>
+              <span className="px-2 py-0.5 rounded-md bg-emerald-50 text-emerald-700 border border-emerald-200 text-[10px] font-bold">
+                Salt-Okunur (Read-Only)
+              </span>
+            </h3>
+            <p className="text-[11px] text-gray-500">
+              <code>prItemBasePrice</code> tablosundan güncel alış maliyetlerini çeker (Yazma/silme kesinlikle engellidir).
+            </p>
+          </div>
+        </div>
+
+        <div className="flex items-center gap-2">
+          <Button
+            onClick={handleSyncMssqlCosts}
+            disabled={syncingMssql}
+            className="text-xs font-bold gap-1.5 bg-slate-900 hover:bg-slate-800 text-white rounded-xl shadow-xs h-9 cursor-pointer"
+          >
+            <Database className={`w-3.5 h-3.5 text-blue-400 ${syncingMssql ? 'animate-spin' : ''}`} />
+            <span>{syncingMssql ? 'Maliyetler Çekiliyor...' : 'SQL Server\'dan Maliyetleri Çek'}</span>
+          </Button>
+        </div>
+      </div>
+
       {/* 1. TOP STATUS TABS (Tüm Ürünler, Aktif Ürünler, Onay Sürecindeki Ürünler, Pasif Ürünler) */}
       <div className="bg-white rounded-2xl sm:rounded-3xl border border-border shadow-xs overflow-hidden">
         <div className="flex items-stretch divide-x divide-border overflow-x-auto scrollbar-none">
