@@ -3,10 +3,11 @@
  * Grounded 100% in Database Tables (cargo_barem_tiers and carrier_desi_matrices)
  * 
  * Rules based on official Trendyol Cargo Barem System (10 August 2026):
- * 1. Satış Tutarı < 350 TL: Barem Desteği devreye girer.
- *    - Termin = 1 Gün (veya Hızlı Teslimat): Avantajlı Barem Fiyatı (discountedPriceExVat) uygulanır.
- *    - Termin > 1 Gün (Standart / 2-3 Gün): Standart Barem Fiyatı (standardPriceExVat) uygulanır.
- * 2. Satış Tutarı >= 350 TL: Barem desteği biter, Kargo Desi Matrisi (carrier_desi_matrices) devreye girer.
+ * 1. Sipariş / Sepet Satış Tutarı < 350 TL: Barem Desteği devreye girer.
+ *    - 1. Barem: 0 - 199.99 TL (1 Gün Termin Avantajlı veya Standart)
+ *    - 2. Barem: 200 - 349.99 TL (1 Gün Termin Avantajlı veya Standart)
+ * 2. Sipariş / Sepet Satış Tutarı >= 350 TL: Barem desteği biter, Kargo Desi Matrisi (carrier_desi_matrices) devreye girer.
+ *    - Paket Toplam Desisi (Birim Desi * Adet) üzerinden resmi desi matrisi fiyatı + %20 KDV hesaplanır.
  */
 
 export interface BaremTier {
@@ -49,7 +50,7 @@ export interface ShippingCalculationResult {
  * Standard Carrier Mapping normalizer
  */
 export function normalizeCarrierName(raw: string): string {
-  const norm = (raw || '').toLowerCase();
+  const norm = (raw || '').toLowerCase().trim();
   if (norm.includes('tex') || norm.includes('trendyol')) return 'TEX';
   if (norm.includes('aras')) return 'Aras';
   if (norm.includes('ptt')) return 'PTT';
@@ -57,6 +58,10 @@ export function normalizeCarrierName(raw: string): string {
   if (norm.includes('yurtiçi') || norm.includes('yurtici') || norm.includes('yk')) return 'YK';
   if (norm.includes('kolay')) return 'Kolay Gelsin';
   if (norm.includes('dhl')) return 'DHL eCommerce';
+  if (norm.includes('ceva tedarik')) return 'CEVA Tedarik';
+  if (norm.includes('ceva')) return 'CEVA';
+  if (norm.includes('horoz')) return 'Horoz';
+  if (norm.includes('mng')) return 'MNG';
   return 'TEX';
 }
 
@@ -75,19 +80,19 @@ export function calculateTrendyolShipping(
   desiMatrices: DesiMatrixItem[] = []
 ): ShippingCalculationResult {
   const carrierKey = normalizeCarrierName(carrierRaw);
-  const effectiveDesi = Math.max(0.5, desi || 1.0);
+  const effectiveDesi = Math.max(0.5, Number(desi) || 1.0);
   const vatMultiplier = 1.20; // 20% Logistics VAT
 
   // 1. CHECK BAREM SUPPORT (Sale Price < 350 TL)
-  if (salePrice < 350 && baremTiers.length > 0) {
+  if (salePrice < 350 && Array.isArray(baremTiers) && baremTiers.length > 0) {
     const matchedTier = baremTiers.find(t => 
       normalizeCarrierName(t.carrierName) === carrierKey &&
-      salePrice >= t.minAmount &&
-      salePrice <= t.maxAmount
+      salePrice >= parseFloat(t.minAmount.toString()) &&
+      salePrice <= parseFloat(t.maxAmount.toString())
     ) || baremTiers.find(t => 
       normalizeCarrierName(t.carrierName) === 'TEX' &&
-      salePrice >= t.minAmount &&
-      salePrice <= t.maxAmount
+      salePrice >= parseFloat(t.minAmount.toString()) &&
+      salePrice <= parseFloat(t.maxAmount.toString())
     );
 
     if (matchedTier) {
@@ -107,7 +112,7 @@ export function calculateTrendyolShipping(
 
       return {
         isBaremSupported: true,
-        tierName: matchedTier.tierName,
+        tierName: matchedTier.tierName || (isTier1 ? '0 TL - 199,99 TL Baremi' : '200 TL - 349,99 TL Baremi'),
         calculationMethod: isTier1 ? 'barem_tier_1' : 'barem_tier_2',
         carrierName: carrierKey,
         desi: effectiveDesi,
@@ -117,8 +122,8 @@ export function calculateTrendyolShipping(
         advantageStatus: is1DayTermin ? 'advantageous_1day' : 'standard_lead_time',
         savingsAmount: savings,
         explanation: is1DayTermin
-          ? `Sipariş tutarı ₺${salePrice.toFixed(2)} (< 350 ₺) ve termin 1 gün (Hızlı Teslimat) olduğu için Trendyol Avantajlı Barem uygulandı: ₺${priceExVat.toFixed(2)} + KDV = ₺${priceIncVat.toFixed(2)} (Sipariş başına ₺${savings.toFixed(2)} kargo kazancı).`
-          : `Sipariş tutarı ₺${salePrice.toFixed(2)} (< 350 ₺) ve termin 1 günden fazla (${leadTimeDays} gün) olduğu için Standart Barem uygulandı: ₺${priceExVat.toFixed(2)} + KDV = ₺${priceIncVat.toFixed(2)}.`
+          ? `Sipariş sepet tutarı ₺${salePrice.toFixed(2)} (< 350 ₺) ve termin 1 gün (Hızlı Teslimat) olduğu için Trendyol Avantajlı Barem uygulandı: ₺${priceExVat.toFixed(2)} + %20 KDV = ₺${priceIncVat.toFixed(2)} (₺${savings.toFixed(2)} kargo kazancı).`
+          : `Sipariş sepet tutarı ₺${salePrice.toFixed(2)} (< 350 ₺) ve termin standart (${leadTimeDays} gün) olduğu için Standart Barem uygulandı: ₺${priceExVat.toFixed(2)} + %20 KDV = ₺${priceIncVat.toFixed(2)}.`
       };
     }
   }
@@ -168,6 +173,9 @@ export function calculateTrendyolShipping(
       'YK': { baseExVat: 121.75, perDesiExVat: 14.50 },
       'Kolay Gelsin': { baseExVat: 96.59, perDesiExVat: 12.20 },
       'DHL eCommerce': { baseExVat: 97.99, perDesiExVat: 13.00 },
+      'CEVA': { baseExVat: 697.63, perDesiExVat: 7.68 },
+      'CEVA Tedarik': { baseExVat: 516.21, perDesiExVat: 12.43 },
+      'Horoz': { baseExVat: 613.19, perDesiExVat: 7.33 },
     };
     const cInfo = carrierBaseMap[carrierKey] || carrierBaseMap['TEX'];
     rawPriceExVat = cInfo.baseExVat + (Math.max(1, roundedDesi) - 1) * cInfo.perDesiExVat;
@@ -185,6 +193,6 @@ export function calculateTrendyolShipping(
     leadTimeDays,
     advantageStatus: 'desi_pricing',
     savingsAmount: 0,
-    explanation: `Sipariş tutarı ₺${salePrice.toFixed(2)} (>= 350 ₺) olduğu için barem desteği dışındadır. ${carrierKey} kargo firması için ${effectiveDesi} Desi resmi tarifesi uygulandı: ₺${rawPriceExVat.toFixed(2)} + %20 KDV = ₺${rawPriceIncVat.toFixed(2)}.`
+    explanation: `Sipariş tutarı ₺${salePrice.toFixed(2)} (≥ 350 ₺) olduğu için barem desteği dışındadır. ${carrierKey} firması için ${effectiveDesi} Desi resmi tarifesi uygulandı: ₺${rawPriceExVat.toFixed(2)} + %20 KDV = ₺${rawPriceIncVat.toFixed(2)}.`
   };
 }

@@ -169,9 +169,10 @@ export default function ProductPricingPage() {
     const q = getMinimumOrderQuantity(unitPrice);
     const basketGross = unitPrice * q;
     const basketCost = costPrice * q;
+    const basketDesi = Math.max(0.5, desi * q);
 
     // Shipping calculation for this basket amount (Barem under 350 TL, Desi Matrix above 350 TL)
-    const shippingObj = calculateTrendyolShipping(basketGross, desi, carrier, leadTimeDays, baremTiers, desiRates, desiMatrices);
+    const shippingObj = calculateTrendyolShipping(basketGross, basketDesi, carrier, leadTimeDays, baremTiers, desiRates, desiMatrices);
     const ship = shippingObj.appliedPriceIncVat;
 
     const comm = basketGross * (commissionRate / 100);
@@ -659,10 +660,13 @@ export default function ProductPricingPage() {
                 >
                   <option value="TEX">Trendyol Express (TEX)</option>
                   <option value="ARAS">Aras Kargo</option>
-                  <option value="SURAT">Sürat Kargo</option>
-                  <option value="MNG">MNG Kargo</option>
                   <option value="PTT">PTT Kargo</option>
+                  <option value="SURAT">Sürat Kargo</option>
                   <option value="YK">Yurtiçi Kargo (YK)</option>
+                  <option value="Kolay Gelsin">Kolay Gelsin</option>
+                  <option value="DHL">DHL eCommerce</option>
+                  <option value="CEVA">CEVA Lojistik</option>
+                  <option value="Horoz">Horoz Lojistik</option>
                 </select>
               </div>
 
@@ -893,7 +897,14 @@ export default function ProductPricingPage() {
 
               {/* 3. Kargo Gideri */}
               <div className="flex items-center justify-between py-1 text-gray-700 hover:bg-canvas/80 px-2 -mx-2 rounded-xl transition-all">
-                <span>3. Kargo Gideri ({carrier}, {currentSim.shippingObj.tierName})</span>
+                <div className="flex flex-col">
+                  <span>3. Kargo Gideri ({carrier}, {currentSim.shippingObj.isBaremSupported ? currentSim.shippingObj.tierName : `${currentSim.shippingObj.desi} Desi`})</span>
+                  {currentSim.q > 1 && breakdownView === 'unit' && (
+                    <span className="text-[10px] text-gray-500 font-semibold">
+                      Sepet Kargo: ₺{currentSim.ship.toFixed(2)} ({currentSim.q} Adet)
+                    </span>
+                  )}
+                </div>
                 <span className="font-bold text-primary tabular-nums">
                   -₺{(breakdownView === 'unit' ? (currentSim.ship / currentSim.q) : currentSim.ship).toFixed(2)}
                 </span>
