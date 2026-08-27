@@ -53,28 +53,8 @@ function getMarketplaceInfo(p: any): { url: string; label: string; badgeClass: s
 
   // Trendyol
   let url = p?.marketplaceUrl;
-  let contentId: string | null = null;
 
-  if (url && typeof url === 'string') {
-    const m = url.match(/-p-(\d+)/) || url.match(/\/p-(\d+)/);
-    if (m) contentId = m[1];
-  }
-  if (!contentId && p?.modelCode && /^\d{7,12}$/.test(p.modelCode)) {
-    contentId = p.modelCode;
-  }
-
-  if (contentId) {
-    const brandSlug = slugify(p?.brand || 'genject');
-    const titleSlug = slugify(p?.title || p?.barcode || 'urun');
-    url = `https://www.trendyol.com/${brandSlug}/${titleSlug}-p-${contentId}?merchantId=230566&filterOverPriceListings=false`;
-    return {
-      url,
-      label: 'Trendyol',
-      badgeClass: 'border-amber-300 text-amber-800 bg-amber-50 hover:bg-amber-100',
-      isDirect: true
-    };
-  }
-
+  // 1. If product already has an exact official Trendyol URL from Excel / API, use it directly!
   if (url && typeof url === 'string' && url.startsWith('http') && url.includes('trendyol.com') && url.includes('-p-')) {
     return {
       url,
@@ -84,14 +64,14 @@ function getMarketplaceInfo(p: any): { url: string; label: string; badgeClass: s
     };
   }
 
-  // Smart Search Query fallback
+  // 2. Guaranteed Store Search Fallback (Searches inside Davye Medikal store on Trendyol)
   const brand = p?.brand || '';
   const cleanTitle = (p?.title || p?.barcode || '')
     .replace(/,\s*one size/gi, '')
     .replace(/,\s*\(K:\d+\)/gi, '')
     .trim();
   const q = brand && !cleanTitle.toLowerCase().includes(brand.toLowerCase()) ? `${brand} ${cleanTitle}` : cleanTitle;
-  url = `https://www.trendyol.com/sr?q=${encodeURIComponent(q)}`;
+  url = `https://www.trendyol.com/sr?mid=230566&q=${encodeURIComponent(q)}`;
 
   return {
     url,
