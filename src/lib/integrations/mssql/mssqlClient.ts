@@ -6,6 +6,7 @@
  * 2. INSERT, UPDATE, DELETE, DROP, ALTER, EXEC, SP_, XP_ ve tüm veri değiştirici komutlar kod seviyesinde engellenmiştir.
  * 3. readOnlyIntent aktiftir.
  * 4. Tüm sorgular parametrik (SQL Injection korumalı) olarak çalıştırılır.
+ * 5. Eşleşme kuralı: Trendyol'daki Model Kodu (model_code / sku) -> MSSQL tablosundaki ItemCode alanına denk gelir.
  */
 
 import sql from 'mssql';
@@ -21,7 +22,7 @@ export interface MssqlConfig {
 }
 
 export interface ItemCostResult {
-  barcode: string;
+  modelCode: string;
   cost: number;
   currency: string;
 }
@@ -106,32 +107,32 @@ export async function getMssqlPool(customConfig?: Partial<MssqlConfig>): Promise
 }
 
 /**
- * Tek bir barkodun maliyetini çeker
- * SQL: SELECT TOP 1 ItemCode AS Barkod, Price AS Maliyet, CurrencyCode AS ParaBirimi FROM prItemBasePrice WHERE ItemCode = @Barkod AND BasePriceCode = 1
+ * Tek bir Model Kodunun (ItemCode) maliyetini çeker
+ * SQL: SELECT TOP 1 ItemCode AS ModelKodu, Price AS Maliyet, CurrencyCode AS ParaBirimi FROM prItemBasePrice WHERE ItemCode = @ModelKodu AND BasePriceCode = 1
  */
-export async function fetchItemCostFromMssql(barcode: string): Promise<ItemCostResult | null> {
-  if (!barcode || typeof barcode !== 'string') return null;
+export async function fetchItemCostByModelCodeFromMssql(modelCode: string): Promise<ItemCostResult | null> {
+  if (!modelCode || typeof modelCode !== 'string') return null;
 
   const pool = await getMssqlPool();
   const queryStr = `
     SELECT TOP 1
-      ItemCode AS Barkod, 
+      ItemCode AS ModelKodu, 
       Price AS Maliyet, 
       CurrencyCode AS ParaBirimi 
     FROM prItemBasePrice 
-    WHERE ItemCode = @Barkod AND BasePriceCode = 1
+    WHERE ItemCode = @ModelKodu AND BasePriceCode = 1
   `;
 
   assertReadOnlyQuery(queryStr);
 
   const request = pool.request();
-  request.input('Barkod', sql.NVarChar(100), barcode.trim());
+  request.input('ModelKodu', sql.NVarChar(100), modelCode.trim());
 
   const result = await request.query(queryStr);
   if (result.recordset && result.recordset.length > 0) {
     const row = result.recordset[0];
     return {
-      barcode: String(row.Barkod).trim(),
+      modelCode: String(row.ModelKodu).trim(),
       cost: parseFloat(row.Maliyet) || 0,
       currency: String(row.ParaBirimi || 'TRY').trim(),
     };
@@ -141,28 +142,28 @@ export async function fetchItemCostFromMssql(barcode: string): Promise<ItemCostR
 }
 
 /**
- * Birden fazla barkodun maliyetini toplu (Batch) olarak çeker
+ * Birden fazla Model Kodunun (ItemCode) maliyetini toplu (Batch) olarak çeker
  */
-export async function fetchBatchCostsFromMssql(barcodes: string[]): Promise<ItemCostResult[]> {
-  if (!Array.isArray(barcodes) || barcodes.length === 0) return [];
+export async function fetchBatchCostsByModelCodesFromMssql(modelCodes: string[]): Promise<ItemCostResult[]> {
+  if (!Array.isArray(modelCodes) || modelCodes.length === 0) return [];
 
-  const cleanBarcodes = Array.from(new Set(barcodes.map(b => String(b).trim()).filter(Boolean)));
-  if (cleanBarcodes.length === 0) return [];
+  const cleanCodes = Array.from(new Set(modelCodes.map(c => String(c).trim()).filter(Boolean)));
+  if (cleanCodes.length === 0) return [];
 
   const pool = await getMssqlPool();
   const request = pool.request();
 
-  // Parameterized IN clause
+  // Parameterized IN clause for safe execution
   const paramNames: string[] = [];
-  cleanBarcodes.forEach((b, idx) => {
-    const pName = `b_${idx}`;
+  cleanCodes.forEach((code, idx) => {
+    const pName = `m_${idx}`;
     paramNames.push(`@${pName}`);
-    request.input(pName, sql.NVarChar(100), b);
+    request.input(pName, sql.NVarChar(100), code);
   });
 
   const queryStr = `
     SELECT 
-      ItemCode AS Barkod, 
+      ItemCode AS ModelKodu, 
       Price AS Maliyet, 
       CurrencyCode AS ParaBirimi 
     FROM prItemBasePrice 
@@ -173,7 +174,7 @@ export async function fetchBatchCostsFromMssql(barcodes: string[]): Promise<Item
 
   const result = await request.query(queryStr);
   return (result.recordset || []).map((row: any) => ({
-    barcode: String(row.Barkod).trim(),
+    modelCode: String(row.ModelKodu).trim(),
     cost: parseFloat(row.Maliyet) || 0,
     currency: String(row.ParaBirimi || 'TRY').trim(),
   }));
@@ -186,7 +187,7 @@ export async function fetchAllActiveCostsFromMssql(): Promise<ItemCostResult[]> 
   const pool = await getMssqlPool();
   const queryStr = `
     SELECT 
-      ItemCode AS Barkod, 
+      ItemCode AS ModelKodu, 
       Price AS Maliyet, 
       CurrencyCode AS ParaBirimi 
     FROM prItemBasePrice 
@@ -197,7 +198,7 @@ export async function fetchAllActiveCostsFromMssql(): Promise<ItemCostResult[]> 
 
   const result = await pool.request().query(queryStr);
   return (result.recordset || []).map((row: any) => ({
-    barcode: String(row.Barkod).trim(),
+    modelCode: String(row.ModelKodu).trim(),
     cost: parseFloat(row.Maliyet) || 0,
     currency: String(row.ParaBirimi || 'TRY').trim(),
   }));
@@ -219,7 +220,7 @@ export async function testMssqlConnection(customConfig?: Partial<MssqlConfig>): 
 
     return {
       success: true,
-      message: `MSSQL sunucusuna başarıyla bağlanıldı. prItemBasePrice tablosunda ${count} adet maliyet kaydı bulundu. (${latencyMs}ms)`,
+      message: `MSSQL sunucusuna başarıyla bağlanıldı. prItemBasePrice tablosunda ${count} adet Model Kodu (ItemCode) maliyet kaydı bulundu. (${latencyMs}ms)`,
       sampleCount: count,
       latencyMs,
     };
