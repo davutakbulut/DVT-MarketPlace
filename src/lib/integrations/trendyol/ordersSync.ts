@@ -261,6 +261,8 @@ export async function syncTrendyolOrders(
               let commRate = Number(line.commissionRate) || 15.0;
               let lineDesi = 1.0;
 
+              const directProductUrl = line.productCode ? `https://www.trendyol.com/p-${line.productCode}${supplierId ? `?merchantId=${supplierId}` : ''}` : null;
+
               if (prodRows.length > 0) {
                 const prod = prodRows[0];
                 productId = prod.id;
@@ -268,6 +270,17 @@ export async function syncTrendyolOrders(
                 vatRate = Number(prod.vat_rate) || 20;
                 commRate = Number(line.commissionRate ?? prod.commission_rate) || 15.0;
                 lineDesi = Math.max(0.5, Number(prod.shipment_desi) || 1.0);
+
+                if (directProductUrl) {
+                  await query(
+                    `UPDATE products 
+                     SET marketplace_product_url = COALESCE(marketplace_product_url, $1),
+                         model_code = COALESCE(model_code, $2),
+                         updated_at = NOW()
+                     WHERE id = $3 AND (marketplace_product_url IS NULL OR marketplace_product_url = '')`,
+                    [directProductUrl, line.productCode ? String(line.productCode) : null, prod.id]
+                  );
+                }
               } else if (barcode) {
                 // Auto-insert product into database products catalog
                 const newProd = await query(
@@ -275,9 +288,11 @@ export async function syncTrendyolOrders(
                      store_id, company_id, barcode, sku, model_code, title,
                      current_sale_price, current_cost, vat_rate, shipment_desi,
                      measured_desi, commission_rate, stock_quantity, delivery_type,
-                     is_active, marketplace, created_at, updated_at
-                   ) VALUES ($1, $2, $3, $4, $5, $6, $7, 0, 20, 1.0, 1.0, $8, 10, 'standard', true, 'trendyol', NOW(), NOW())
-                   ON CONFLICT (store_id, barcode) DO UPDATE SET current_sale_price = EXCLUDED.current_sale_price
+                     is_active, marketplace, marketplace_product_url, created_at, updated_at
+                   ) VALUES ($1, $2, $3, $4, $5, $6, $7, 0, 20, 1.0, 1.0, $8, 10, 'standard', true, 'trendyol', $9, NOW(), NOW())
+                   ON CONFLICT (store_id, barcode) DO UPDATE SET 
+                     current_sale_price = EXCLUDED.current_sale_price,
+                     marketplace_product_url = COALESCE(EXCLUDED.marketplace_product_url, products.marketplace_product_url)
                    RETURNING id`,
                   [
                     store.id,
@@ -288,6 +303,7 @@ export async function syncTrendyolOrders(
                     line.productName || 'Trendyol Ürünü',
                     unitSalePrice,
                     commRate,
+                    directProductUrl,
                   ]
                 );
                 if (newProd.length > 0) {
