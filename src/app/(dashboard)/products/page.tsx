@@ -15,14 +15,42 @@ import {
 import Image from "next/image";
 import { useTenantStore } from "@/stores/useTenantStore";
 
-function getProductMarketplaceUrl(p: any): string {
-  if (p?.marketplaceUrl && typeof p.marketplaceUrl === 'string' && p.marketplaceUrl.startsWith('http')) {
-    return p.marketplaceUrl;
+function getMarketplaceInfo(p: any): { url: string; label: string; badgeClass: string; isDirect: boolean } {
+  const isHepsiburada = p?.marketplace === 'hepsiburada' || (p?.marketplaceUrl && typeof p.marketplaceUrl === 'string' && p.marketplaceUrl.includes('hepsiburada.com'));
+  
+  if (isHepsiburada) {
+    let url = p?.marketplaceUrl;
+    const isDirect = !!(url && typeof url === 'string' && url.startsWith('http'));
+    if (!isDirect) {
+      const q = p?.title || p?.barcode || '';
+      url = `https://www.hepsiburada.com/ara?q=${encodeURIComponent(q)}`;
+    }
+    return {
+      url,
+      label: 'Hepsiburada',
+      badgeClass: 'border-orange-300 text-orange-700 bg-orange-50 hover:bg-orange-100',
+      isDirect
+    };
   }
-  if (p?.barcode) {
-    return `https://www.trendyol.com/sr?q=${encodeURIComponent(p.barcode)}`;
+
+  // Trendyol
+  let url = p?.marketplaceUrl;
+  const isDirect = !!(url && typeof url === 'string' && url.startsWith('http') && url.includes('trendyol.com'));
+  if (!isDirect) {
+    const brand = p?.brand || '';
+    const cleanTitle = (p?.title || p?.barcode || '')
+      .replace(/,\s*one size/gi, '')
+      .replace(/,\s*\(K:\d+\)/gi, '')
+      .trim();
+    const q = brand && !cleanTitle.toLowerCase().includes(brand.toLowerCase()) ? `${brand} ${cleanTitle}` : cleanTitle;
+    url = `https://www.trendyol.com/sr?q=${encodeURIComponent(q)}`;
   }
-  return `https://www.trendyol.com/sr?q=${encodeURIComponent(p?.title || '')}`;
+  return {
+    url,
+    label: 'Trendyol',
+    badgeClass: 'border-amber-300 text-amber-800 bg-amber-50 hover:bg-amber-100',
+    isDirect
+  };
 }
 
 export default function ProductsCatalogPage() {
@@ -766,7 +794,7 @@ export default function ProductsCatalogPage() {
                   {products.map((p) => {
                     const isEditing = editingId === p.id;
                     const hasStock = parseInt(p.stockQuantity || 0) > 0;
-                    const marketplaceUrl = getProductMarketplaceUrl(p);
+                    const mp = getMarketplaceInfo(p);
 
                     return (
                       <tr key={p.id} className="hover:bg-canvas/50 transition-colors">
@@ -801,11 +829,11 @@ export default function ProductsCatalogPage() {
                         <td className="py-3 px-4 table-sticky-first-col font-bold text-dark">
                           <div className="flex items-center gap-1.5 flex-wrap">
                             <a
-                              href={marketplaceUrl}
+                              href={mp.url}
                               target="_blank"
                               rel="noreferrer"
                               className="font-bold text-dark hover:text-primary transition-colors inline-flex items-center gap-1 group/link max-w-[280px]"
-                              title="Trendyol'da Ürünü Aç"
+                              title={`${mp.label}'da Ürünü Aç`}
                             >
                               <span className="truncate">{p.title}</span>
                               <ExternalLink className="w-3 h-3 text-orange-500 shrink-0 opacity-60 group-hover/link:opacity-100 transition-opacity" />
@@ -927,14 +955,14 @@ export default function ProductsCatalogPage() {
                                 <Edit3 className="w-3.5 h-3.5" />
                               </button>
                               <a
-                                href={marketplaceUrl}
+                                href={mp.url}
                                 target="_blank"
                                 rel="noreferrer"
-                                className="p-1.5 rounded-lg border border-orange-200 text-orange-600 bg-orange-50/60 hover:bg-orange-100 hover:text-orange-700 transition-colors inline-flex items-center gap-1 font-bold text-[11px]"
-                                title="Trendyol'da Ürünü Gör"
+                                className={`p-1.5 rounded-lg border inline-flex items-center gap-1 font-bold text-[11px] transition-colors shadow-2xs ${mp.badgeClass}`}
+                                title={`${mp.label}'da Ürünü Gör`}
                               >
                                 <ExternalLink className="w-3.5 h-3.5" />
-                                <span className="hidden lg:inline">Trendyol</span>
+                                <span className="hidden lg:inline">{mp.label}</span>
                               </a>
                             </div>
                           )}
@@ -952,7 +980,7 @@ export default function ProductsCatalogPage() {
                 const isEditing = editingId === p.id;
                 const hasStock = parseInt(p.stockQuantity || 0) > 0;
                 const profit = parseFloat(p.calculatedNetProfit || 0);
-                const marketplaceUrl = getProductMarketplaceUrl(p);
+                const mp = getMarketplaceInfo(p);
 
                 return (
                   <div key={p.id} className="bg-canvas/50 rounded-2xl p-3.5 border border-border/80 shadow-2xs space-y-3 transition-all">
@@ -1008,11 +1036,11 @@ export default function ProductsCatalogPage() {
                         </div>
 
                         <a 
-                          href={marketplaceUrl}
+                          href={mp.url}
                           target="_blank"
                           rel="noreferrer"
                           className="font-bold text-dark text-xs line-clamp-2 leading-snug hover:text-primary transition-colors flex items-center gap-1"
-                          title="Trendyol'da Ürünü Aç"
+                          title={`${mp.label}'da Ürünü Aç`}
                         >
                           <span>{p.title}</span>
                           <ExternalLink className="w-3 h-3 text-orange-500 shrink-0 inline" />
@@ -1135,14 +1163,14 @@ export default function ProductsCatalogPage() {
                           </button>
 
                           <a
-                            href={marketplaceUrl}
+                            href={mp.url}
                             target="_blank"
                             rel="noreferrer"
-                            className="px-2.5 py-1 rounded-lg border border-orange-200 text-orange-600 bg-orange-50 hover:bg-orange-100 font-bold text-[11px] flex items-center gap-1 shadow-2xs transition-colors"
-                            title="Trendyol'da Gör"
+                            className={`px-2.5 py-1 rounded-lg border font-bold text-[11px] flex items-center gap-1 shadow-2xs transition-colors ${mp.badgeClass}`}
+                            title={`${mp.label}'da Gör`}
                           >
                             <ExternalLink className="w-3.5 h-3.5" />
-                            <span>Trendyol</span>
+                            <span>{mp.label}</span>
                           </a>
                         </div>
                       </div>
@@ -1190,98 +1218,101 @@ export default function ProductsCatalogPage() {
       )}
 
       {/* 7. IMAGE ZOOM / LIGHTBOX MODAL */}
-      {zoomedProduct && (
-        <div 
-          className="fixed inset-0 z-50 bg-black/75 backdrop-blur-xs flex items-center justify-center p-4 animate-in fade-in"
-          onClick={() => setZoomedProduct(null)}
-        >
+      {zoomedProduct && (() => {
+        const zoomedMp = getMarketplaceInfo(zoomedProduct);
+        return (
           <div 
-            className="bg-white rounded-3xl max-w-md w-full p-5 sm:p-6 shadow-2xl border border-border relative space-y-4 max-h-[90vh] overflow-y-auto"
-            onClick={(e) => e.stopPropagation()}
+            className="fixed inset-0 z-50 bg-black/75 backdrop-blur-xs flex items-center justify-center p-4 animate-in fade-in"
+            onClick={() => setZoomedProduct(null)}
           >
-            {/* Close Button */}
-            <button
-              onClick={() => setZoomedProduct(null)}
-              className="absolute top-4 right-4 w-8 h-8 rounded-full bg-gray-100 text-gray-600 hover:bg-gray-200 hover:text-dark flex items-center justify-center transition-colors cursor-pointer z-10"
-              title="Kapat (ESC)"
+            <div 
+              className="bg-white rounded-3xl max-w-md w-full p-5 sm:p-6 shadow-2xl border border-border relative space-y-4 max-h-[90vh] overflow-y-auto"
+              onClick={(e) => e.stopPropagation()}
             >
-              <X className="w-4 h-4" />
-            </button>
+              {/* Close Button */}
+              <button
+                onClick={() => setZoomedProduct(null)}
+                className="absolute top-4 right-4 w-8 h-8 rounded-full bg-gray-100 text-gray-600 hover:bg-gray-200 hover:text-dark flex items-center justify-center transition-colors cursor-pointer z-10"
+                title="Kapat (ESC)"
+              >
+                <X className="w-4 h-4" />
+              </button>
 
-            {/* Large HD Image */}
-            <div className="w-full aspect-square rounded-2xl bg-canvas border border-border/80 overflow-hidden flex items-center justify-center p-2 relative">
-              {zoomedProduct.imageUrl ? (
-                <img
-                  src={zoomedProduct.imageUrl}
-                  alt={zoomedProduct.title}
-                  className="w-full h-full object-contain"
-                />
-              ) : (
-                <div className="flex flex-col items-center justify-center text-gray-400 gap-2">
-                  <Package className="w-16 h-16 text-gray-300" />
-                  <span className="text-xs font-bold">Görsel Bulunmuyor</span>
-                </div>
-              )}
-            </div>
-
-            {/* Product Info */}
-            <div className="space-y-3">
-              <div className="flex items-center gap-1.5 flex-wrap">
-                <span className="text-[11px] font-bold text-primary bg-primary-tint-50 border border-primary/20 px-2 py-0.5 rounded-lg">
-                  {zoomedProduct.brand || 'Genject'}
-                </span>
-                <span className="text-[11px] font-mono font-bold text-gray-700 bg-canvas border border-border px-2 py-0.5 rounded-lg">
-                  Barkod: {zoomedProduct.barcode}
-                </span>
-                {zoomedProduct.modelCode && (
-                  <span className="text-[11px] font-mono font-bold text-gray-700 bg-canvas border border-border px-2 py-0.5 rounded-lg">
-                    Model: {zoomedProduct.modelCode}
-                  </span>
+              {/* Large HD Image */}
+              <div className="w-full aspect-square rounded-2xl bg-canvas border border-border/80 overflow-hidden flex items-center justify-center p-2 relative">
+                {zoomedProduct.imageUrl ? (
+                  <img
+                    src={zoomedProduct.imageUrl}
+                    alt={zoomedProduct.title}
+                    className="w-full h-full object-contain"
+                  />
+                ) : (
+                  <div className="flex flex-col items-center justify-center text-gray-400 gap-2">
+                    <Package className="w-16 h-16 text-gray-300" />
+                    <span className="text-xs font-bold">Görsel Bulunmuyor</span>
+                  </div>
                 )}
               </div>
 
-              <h3 className="text-xs sm:text-sm font-bold text-dark leading-snug">
-                {zoomedProduct.title}
-              </h3>
-
-              <div className="flex items-center justify-between pt-3 border-t border-border flex-wrap gap-2">
-                <div className="flex items-center gap-3">
-                  <div>
-                    <span className="text-[10px] text-gray-400 font-semibold block">Satış Fiyatı</span>
-                    <span className="text-base font-black text-primary tabular-nums">
-                      ₺{parseFloat(zoomedProduct.salePrice || 0).toFixed(2)}
+              {/* Product Info */}
+              <div className="space-y-3">
+                <div className="flex items-center gap-1.5 flex-wrap">
+                  <span className="text-[11px] font-bold text-primary bg-primary-tint-50 border border-primary/20 px-2 py-0.5 rounded-lg">
+                    {zoomedProduct.brand || 'Genject'}
+                  </span>
+                  <span className="text-[11px] font-mono font-bold text-gray-700 bg-canvas border border-border px-2 py-0.5 rounded-lg">
+                    Barkod: {zoomedProduct.barcode}
+                  </span>
+                  {zoomedProduct.modelCode && (
+                    <span className="text-[11px] font-mono font-bold text-gray-700 bg-canvas border border-border px-2 py-0.5 rounded-lg">
+                      Model: {zoomedProduct.modelCode}
                     </span>
-                  </div>
-                  {parseFloat(zoomedProduct.costPrice || 0) > 0 && (
-                    <div>
-                      <span className="text-[10px] text-gray-400 font-semibold block">Alış Maliyeti</span>
-                      <span className="text-sm font-bold text-red-700 tabular-nums">
-                        ₺{parseFloat(zoomedProduct.costPrice).toFixed(2)}
-                      </span>
-                    </div>
                   )}
-                  <div>
-                    <span className="text-[10px] text-gray-400 font-semibold block">Stok</span>
-                    <span className="text-sm font-bold text-dark">
-                      {zoomedProduct.stockQuantity} Adet
-                    </span>
-                  </div>
                 </div>
 
-                <a
-                  href={getProductMarketplaceUrl(zoomedProduct)}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="px-3.5 py-2 rounded-xl bg-orange-500 hover:bg-orange-600 text-white font-bold text-xs flex items-center gap-1.5 shadow-sm transition-colors cursor-pointer"
-                >
-                  <ExternalLink className="w-3.5 h-3.5" />
-                  <span>Trendyol'da Aç</span>
-                </a>
+                <h3 className="text-xs sm:text-sm font-bold text-dark leading-snug">
+                  {zoomedProduct.title}
+                </h3>
+
+                <div className="flex items-center justify-between pt-3 border-t border-border flex-wrap gap-2">
+                  <div className="flex items-center gap-3">
+                    <div>
+                      <span className="text-[10px] text-gray-400 font-semibold block">Satış Fiyatı</span>
+                      <span className="text-base font-black text-primary tabular-nums">
+                        ₺{parseFloat(zoomedProduct.salePrice || 0).toFixed(2)}
+                      </span>
+                    </div>
+                    {parseFloat(zoomedProduct.costPrice || 0) > 0 && (
+                      <div>
+                        <span className="text-[10px] text-gray-400 font-semibold block">Alış Maliyeti</span>
+                        <span className="text-sm font-bold text-red-700 tabular-nums">
+                          ₺{parseFloat(zoomedProduct.costPrice).toFixed(2)}
+                        </span>
+                      </div>
+                    )}
+                    <div>
+                      <span className="text-[10px] text-gray-400 font-semibold block">Stok</span>
+                      <span className="text-sm font-bold text-dark">
+                        {zoomedProduct.stockQuantity} Adet
+                      </span>
+                    </div>
+                  </div>
+
+                  <a
+                    href={zoomedMp.url}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="px-3.5 py-2 rounded-xl bg-orange-500 hover:bg-orange-600 text-white font-bold text-xs flex items-center gap-1.5 shadow-sm transition-colors cursor-pointer"
+                  >
+                    <ExternalLink className="w-3.5 h-3.5" />
+                    <span>{zoomedMp.label}'da Aç</span>
+                  </a>
+                </div>
               </div>
             </div>
           </div>
-        </div>
-      )}
+        );
+      })()}
     </div>
   );
 }
