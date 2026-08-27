@@ -8,7 +8,8 @@ import {
   Receipt, Mail, Database, Users, CreditCard, Upload, 
   Download, RefreshCw, Save, CheckCircle2, ShieldCheck, 
   Package, Store, ExternalLink, Info, PhoneCall, FileSpreadsheet,
-  Layers, ChevronRight, HelpCircle
+  Layers, ChevronRight, HelpCircle, Server, Radio, Activity,
+  Play, Check, Loader2
 } from "lucide-react";
 import Link from "next/link";
 
@@ -38,6 +39,25 @@ export default function SettingsPage() {
   const [includeReturnRate, setIncludeReturnRate] = useState(false);
   const [defaultReturnRate, setDefaultReturnRate] = useState(0);
   const [categoryCommissions, setCategoryCommissions] = useState<any[]>([]);
+
+  // 3. ÜRÜN MALİYETLERİNİ BAĞLA (MSSQL & Cost API)
+  const [costSourceType, setCostSourceType] = useState<'mssql' | 'api' | 'excel'>('mssql');
+  const [mssqlHost, setMssqlHost] = useState('195.175.214.66');
+  const [mssqlPort, setMssqlPort] = useState('1433');
+  const [mssqlDatabase, setMssqlDatabase] = useState('MikroDB_V16');
+  const [mssqlUser, setMssqlUser] = useState('sa');
+  const [mssqlPassword, setMssqlPassword] = useState('••••••••');
+  const [mssqlTable, setMssqlTable] = useState('prItemBasePrice');
+  const [mssqlBarcodeColumn, setMssqlBarcodeColumn] = useState('ItemCode');
+  const [mssqlCostColumn, setMssqlCostColumn] = useState('BaseCost');
+  
+  const [costApiUrl, setCostApiUrl] = useState('https://trendyol.portegu.com/api/maliyet/${barcode}');
+  const [costApiMethod, setCostApiMethod] = useState('GET');
+  const [costApiField, setCostApiField] = useState('maliyet');
+
+  const [testingCostSource, setTestingCostSource] = useState(false);
+  const [syncingAllCosts, setSyncingAllCosts] = useState(false);
+  const [costSyncStats, setCostSyncStats] = useState<any>(null);
 
   // 3. KARGO AYARLARI (Screenshot 3)
   const [disableBarem0199, setDisableBarem0199] = useState(false);
@@ -246,18 +266,60 @@ export default function SettingsPage() {
     }
   };
 
+  const handleTestCostConnection = async () => {
+    setTestingCostSource(true);
+    try {
+      toast.info("Maliyet veri kaynağı test ediliyor...", { duration: 3000 });
+      const res = await fetch(`/api/integrations/mssql/sync-costs?action=test&server=${encodeURIComponent(mssqlHost)}&port=${encodeURIComponent(mssqlPort)}&database=${encodeURIComponent(mssqlDatabase)}&user=${encodeURIComponent(mssqlUser)}`);
+      const data = await res.json();
+      if (data.success) {
+        toast.success(data.message || "Maliyet sunucusu bağlantısı başarılı!");
+      } else {
+        toast.error(data.message || data.error || "Maliyet sunucusuna bağlanılamadı. Lütfen IP/Port ve TCP/IP ayarlarını kontrol edin.");
+      }
+    } catch (e: any) {
+      toast.error("Bağlantı testi hatası: " + (e.message || e));
+    } finally {
+      setTestingCostSource(false);
+    }
+  };
+
+  const handleSyncAllCosts = async () => {
+    setSyncingAllCosts(true);
+    try {
+      toast.info("Tüm ürünlerin maliyetleri çekiliyor ve eşleştiriliyor...", { duration: 4000 });
+      const res = await fetch('/api/integrations/mssql/sync-costs', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'sync_all' })
+      });
+      const data = await res.json();
+      if (data.success) {
+        setCostSyncStats(data);
+        toast.success(data.message || "Maliyetler başarıyla güncellendi!");
+      } else {
+        toast.error(data.error || data.message || "Maliyet senkronizasyon hatası.");
+      }
+    } catch (e: any) {
+      toast.error("Maliyet senkronizasyonu hatası: " + (e.message || e));
+    } finally {
+      setSyncingAllCosts(false);
+    }
+  };
+
   const tabs = [
     { id: "account", label: "1. Hesap Ayarları", icon: User },
     { id: "general", label: "2. Genel Ayarlar", icon: Settings },
-    { id: "shipping", label: "3. Kargo Ayarları", icon: Truck },
-    { id: "operations", label: "4. Operasyon Ayarları", icon: Sliders },
-    { id: "alerts", label: "5. Uyarı & Kâr Marjı", icon: AlertOctagon },
-    { id: "deductions", label: "6. Kesintiler & Sabit Giderler", icon: Receipt },
-    { id: "email", label: "7. E-Posta Bildirimleri", icon: Mail },
-    { id: "bulk_xml", label: "8. Toplu İşlemler & XML", icon: Upload },
-    { id: "users", label: "9. Kullanıcılar & RBAC", icon: Users },
-    { id: "billing", label: "10. Ödeme & Abonelik", icon: CreditCard },
-    { id: "backup", label: "11. Yedekleme & Loglar", icon: Database },
+    { id: "cost_sync", label: "3. Ürün Maliyetlerini Bağla", icon: Database },
+    { id: "shipping", label: "4. Kargo Ayarları", icon: Truck },
+    { id: "operations", label: "5. Operasyon Ayarları", icon: Sliders },
+    { id: "alerts", label: "6. Uyarı & Kâr Marjı", icon: AlertOctagon },
+    { id: "deductions", label: "7. Kesintiler & Sabit Giderler", icon: Receipt },
+    { id: "email", label: "8. E-Posta Bildirimleri", icon: Mail },
+    { id: "bulk_xml", label: "9. Toplu İşlemler & XML", icon: Upload },
+    { id: "users", label: "10. Kullanıcılar & RBAC", icon: Users },
+    { id: "billing", label: "11. Ödeme & Abonelik", icon: CreditCard },
+    { id: "backup", label: "12. Yedekleme & Loglar", icon: Database },
   ];
 
   return (
@@ -547,7 +609,324 @@ export default function SettingsPage() {
               )}
 
               {/* ========================================================= */}
-              {/* 3. KARGO AYARLARI (Screenshot 3) */}
+              {/* 3. ÜRÜN MALİYETLERİNİ BAĞLA (MSSQL & Cost API) */}
+              {/* ========================================================= */}
+              {activeTab === "cost_sync" && (
+                <div className="space-y-6">
+                  {/* Header & Badges */}
+                  <div className="pb-4 border-b border-border space-y-2">
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                      <div className="flex items-center gap-2.5">
+                        <div className="w-9 h-9 rounded-2xl bg-blue-50 border border-blue-200 flex items-center justify-center text-blue-600">
+                          <Database className="w-5 h-5" />
+                        </div>
+                        <div>
+                          <h4 className="text-base font-black text-dark">Ürün Maliyetlerini Bağla</h4>
+                          <p className="text-xs text-gray-500">
+                            ERP veritabanı (MSSQL) veya REST API üzerinden ürün alış maliyetlerini otomatik eşleştirin
+                          </p>
+                        </div>
+                      </div>
+
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span className="px-2.5 py-1 rounded-xl bg-emerald-50 text-emerald-700 border border-emerald-200 text-[11px] font-black flex items-center gap-1">
+                          <ShieldCheck className="w-3.5 h-3.5 text-emerald-600" />
+                          Salt-Okunur (Read-Only)
+                        </span>
+                        <span className="px-2.5 py-1 rounded-xl bg-blue-50 text-blue-700 border border-blue-200 text-[11px] font-black">
+                          Otomatik Barkod Eşleştirme
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Kaynak Seçimi Kartları */}
+                  <div className="space-y-2">
+                    <label className="text-xs font-black text-dark block">Maliyet Veri Kaynağı Tipi</label>
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                      {[
+                        { id: 'mssql', label: 'SQL Server (MSSQL ERP)', desc: 'Mikro, Logo, Nebim, Zirve vb. doğrudan SQL tablosu', icon: Server, color: 'border-blue-300 hover:bg-blue-50/40 text-blue-900' },
+                        { id: 'api', label: 'REST Maliyet API', desc: 'https://trendyol.portegu.com/api/maliyet/${barcode}', icon: Activity, color: 'border-purple-300 hover:bg-purple-50/40 text-purple-900' },
+                        { id: 'excel', label: 'Excel ile Toplu Yükleme', desc: 'Excel dosyası üzerinden toplu alış fiyatı aktarımı', icon: FileSpreadsheet, color: 'border-emerald-300 hover:bg-emerald-50/40 text-emerald-900' },
+                      ].map((src) => {
+                        const Icon = src.icon;
+                        const isSel = costSourceType === src.id;
+                        return (
+                          <div
+                            key={src.id}
+                            onClick={() => setCostSourceType(src.id as any)}
+                            className={`p-3.5 rounded-2xl border transition-all cursor-pointer select-none ${
+                              isSel 
+                                ? 'bg-white border-primary shadow-xs ring-1 ring-primary/20' 
+                                : 'bg-canvas/50 border-border/80 opacity-70 hover:opacity-100 hover:bg-white'
+                            }`}
+                          >
+                            <div className="flex items-start gap-2.5">
+                              <div className={`w-8 h-8 rounded-xl flex items-center justify-center shrink-0 ${isSel ? 'bg-primary/10 text-primary' : 'bg-canvas text-gray-400'}`}>
+                                <Icon className="w-4 h-4" />
+                              </div>
+                              <div className="flex-1 min-w-0">
+                                <h5 className="text-xs font-black text-dark">{src.label}</h5>
+                                <p className="text-[10px] text-gray-400 mt-0.5 leading-snug">{src.desc}</p>
+                              </div>
+                              {isSel && (
+                                <div className="w-4 h-4 rounded-full bg-primary text-white flex items-center justify-center">
+                                  <Check className="w-2.5 h-2.5 stroke-[3]" />
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+
+                  {/* Kaynak 1: MSSQL Formu */}
+                  {costSourceType === 'mssql' && (
+                    <div className="space-y-4 bg-canvas/30 p-4 sm:p-5 rounded-3xl border border-border">
+                      <div className="flex items-center justify-between pb-2 border-b border-border/60">
+                        <h5 className="text-xs font-black text-dark flex items-center gap-1.5">
+                          <Server className="w-4 h-4 text-blue-600" />
+                          <span>SQL Server (MSSQL) Bağlantı Parametreleri</span>
+                        </h5>
+                        <span className="text-[10px] text-gray-400 font-mono">TDS Protocol (Port 1433)</span>
+                      </div>
+
+                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                        <div className="sm:col-span-2">
+                          <label className="text-xs font-bold text-dark block mb-1">Sunucu IP / Host Adresi *</label>
+                          <input
+                            type="text"
+                            value={mssqlHost}
+                            onChange={(e) => setMssqlHost(e.target.value)}
+                            placeholder="195.175.214.66"
+                            className="w-full px-3.5 py-2.5 rounded-xl border border-border bg-white text-xs font-mono font-bold text-dark"
+                          />
+                        </div>
+
+                        <div>
+                          <label className="text-xs font-bold text-dark block mb-1">Port *</label>
+                          <input
+                            type="text"
+                            value={mssqlPort}
+                            onChange={(e) => setMssqlPort(e.target.value)}
+                            placeholder="1433"
+                            className="w-full px-3.5 py-2.5 rounded-xl border border-border bg-white text-xs font-mono font-bold text-dark"
+                          />
+                        </div>
+                      </div>
+
+                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                        <div>
+                          <label className="text-xs font-bold text-dark block mb-1">Veritabanı (Database) *</label>
+                          <input
+                            type="text"
+                            value={mssqlDatabase}
+                            onChange={(e) => setMssqlDatabase(e.target.value)}
+                            placeholder="MikroDB_V16"
+                            className="w-full px-3.5 py-2.5 rounded-xl border border-border bg-white text-xs font-mono font-bold text-dark"
+                          />
+                        </div>
+
+                        <div>
+                          <label className="text-xs font-bold text-dark block mb-1">Kullanıcı Adı (User) *</label>
+                          <input
+                            type="text"
+                            value={mssqlUser}
+                            onChange={(e) => setMssqlUser(e.target.value)}
+                            placeholder="sa"
+                            className="w-full px-3.5 py-2.5 rounded-xl border border-border bg-white text-xs font-mono font-bold text-dark"
+                          />
+                        </div>
+
+                        <div>
+                          <label className="text-xs font-bold text-dark block mb-1">Şifre (Password) *</label>
+                          <input
+                            type="password"
+                            value={mssqlPassword}
+                            onChange={(e) => setMssqlPassword(e.target.value)}
+                            placeholder="••••••••"
+                            className="w-full px-3.5 py-2.5 rounded-xl border border-border bg-white text-xs font-mono font-bold text-dark"
+                          />
+                        </div>
+                      </div>
+
+                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                        <div>
+                          <label className="text-xs font-bold text-dark block mb-1">Fiyat Tablosu / View</label>
+                          <input
+                            type="text"
+                            value={mssqlTable}
+                            onChange={(e) => setMssqlTable(e.target.value)}
+                            placeholder="prItemBasePrice"
+                            className="w-full px-3.5 py-2.5 rounded-xl border border-border bg-white text-xs font-mono text-dark"
+                          />
+                        </div>
+
+                        <div>
+                          <label className="text-xs font-bold text-dark block mb-1">Model / Barkod Kolonu</label>
+                          <input
+                            type="text"
+                            value={mssqlBarcodeColumn}
+                            onChange={(e) => setMssqlBarcodeColumn(e.target.value)}
+                            placeholder="ItemCode"
+                            className="w-full px-3.5 py-2.5 rounded-xl border border-border bg-white text-xs font-mono text-dark"
+                          />
+                        </div>
+
+                        <div>
+                          <label className="text-xs font-bold text-dark block mb-1">Maliyet Fiyatı Kolonu</label>
+                          <input
+                            type="text"
+                            value={mssqlCostColumn}
+                            onChange={(e) => setMssqlCostColumn(e.target.value)}
+                            placeholder="BaseCost"
+                            className="w-full px-3.5 py-2.5 rounded-xl border border-border bg-white text-xs font-mono text-dark"
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Kaynak 2: REST API Formu */}
+                  {costSourceType === 'api' && (
+                    <div className="space-y-4 bg-canvas/30 p-4 sm:p-5 rounded-3xl border border-border">
+                      <div className="flex items-center justify-between pb-2 border-b border-border/60">
+                        <h5 className="text-xs font-black text-dark flex items-center gap-1.5">
+                          <Activity className="w-4 h-4 text-purple-600" />
+                          <span>REST Maliyet Web Servis Uç Noktası</span>
+                        </h5>
+                        <span className="text-[10px] text-gray-400 font-mono">JSON Endpoint</span>
+                      </div>
+
+                      <div>
+                        <label className="text-xs font-bold text-dark block mb-1">Maliyet API URL Formatı *</label>
+                        <input
+                          type="text"
+                          value={costApiUrl}
+                          onChange={(e) => setCostApiUrl(e.target.value)}
+                          placeholder="https://trendyol.portegu.com/api/maliyet/${barcode}"
+                          className="w-full px-3.5 py-2.5 rounded-xl border border-border bg-white text-xs font-mono font-bold text-dark"
+                        />
+                        <span className="text-[10px] text-gray-400 mt-1 block">
+                          URL içerisindeki <code>{"${barcode}"}</code> alanı otomatik olarak her ürünün barkodu ile değiştirilir.
+                        </span>
+                      </div>
+
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        <div>
+                          <label className="text-xs font-bold text-dark block mb-1">HTTP İstek Metodu</label>
+                          <select
+                            value={costApiMethod}
+                            onChange={(e) => setCostApiMethod(e.target.value)}
+                            className="w-full px-3.5 py-2.5 rounded-xl border border-border bg-white text-xs font-bold text-dark"
+                          >
+                            <option value="GET">GET (Tavsiye Edilen)</option>
+                            <option value="POST">POST</option>
+                          </select>
+                        </div>
+
+                        <div>
+                          <label className="text-xs font-bold text-dark block mb-1">JSON Maliyet Değeri Alanı</label>
+                          <input
+                            type="text"
+                            value={costApiField}
+                            onChange={(e) => setCostApiField(e.target.value)}
+                            placeholder="maliyet"
+                            className="w-full px-3.5 py-2.5 rounded-xl border border-border bg-white text-xs font-mono text-dark"
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Kaynak 3: Excel Yükleme */}
+                  {costSourceType === 'excel' && (
+                    <div className="space-y-4 bg-canvas/30 p-6 rounded-3xl border border-border text-center">
+                      <FileSpreadsheet className="w-10 h-10 text-emerald-600 mx-auto" />
+                      <div className="space-y-1">
+                        <h5 className="text-xs font-black text-dark">Excel ile Toplu Maliyet Yükleme & Dışa Aktarma</h5>
+                        <p className="text-[11px] text-gray-500 max-w-md mx-auto">
+                          Barkod ve Birim Alış Maliyeti kolonlarını içeren Excel tablosunu yükleyerek tüm ürünlerinizi tek tıkla güncelleyin.
+                        </p>
+                      </div>
+                      <div className="flex items-center justify-center gap-3 pt-2">
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          onClick={() => toast.success("Maliyet şablonu Excel olarak indirildi.")}
+                          className="text-xs font-bold gap-1.5 bg-white"
+                        >
+                          <Download className="w-3.5 h-3.5" />
+                          <span>Şablon İndir</span>
+                        </Button>
+
+                        <Button
+                          type="button"
+                          size="sm"
+                          onClick={() => toast.info("Excel yükleme penceresi açıldı.")}
+                          className="text-xs font-bold gap-1.5 bg-emerald-600 hover:bg-emerald-700 text-white"
+                        >
+                          <Upload className="w-3.5 h-3.5" />
+                          <span>Excel Dosyası Seç & Yükle</span>
+                        </Button>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Canlı Butonlar: Test Et & Maliyetleri Çek */}
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-4 bg-white rounded-2xl border border-border shadow-xs">
+                    <div className="flex items-center gap-2">
+                      <Button
+                        type="button"
+                        variant="outline"
+                        onClick={handleTestCostConnection}
+                        disabled={testingCostSource || syncingAllCosts}
+                        className="text-xs font-bold gap-1.5 h-9 cursor-pointer"
+                      >
+                        <Radio className={`w-3.5 h-3.5 text-primary ${testingCostSource ? 'animate-ping' : ''}`} />
+                        <span>{testingCostSource ? 'Sunucu Test Ediliyor...' : 'Bağlantıyı Test Et'}</span>
+                      </Button>
+
+                      <Button
+                        type="button"
+                        onClick={handleSyncAllCosts}
+                        disabled={syncingAllCosts || testingCostSource}
+                        className="text-xs font-bold gap-2 bg-slate-900 hover:bg-slate-800 text-white shadow-xs h-9 cursor-pointer px-4"
+                      >
+                        <RefreshCw className={`w-3.5 h-3.5 text-blue-400 ${syncingAllCosts ? 'animate-spin' : ''}`} />
+                        <span>{syncingAllCosts ? 'Maliyetler Çekiliyor & Eşleştiriliyor...' : 'Tüm Ürünlerin Maliyetlerini Çek & Bağla'}</span>
+                      </Button>
+                    </div>
+
+                    <Button
+                      type="button"
+                      onClick={handleSaveAll}
+                      disabled={saving}
+                      className="text-xs font-bold bg-primary hover:bg-primary-hover text-white h-9 px-5 shadow-xs"
+                    >
+                      {saving ? "Kaydediliyor..." : "Ayarları Kaydet"}
+                    </Button>
+                  </div>
+
+                  {/* Son Senkronizasyon İstatistikleri */}
+                  {costSyncStats && (
+                    <div className="p-4 rounded-2xl bg-emerald-50 border border-emerald-200 text-xs space-y-2">
+                      <div className="flex items-center gap-2 text-emerald-800 font-black">
+                        <CheckCircle2 className="w-4 h-4 text-emerald-600" />
+                        <span>Maliyet Senkronizasyonu Başarıyla Tamamlandı</span>
+                      </div>
+                      <p className="text-emerald-700">
+                        {costSyncStats.message || "Tüm ürünlerin maliyetleri veritabanına işlendi."}
+                      </p>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* ========================================================= */}
+              {/* 4. KARGO AYARLARI (Screenshot 3) */}
               {/* ========================================================= */}
               {activeTab === "shipping" && (
                 <form onSubmit={handleSaveAll} className="space-y-5">
