@@ -15,6 +15,24 @@ import {
 import Image from "next/image";
 import { useTenantStore } from "@/stores/useTenantStore";
 
+function slugify(text: string): string {
+  const trMap: Record<string, string> = {
+    'ç': 'c', 'Ç': 'c',
+    'ğ': 'g', 'Ğ': 'g',
+    'ş': 's', 'Ş': 's',
+    'ü': 'u', 'Ü': 'u',
+    'ı': 'i', 'İ': 'i',
+    'ö': 'o', 'Ö': 'o'
+  };
+  return String(text || '')
+    .replace(/[çÇğĞşŞüÜıİöÖ]/g, c => trMap[c] || c)
+    .toLowerCase()
+    .replace(/,\s*one size/gi, '')
+    .replace(/,\s*\(k:\d+\)/gi, '')
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '') || 'urun';
+}
+
 function getMarketplaceInfo(p: any): { url: string; label: string; badgeClass: string; isDirect: boolean } {
   const isHepsiburada = p?.marketplace === 'hepsiburada' || (p?.marketplaceUrl && typeof p.marketplaceUrl === 'string' && p.marketplaceUrl.includes('hepsiburada.com'));
   
@@ -35,21 +53,51 @@ function getMarketplaceInfo(p: any): { url: string; label: string; badgeClass: s
 
   // Trendyol
   let url = p?.marketplaceUrl;
-  const isDirect = !!(url && typeof url === 'string' && url.startsWith('http') && url.includes('trendyol.com'));
-  if (!isDirect) {
-    const brand = p?.brand || '';
-    const cleanTitle = (p?.title || p?.barcode || '')
-      .replace(/,\s*one size/gi, '')
-      .replace(/,\s*\(K:\d+\)/gi, '')
-      .trim();
-    const q = brand && !cleanTitle.toLowerCase().includes(brand.toLowerCase()) ? `${brand} ${cleanTitle}` : cleanTitle;
-    url = `https://www.trendyol.com/sr?q=${encodeURIComponent(q)}`;
+  let contentId: string | null = null;
+
+  if (url && typeof url === 'string') {
+    const m = url.match(/-p-(\d+)/) || url.match(/\/p-(\d+)/);
+    if (m) contentId = m[1];
   }
+  if (!contentId && p?.modelCode && /^\d{7,12}$/.test(p.modelCode)) {
+    contentId = p.modelCode;
+  }
+
+  if (contentId) {
+    const brandSlug = slugify(p?.brand || 'genject');
+    const titleSlug = slugify(p?.title || p?.barcode || 'urun');
+    url = `https://www.trendyol.com/${brandSlug}/${titleSlug}-p-${contentId}?merchantId=230566&filterOverPriceListings=false`;
+    return {
+      url,
+      label: 'Trendyol',
+      badgeClass: 'border-amber-300 text-amber-800 bg-amber-50 hover:bg-amber-100',
+      isDirect: true
+    };
+  }
+
+  if (url && typeof url === 'string' && url.startsWith('http') && url.includes('trendyol.com') && url.includes('-p-')) {
+    return {
+      url,
+      label: 'Trendyol',
+      badgeClass: 'border-amber-300 text-amber-800 bg-amber-50 hover:bg-amber-100',
+      isDirect: true
+    };
+  }
+
+  // Smart Search Query fallback
+  const brand = p?.brand || '';
+  const cleanTitle = (p?.title || p?.barcode || '')
+    .replace(/,\s*one size/gi, '')
+    .replace(/,\s*\(K:\d+\)/gi, '')
+    .trim();
+  const q = brand && !cleanTitle.toLowerCase().includes(brand.toLowerCase()) ? `${brand} ${cleanTitle}` : cleanTitle;
+  url = `https://www.trendyol.com/sr?q=${encodeURIComponent(q)}`;
+
   return {
     url,
     label: 'Trendyol',
     badgeClass: 'border-amber-300 text-amber-800 bg-amber-50 hover:bg-amber-100',
-    isDirect
+    isDirect: false
   };
 }
 

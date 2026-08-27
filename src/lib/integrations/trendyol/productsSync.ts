@@ -88,6 +88,24 @@ export async function syncTrendyolProducts(
           const barcode = (item.barcode || '').trim();
           if (!barcode) continue;
 
+function slugify(text: string): string {
+  const trMap: Record<string, string> = {
+    'ç': 'c', 'Ç': 'c',
+    'ğ': 'g', 'Ğ': 'g',
+    'ş': 's', 'Ş': 's',
+    'ü': 'u', 'Ü': 'u',
+    'ı': 'i', 'İ': 'i',
+    'ö': 'o', 'Ö': 'o'
+  };
+  return String(text || '')
+    .replace(/[çÇğĞşŞüÜıİöÖ]/g, c => trMap[c] || c)
+    .toLowerCase()
+    .replace(/,\s*one size/gi, '')
+    .replace(/,\s*\(k:\d+\)/gi, '')
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '') || 'urun';
+}
+
           const title = item.title || 'İsimsiz Ürün';
           const brand = item.brand || null;
           const sku = item.stockCode || item.productMainId || barcode;
@@ -98,8 +116,9 @@ export async function syncTrendyolProducts(
           const shipmentDesi = Math.max(0.5, Number(item.dimensionalWeight) || 1.0);
           const stockQuantity = Math.max(0, Number(item.quantity) || 10);
           const isActive = item.onSale === true && item.approved === true;
-          const productUrl = (item as any).platformListingId 
-            ? `https://www.trendyol.com/p-${(item as any).platformListingId}${store.supplier_id ? `?merchantId=${store.supplier_id}` : ''}`
+          const contentId = (item as any).platformListingId || (item as any).id;
+          const productUrl = contentId 
+            ? `https://www.trendyol.com/${slugify(brand || 'genject')}/${slugify(title)}-p-${contentId}?merchantId=${store.supplier_id || store.seller_id || '230566'}&filterOverPriceListings=false`
             : null;
 
           const existing = await query(

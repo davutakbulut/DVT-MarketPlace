@@ -261,7 +261,13 @@ export async function syncTrendyolOrders(
               let commRate = Number(line.commissionRate) || 15.0;
               let lineDesi = 1.0;
 
-              const directProductUrl = line.productCode ? `https://www.trendyol.com/p-${line.productCode}${supplierId ? `?merchantId=${supplierId}` : ''}` : null;
+              const slugify = (text: string) => {
+                const trMap: Record<string, string> = { 'ç': 'c', 'Ç': 'c', 'ğ': 'g', 'Ğ': 'g', 'ş': 's', 'Ş': 's', 'ü': 'u', 'Ü': 'u', 'ı': 'i', 'İ': 'i', 'ö': 'o', 'Ö': 'o' };
+                return String(text || '').replace(/[çÇğĞşŞüÜıİöÖ]/g, c => trMap[c] || c).toLowerCase().replace(/,\s*one size/gi, '').replace(/,\s*\(k:\d+\)/gi, '').replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '') || 'urun';
+              };
+              const directProductUrl = line.productCode 
+                ? `https://www.trendyol.com/genject/${slugify(line.productName || barcode)}-p-${line.productCode}?merchantId=${supplierId || '230566'}&filterOverPriceListings=false` 
+                : null;
 
               if (prodRows.length > 0) {
                 const prod = prodRows[0];
