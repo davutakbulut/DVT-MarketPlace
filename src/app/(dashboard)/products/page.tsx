@@ -711,7 +711,7 @@ export default function ProductsCatalogPage() {
         </div>
       </div>
 
-      {/* 5. PRODUCTS TABLE */}
+      {/* 5. PRODUCTS VIEW (DESKTOP TABLE + MOBILE CARDS) */}
       <div className="bg-white rounded-3xl border border-border shadow-xs overflow-hidden">
         {loading ? (
           <div className="p-12 text-center text-xs text-gray-500 font-bold flex items-center justify-center gap-2">
@@ -723,188 +723,414 @@ export default function ProductsCatalogPage() {
             Seçili kriterlere uygun ürün bulunamadı.
           </div>
         ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-left text-xs border-collapse min-w-[1050px]">
-              <thead>
-                <tr className="bg-canvas border-b border-border text-muted-foreground font-semibold text-[11px]">
-                  <th className="py-3 px-4 w-12 text-center">Görsel</th>
-                  <th className="py-3 px-4 table-sticky-first-col bg-canvas">Ürün Adı & Model</th>
-                  <th className="py-3 px-4">Marka</th>
-                  <th className="py-3 px-4 text-center font-bold">Stok</th>
-                  <th className="py-3 px-4 text-primary font-bold">Satış Fiyatı (₺)</th>
-                  <th className="py-3 px-4 font-bold text-red-700">Alış Maliyeti (₺)</th>
-                  <th className="py-3 px-4 font-bold text-emerald-700">Tahmini Net Kâr (₺)</th>
-                  <th className="py-3 px-4">Komisyon / KDV</th>
-                  <th className="py-3 px-4">Desi</th>
-                  <th className="py-3 px-4 text-right">İşlemler</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-border/60">
-                {products.map((p) => {
-                  const isEditing = editingId === p.id;
-                  const hasStock = parseInt(p.stockQuantity || 0) > 0;
+          <div>
+            {/* A. DESKTOP TABLE VIEW (Visible on md and larger) */}
+            <div className="hidden md:block overflow-x-auto">
+              <table className="w-full text-left text-xs border-collapse min-w-[950px]">
+                <thead>
+                  <tr className="bg-canvas border-b border-border text-muted-foreground font-semibold text-[11px]">
+                    <th className="py-3 px-4 w-12 text-center">Görsel</th>
+                    <th className="py-3 px-4 table-sticky-first-col bg-canvas">Ürün Adı & Model</th>
+                    <th className="py-3 px-4">Marka</th>
+                    <th className="py-3 px-4 text-center font-bold">Stok</th>
+                    <th className="py-3 px-4 text-primary font-bold">Satış Fiyatı (₺)</th>
+                    <th className="py-3 px-4 font-bold text-red-700">Alış Maliyeti (₺)</th>
+                    <th className="py-3 px-4 font-bold text-emerald-700">Tahmini Net Kâr (₺)</th>
+                    <th className="py-3 px-4">Komisyon / KDV</th>
+                    <th className="py-3 px-4">Desi</th>
+                    <th className="py-3 px-4 text-right">İşlemler</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-border/60">
+                  {products.map((p) => {
+                    const isEditing = editingId === p.id;
+                    const hasStock = parseInt(p.stockQuantity || 0) > 0;
 
-                  return (
-                    <tr key={p.id} className="hover:bg-canvas/50 transition-colors">
-                      <td className="py-3 px-4 text-center">
-                        <div className="w-10 h-10 rounded-xl border border-border/80 shadow-2xs overflow-hidden bg-white mx-auto relative flex items-center justify-center group/img">
-                          {p.imageUrl ? (
-                            <img 
-                              src={p.imageUrl} 
-                              alt={p.title} 
-                              className="w-full h-full object-cover transition-transform duration-300 group-hover/img:scale-125"
-                              onError={(e) => {
-                                (e.target as any).src = 'https://images.unsplash.com/photo-1584308666744-24d5c474f2ae?w=100&auto=format&fit=crop&q=60';
-                              }}
+                    return (
+                      <tr key={p.id} className="hover:bg-canvas/50 transition-colors">
+                        <td className="py-3 px-4 text-center">
+                          <div className="w-10 h-10 rounded-xl border border-border/80 shadow-2xs overflow-hidden bg-white mx-auto relative flex items-center justify-center group/img">
+                            {p.imageUrl ? (
+                              <img 
+                                src={p.imageUrl} 
+                                alt={p.title} 
+                                className="w-full h-full object-cover transition-transform duration-300 group-hover/img:scale-125"
+                                onError={(e) => {
+                                  (e.target as any).src = 'https://images.unsplash.com/photo-1584308666744-24d5c474f2ae?w=100&auto=format&fit=crop&q=60';
+                                }}
+                              />
+                            ) : (
+                              <div className="w-full h-full bg-primary-tint-50 flex items-center justify-center text-primary">
+                                <Package className="w-4 h-4" />
+                              </div>
+                            )}
+                          </div>
+                        </td>
+                        <td className="py-3 px-4 table-sticky-first-col font-bold text-dark">
+                          <div className="flex items-center gap-1.5 flex-wrap">
+                            <span className="block truncate max-w-[280px]">{p.title}</span>
+                            {p.productStatus === 'active' && (
+                              <span className="text-[9px] bg-emerald-100 text-emerald-800 font-bold px-1.5 py-0.5 rounded-full shrink-0">
+                                Aktif
+                              </span>
+                            )}
+                            {p.productStatus === 'pending_approval' && (
+                              <span className="text-[9px] bg-amber-100 text-amber-800 font-bold px-1.5 py-0.5 rounded-full shrink-0">
+                                Onay Sürecinde
+                              </span>
+                            )}
+                            {p.productStatus === 'passive' && (
+                              <span className="text-[9px] bg-gray-100 text-gray-700 font-bold px-1.5 py-0.5 rounded-full shrink-0">
+                                Pasif
+                              </span>
+                            )}
+                            {p.deliveryType === 'fast_delivery' && (
+                              <span className="text-[9px] bg-sky-100 text-sky-800 font-bold px-1.5 py-0.5 rounded-full shrink-0">Hızlı</span>
+                            )}
+                          </div>
+                          <div className="flex items-center gap-2 mt-0.5">
+                            <span className="text-[10px] text-gray-400 font-mono">Barkod: {p.barcode}</span>
+                            {p.modelCode && <span className="text-[10px] text-gray-400 font-mono">Model: {p.modelCode}</span>}
+                            {p.sku && <span className="text-[10px] text-gray-400 font-mono">Stok Kodu: {p.sku}</span>}
+                          </div>
+                        </td>
+                        <td className="py-3 px-4 font-semibold text-gray-700">
+                          {p.brand || 'Genject'}
+                        </td>
+
+                        <td className="py-3 px-4 text-center">
+                          {isEditing ? (
+                            <input
+                              type="number"
+                              value={editStock}
+                              onChange={(e) => setEditStock(parseInt(e.target.value) || 0)}
+                              className="w-16 px-2 py-1 rounded-lg border border-primary text-center font-bold"
                             />
                           ) : (
-                            <div className="w-full h-full bg-primary-tint-50 flex items-center justify-center text-primary">
-                              <Package className="w-4 h-4" />
+                            <Badge variant={hasStock ? "excellent" : "secondary"}>
+                              {p.stockQuantity} Adet
+                            </Badge>
+                          )}
+                        </td>
+                        <td className="py-3 px-4 font-black text-primary tabular-nums">
+                          {isEditing ? (
+                            <input
+                              type="number"
+                              step="0.5"
+                              value={editPrice}
+                              onChange={(e) => setEditPrice(parseFloat(e.target.value) || 0)}
+                              className="w-20 px-2 py-1 rounded-lg border border-primary font-bold text-primary"
+                            />
+                          ) : (
+                            `₺${parseFloat(p.salePrice || 0).toFixed(2)}`
+                          )}
+                        </td>
+                        <td className="py-3 px-4 font-bold text-red-700 tabular-nums">
+                          {isEditing ? (
+                            <input
+                              type="number"
+                              step="0.5"
+                              value={editCost}
+                              onChange={(e) => setEditCost(parseFloat(e.target.value) || 0)}
+                              className="w-20 px-2 py-1 rounded-lg border border-red-500 font-bold text-red-700"
+                            />
+                          ) : p.costPrice !== null && p.costPrice !== undefined && p.costPrice > 0 ? (
+                            <span>₺{parseFloat(p.costPrice).toFixed(2)}</span>
+                          ) : (
+                            <span className="text-amber-600 font-semibold bg-amber-50 px-1.5 py-0.5 rounded text-[10px]">
+                              Maliyet Girilmedi
+                            </span>
+                          )}
+                        </td>
+                        <td className="py-3 px-4 font-black tabular-nums">
+                          {parseFloat(p.calculatedNetProfit || 0) > 0 ? (
+                            <span className="text-emerald-700 font-bold">₺{parseFloat(p.calculatedNetProfit || 0).toFixed(2)}</span>
+                          ) : parseFloat(p.calculatedNetProfit || 0) < 0 ? (
+                            <span className="text-red-600 font-bold">₺{parseFloat(p.calculatedNetProfit || 0).toFixed(2)}</span>
+                          ) : (
+                            <span className="text-gray-400">₺0.00</span>
+                          )}
+                        </td>
+                        <td className="py-3 px-4 text-muted-foreground font-medium">
+                          %{p.commissionRate || 15} / %{p.vatRate || 20}
+                        </td>
+                        <td className="py-3 px-4 text-muted-foreground font-medium">
+                          {p.desi || 1} Desi
+                        </td>
+                        <td className="py-3 px-4 text-right">
+                          {isEditing ? (
+                            <div className="flex items-center justify-end gap-1">
+                              <button
+                                onClick={() => handleSaveEdit(p.id)}
+                                disabled={saving}
+                                className="p-1 rounded-lg bg-emerald-100 text-emerald-800 hover:bg-emerald-200 transition-colors cursor-pointer"
+                                title="Kaydet"
+                              >
+                                <Check className="w-3.5 h-3.5" />
+                              </button>
+                              <button
+                                onClick={() => setEditingId(null)}
+                                className="p-1 rounded-lg bg-gray-100 text-gray-600 hover:bg-gray-200 transition-colors cursor-pointer"
+                                title="İptal"
+                              >
+                                <X className="w-3.5 h-3.5" />
+                              </button>
+                            </div>
+                          ) : (
+                            <div className="flex items-center justify-end gap-1.5">
+                              <button
+                                onClick={() => handleStartEdit(p)}
+                                className="p-1.5 rounded-lg border border-border text-gray-500 hover:text-dark hover:bg-canvas transition-colors cursor-pointer"
+                                title="Hızlı Düzenle"
+                              >
+                                <Edit3 className="w-3.5 h-3.5" />
+                              </button>
+                              {p.marketplaceUrl && (
+                                <a
+                                  href={p.marketplaceUrl}
+                                  target="_blank"
+                                  rel="noreferrer"
+                                  className="p-1.5 rounded-lg border border-border text-gray-500 hover:text-primary hover:bg-canvas transition-colors"
+                                  title="Trendyol'da Gör"
+                                >
+                                  <ExternalLink className="w-3.5 h-3.5" />
+                                </a>
+                              )}
                             </div>
                           )}
-                        </div>
-                      </td>
-                      <td className="py-3 px-4 table-sticky-first-col font-bold text-dark">
-                        <div className="flex items-center gap-1.5 flex-wrap">
-                          <span className="block truncate max-w-[280px]">{p.title}</span>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+
+            {/* B. MOBILE CARD VIEW (Visible only on mobile < md) - ZERO HORIZONTAL SCROLL */}
+            <div className="block md:hidden divide-y divide-border p-3 space-y-3.5">
+              {products.map((p) => {
+                const isEditing = editingId === p.id;
+                const hasStock = parseInt(p.stockQuantity || 0) > 0;
+                const profit = parseFloat(p.calculatedNetProfit || 0);
+
+                return (
+                  <div key={p.id} className="bg-canvas/50 rounded-2xl p-3.5 border border-border/80 shadow-2xs space-y-3 transition-all">
+                    {/* Top: Image + Info */}
+                    <div className="flex items-start gap-3">
+                      <div className="w-14 h-14 rounded-xl border border-border/80 shadow-2xs overflow-hidden bg-white shrink-0 relative flex items-center justify-center">
+                        {p.imageUrl ? (
+                          <img 
+                            src={p.imageUrl} 
+                            alt={p.title} 
+                            className="w-full h-full object-cover"
+                            onError={(e) => {
+                              (e.target as any).src = 'https://images.unsplash.com/photo-1584308666744-24d5c474f2ae?w=100&auto=format&fit=crop&q=60';
+                            }}
+                          />
+                        ) : (
+                          <div className="w-full h-full bg-primary-tint-50 flex items-center justify-center text-primary">
+                            <Package className="w-5 h-5" />
+                          </div>
+                        )}
+                      </div>
+
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-1.5 flex-wrap mb-1">
                           {p.productStatus === 'active' && (
-                            <span className="text-[9px] bg-emerald-100 text-emerald-800 font-bold px-1.5 py-0.5 rounded-full shrink-0">
+                            <span className="text-[9px] bg-emerald-100 text-emerald-800 font-bold px-1.5 py-0.2 rounded-full">
                               Aktif
                             </span>
                           )}
                           {p.productStatus === 'pending_approval' && (
-                            <span className="text-[9px] bg-amber-100 text-amber-800 font-bold px-1.5 py-0.5 rounded-full shrink-0">
+                            <span className="text-[9px] bg-amber-100 text-amber-800 font-bold px-1.5 py-0.2 rounded-full">
                               Onay Sürecinde
                             </span>
                           )}
                           {p.productStatus === 'passive' && (
-                            <span className="text-[9px] bg-gray-100 text-gray-700 font-bold px-1.5 py-0.5 rounded-full shrink-0">
+                            <span className="text-[9px] bg-gray-100 text-gray-700 font-bold px-1.5 py-0.2 rounded-full">
                               Pasif
                             </span>
                           )}
-                          {p.deliveryType === 'fast_delivery' && (
-                            <span className="text-[9px] bg-sky-100 text-sky-800 font-bold px-1.5 py-0.5 rounded-full shrink-0">Hızlı</span>
-                          )}
+                          <Badge variant={hasStock ? "excellent" : "secondary"} className="text-[9px] py-0 px-1.5">
+                            {p.stockQuantity} Adet
+                          </Badge>
                         </div>
-                        <div className="flex items-center gap-2 mt-0.5">
-                          <span className="text-[10px] text-gray-400 font-mono">Barkod: {p.barcode}</span>
-                          {p.modelCode && <span className="text-[10px] text-gray-400 font-mono">Model: {p.modelCode}</span>}
-                          {p.sku && <span className="text-[10px] text-gray-400 font-mono">Stok Kodu: {p.sku}</span>}
-                        </div>
-                      </td>
-                      <td className="py-3 px-4 font-semibold text-gray-700">
-                        {p.brand || 'Genject'}
-                      </td>
 
-                      <td className="py-3 px-4 text-center">
-                        {isEditing ? (
+                        <h4 className="font-bold text-dark text-xs line-clamp-2 leading-snug">
+                          {p.title}
+                        </h4>
+
+                        <div className="flex items-center gap-2 mt-1 text-[10px] text-gray-500 font-mono flex-wrap">
+                          <span>Barkod: {p.barcode}</span>
+                          {p.modelCode && <span>• Model: {p.modelCode}</span>}
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Middle: Financials Grid (2x2) */}
+                    {isEditing ? (
+                      <div className="bg-white p-3 rounded-xl border border-primary/40 space-y-2.5 shadow-xs animate-in fade-in">
+                        <div className="grid grid-cols-2 gap-2">
+                          <div>
+                            <label className="text-[10px] font-bold text-gray-600 block mb-0.5">Satış Fiyatı (₺)</label>
+                            <input
+                              type="number"
+                              step="0.5"
+                              value={editPrice}
+                              onChange={(e) => setEditPrice(parseFloat(e.target.value) || 0)}
+                              className="w-full px-2 py-1 rounded-lg border border-primary font-bold text-primary text-xs bg-white"
+                            />
+                          </div>
+                          <div>
+                            <label className="text-[10px] font-bold text-gray-600 block mb-0.5">Alış Maliyeti (₺)</label>
+                            <input
+                              type="number"
+                              step="0.5"
+                              value={editCost}
+                              onChange={(e) => setEditCost(parseFloat(e.target.value) || 0)}
+                              className="w-full px-2 py-1 rounded-lg border border-red-500 font-bold text-red-700 text-xs bg-white"
+                            />
+                          </div>
+                        </div>
+                        <div>
+                          <label className="text-[10px] font-bold text-gray-600 block mb-0.5">Stok Miktarı</label>
                           <input
                             type="number"
                             value={editStock}
                             onChange={(e) => setEditStock(parseInt(e.target.value) || 0)}
-                            className="w-16 px-2 py-1 rounded-lg border border-primary text-center font-bold"
+                            className="w-full px-2 py-1 rounded-lg border border-border font-bold text-dark text-xs bg-white"
                           />
-                        ) : (
-                          <Badge variant={hasStock ? "excellent" : "secondary"}>
-                            {p.stockQuantity} Adet
-                          </Badge>
-                        )}
-                      </td>
-                      <td className="py-3 px-4 font-black text-primary tabular-nums">
-                        {isEditing ? (
-                          <input
-                            type="number"
-                            step="0.5"
-                            value={editPrice}
-                            onChange={(e) => setEditPrice(parseFloat(e.target.value) || 0)}
-                            className="w-20 px-2 py-1 rounded-lg border border-primary font-bold text-primary"
-                          />
-                        ) : (
-                          `₺${parseFloat(p.salePrice || 0).toFixed(2)}`
-                        )}
-                      </td>
-                      <td className="py-3 px-4 font-bold text-red-700 tabular-nums">
-                        {isEditing ? (
-                          <input
-                            type="number"
-                            step="0.5"
-                            value={editCost}
-                            onChange={(e) => setEditCost(parseFloat(e.target.value) || 0)}
-                            className="w-20 px-2 py-1 rounded-lg border border-red-500 font-bold text-red-700"
-                          />
-                        ) : p.costPrice !== null && p.costPrice !== undefined && p.costPrice > 0 ? (
-                          <span>₺{parseFloat(p.costPrice).toFixed(2)}</span>
-                        ) : (
-                          <span className="text-amber-600 font-semibold bg-amber-50 px-1.5 py-0.5 rounded text-[10px]">
-                            Maliyet Girilmedi
+                        </div>
+                        <div className="flex items-center gap-2 pt-1">
+                          <button
+                            onClick={() => handleSaveEdit(p.id)}
+                            disabled={saving}
+                            className="flex-1 py-1.5 rounded-lg bg-emerald-600 text-white font-bold text-xs flex items-center justify-center gap-1 shadow-xs hover:bg-emerald-700"
+                          >
+                            <Check className="w-3.5 h-3.5" />
+                            <span>Kaydet</span>
+                          </button>
+                          <button
+                            onClick={() => setEditingId(null)}
+                            className="px-3 py-1.5 rounded-lg bg-gray-100 text-gray-600 font-bold text-xs hover:bg-gray-200"
+                          >
+                            İptal
+                          </button>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="grid grid-cols-2 gap-2 text-xs">
+                        {/* Satış Fiyatı */}
+                        <div className="bg-white p-2.5 rounded-xl border border-border/80 flex flex-col justify-between">
+                          <span className="text-[10px] text-gray-500 font-semibold block">Satış Fiyatı</span>
+                          <span className="font-black text-primary text-sm tabular-nums mt-0.5">
+                            ₺{parseFloat(p.salePrice || 0).toFixed(2)}
                           </span>
-                        )}
-                      </td>
-                      <td className="py-3 px-4 font-black tabular-nums">
-                        {parseFloat(p.calculatedNetProfit || 0) > 0 ? (
-                          <span className="text-emerald-700 font-bold">₺{parseFloat(p.calculatedNetProfit || 0).toFixed(2)}</span>
-                        ) : parseFloat(p.calculatedNetProfit || 0) < 0 ? (
-                          <span className="text-red-600 font-bold">₺{parseFloat(p.calculatedNetProfit || 0).toFixed(2)}</span>
-                        ) : (
-                          <span className="text-gray-400">₺0.00</span>
-                        )}
-                      </td>
-                      <td className="py-3 px-4 text-muted-foreground font-medium">
-                        %{p.commissionRate || 15} / %{p.vatRate || 20}
-                      </td>
-                      <td className="py-3 px-4 text-muted-foreground font-medium">
-                        {p.desi || 1} Desi
-                      </td>
-                      <td className="py-3 px-4 text-right">
-                        {isEditing ? (
-                          <div className="flex items-center justify-end gap-1">
-                            <button
-                              onClick={() => handleSaveEdit(p.id)}
-                              disabled={saving}
-                              className="p-1 rounded-lg bg-emerald-100 text-emerald-800 hover:bg-emerald-200 transition-colors"
-                              title="Kaydet"
+                        </div>
+
+                        {/* Alış Maliyeti */}
+                        <div className="bg-white p-2.5 rounded-xl border border-border/80 flex flex-col justify-between">
+                          <span className="text-[10px] text-gray-500 font-semibold block">Alış Maliyeti</span>
+                          {p.costPrice !== null && p.costPrice !== undefined && p.costPrice > 0 ? (
+                            <span className="font-bold text-red-700 text-sm tabular-nums mt-0.5">
+                              ₺{parseFloat(p.costPrice).toFixed(2)}
+                            </span>
+                          ) : (
+                            <span className="text-amber-600 font-bold text-[10px] bg-amber-50 px-1.5 py-0.5 rounded mt-0.5 inline-block">
+                              Girilmedi
+                            </span>
+                          )}
+                        </div>
+
+                        {/* Net Kâr */}
+                        <div className="bg-white p-2.5 rounded-xl border border-border/80 flex flex-col justify-between">
+                          <span className="text-[10px] text-gray-500 font-semibold block">Tahmini Net Kâr</span>
+                          <span className={`font-black text-xs tabular-nums mt-0.5 ${profit > 0 ? 'text-emerald-700' : profit < 0 ? 'text-red-600' : 'text-gray-500'}`}>
+                            {profit > 0 ? `+₺${profit.toFixed(2)}` : `₺${profit.toFixed(2)}`}
+                          </span>
+                        </div>
+
+                        {/* Desi & Komisyon */}
+                        <div className="bg-white p-2.5 rounded-xl border border-border/80 flex flex-col justify-between">
+                          <span className="text-[10px] text-gray-500 font-semibold block">Desi & Komisyon</span>
+                          <span className="text-[11px] font-bold text-gray-700 mt-0.5 truncate">
+                            {p.desi || 1} Desi • %{p.commissionRate || 15}
+                          </span>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Bottom Actions */}
+                    {!isEditing && (
+                      <div className="flex items-center justify-between pt-1 border-t border-border/60 text-xs">
+                        <span className="text-[10px] font-semibold text-gray-400">
+                          {p.brand || 'Genject'}
+                        </span>
+                        
+                        <div className="flex items-center gap-1.5">
+                          <button
+                            onClick={() => handleStartEdit(p)}
+                            className="px-2.5 py-1 rounded-lg border border-border text-gray-700 font-bold text-[11px] hover:bg-canvas flex items-center gap-1 shadow-2xs"
+                          >
+                            <Edit3 className="w-3 h-3 text-gray-500" />
+                            <span>Düzenle</span>
+                          </button>
+
+                          {p.marketplaceUrl && (
+                            <a
+                              href={p.marketplaceUrl}
+                              target="_blank"
+                              rel="noreferrer"
+                              className="p-1 rounded-lg border border-border text-gray-500 hover:text-primary hover:bg-canvas"
+                              title="Trendyol'da Gör"
                             >
-                              <Check className="w-3.5 h-3.5" />
-                            </button>
-                            <button
-                              onClick={() => setEditingId(null)}
-                              className="p-1 rounded-lg bg-gray-100 text-gray-600 hover:bg-gray-200 transition-colors"
-                              title="İptal"
-                            >
-                              <X className="w-3.5 h-3.5" />
-                            </button>
-                          </div>
-                        ) : (
-                          <div className="flex items-center justify-end gap-1.5">
-                            <button
-                              onClick={() => handleStartEdit(p)}
-                              className="p-1.5 rounded-lg border border-border text-gray-500 hover:text-dark hover:bg-canvas transition-colors"
-                              title="Hızlı Düzenle"
-                            >
-                              <Edit3 className="w-3.5 h-3.5" />
-                            </button>
-                            {p.marketplaceUrl && (
-                              <a
-                                href={p.marketplaceUrl}
-                                target="_blank"
-                                rel="noreferrer"
-                                className="p-1.5 rounded-lg border border-border text-gray-500 hover:text-primary hover:bg-canvas transition-colors"
-                                title="Trendyol'da Gör"
-                              >
-                                <ExternalLink className="w-3.5 h-3.5" />
-                              </a>
-                            )}
-                          </div>
-                        )}
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
+                              <ExternalLink className="w-3.5 h-3.5" />
+                            </a>
+                          )}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
           </div>
         )}
       </div>
+
+      {/* 6. BOTTOM PAGINATION BAR (Visible on both Desktop and Mobile) */}
+      {!loading && products.length > 0 && (
+        <div className="flex items-center justify-between flex-wrap gap-3 bg-white p-3.5 sm:p-4 rounded-2xl sm:rounded-3xl border border-border shadow-xs text-xs font-semibold text-gray-600">
+          <div className="text-gray-500">
+            Toplam <span className="font-bold text-dark">{pagination.totalCount || products.length}</span> üründen{' '}
+            <span className="font-bold text-dark">{((pagination.page - 1) * pagination.pageSize) + 1} - {Math.min(pagination.page * pagination.pageSize, pagination.totalCount || products.length)}</span> arası gösteriliyor
+          </div>
+
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => setPagination(prev => ({ ...prev, page: Math.max(1, prev.page - 1) }))}
+              disabled={pagination.page <= 1}
+              className="px-3 py-1.5 rounded-xl border border-border flex items-center gap-1 font-bold disabled:opacity-30 hover:bg-canvas cursor-pointer shadow-2xs bg-white"
+            >
+              <ChevronLeft className="w-3.5 h-3.5" />
+              <span>Önceki</span>
+            </button>
+
+            <span className="font-bold text-dark px-2">
+              Sayfa {pagination.page} / {pagination.totalPages}
+            </span>
+
+            <button
+              onClick={() => setPagination(prev => ({ ...prev, page: Math.min(pagination.totalPages, prev.page + 1) }))}
+              disabled={pagination.page >= pagination.totalPages}
+              className="px-3 py-1.5 rounded-xl border border-border flex items-center gap-1 font-bold disabled:opacity-30 hover:bg-canvas cursor-pointer shadow-2xs bg-white"
+            >
+              <span>Sonraki</span>
+              <ChevronRight className="w-3.5 h-3.5" />
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
