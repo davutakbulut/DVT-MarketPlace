@@ -436,10 +436,6 @@ export default function ProductPricingPage() {
                   {selectedProductObj.brand && (
                     <Badge variant="outline" className="text-[10px]">{selectedProductObj.brand}</Badge>
                   )}
-                  <span className="px-2 py-0.5 rounded-lg bg-primary-tint-50 text-primary font-bold text-[10px] sm:text-[11px] border border-primary/20 flex items-center gap-1">
-                    <Box className="w-3 h-3 text-primary" />
-                    <span>Paket: {selectedProductObj.packageQuantity || 1} Adet</span>
-                  </span>
                   <Badge variant={selectedProductObj.stockQuantity > 0 ? "excellent" : "secondary"} className="text-[10px]">
                     {selectedProductObj.stockQuantity > 0 ? `Stok: ${selectedProductObj.stockQuantity} Adet` : "Tükendi"}
                   </Badge>

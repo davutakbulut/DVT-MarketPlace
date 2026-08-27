@@ -217,7 +217,6 @@ export async function GET(request: Request) {
         p.shipment_desi as "shipmentDesi", 
         p.measured_desi as "measuredDesi",
         p.stock_quantity as "stockQuantity",
-        COALESCE(p.package_quantity, 1) as "packageQuantity",
         p.extra_cost as "extraCost",
         p.target_profit_margin_percent as "targetMarginPercent",
         p.target_profit_amount as "targetProfitAmount",
@@ -281,7 +280,6 @@ export async function POST(request: Request) {
     const costPrice = body.costPrice !== undefined ? body.costPrice : body.currentCost;
     const salePrice = body.salePrice;
     const stockQuantity = body.stockQuantity;
-    const packageQuantity = body.packageQuantity !== undefined ? parseInt(body.packageQuantity) : undefined;
 
     if (!productId && !barcode) {
       return NextResponse.json({ error: 'Ürün ID veya Barkod zorunludur' }, { status: 400 });
@@ -306,12 +304,6 @@ export async function POST(request: Request) {
     if (stockQuantity !== undefined) {
       updateQuery += `, stock_quantity = $${pIdx}`;
       params.push(stockQuantity);
-      pIdx++;
-    }
-
-    if (packageQuantity !== undefined) {
-      updateQuery += `, package_quantity = $${pIdx}`;
-      params.push(Math.max(1, packageQuantity));
       pIdx++;
     }
 
