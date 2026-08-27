@@ -6,7 +6,8 @@ import { toast } from "sonner";
 import { 
   Store, Plus, Key, ShieldCheck, CheckCircle2, AlertTriangle, 
   RefreshCw, Trash2, Edit3, Globe, ExternalLink, Sparkles, Check, ArrowRight,
-  Truck, Radio, Info, Activity, Layers, Lock, X
+  Truck, Radio, Info, Activity, Layers, Lock, X, Package, RotateCcw,
+  Tags, Coins, CheckSquare, Square, SlidersHorizontal, AlertCircle, Loader2
 } from "lucide-react";
 
 interface ConnectedStore {
@@ -25,6 +26,15 @@ interface ConnectedStore {
   extraConfig?: any;
 }
 
+interface SyncModuleItem {
+  id: 'orders' | 'claims' | 'products' | 'settlements' | 'status';
+  title: string;
+  desc: string;
+  icon: any;
+  color: string;
+  badge?: string;
+}
+
 export default function StoresManagementPage() {
   const [stores, setStores] = useState<ConnectedStore[]>([]);
   const [loading, setLoading] = useState(true);
@@ -32,6 +42,15 @@ export default function StoresManagementPage() {
   const [editModal, setEditModal] = useState(false);
   const [selectedStore, setSelectedStore] = useState<ConnectedStore | null>(null);
   const [syncingId, setSyncingId] = useState<string | null>(null);
+
+  // Granular Sync Modal State
+  const [syncModalOpen, setSyncModalOpen] = useState(false);
+  const [storeToSync, setStoreToSync] = useState<ConnectedStore | null>(null);
+  const [selectedModules, setSelectedModules] = useState<string[]>(['orders', 'claims', 'products', 'settlements']);
+  const [fullHistoryOrders, setFullHistoryOrders] = useState(false);
+  const [syncRunning, setSyncRunning] = useState(false);
+  const [syncProgress, setSyncProgress] = useState<Record<string, { status: 'pending' | 'running' | 'success' | 'error'; message?: string }>>({});
+  const [syncCompleted, setSyncCompleted] = useState(false);
 
   // Form State (New & Edit)
   const [marketplace, setMarketplace] = useState<'trendyol' | 'hepsiburada' | 'amazon' | 'n11' | 'ciceksepeti' | 'shopify'>('trendyol');
@@ -211,6 +230,217 @@ export default function StoresManagementPage() {
     }
   };
 
+  const syncModuleOptions: SyncModuleItem[] = [
+    {
+      id: 'orders',
+      title: 'Siparişler',
+      desc: 'Yeni siparişleri, teslim edilenleri, alıcı ve maliyet satırlarını senkronize eder.',
+      icon: Package,
+      color: 'text-blue-600 bg-blue-50 border-blue-200',
+      badge: 'Temel Veri'
+    },
+    {
+      id: 'claims',
+      title: 'İptal & İadeler',
+      desc: 'Müşteri iade taleplerini, iptal paketlerini ve kargo iade durumlarını çeker.',
+      icon: RotateCcw,
+      color: 'text-red-600 bg-red-50 border-red-200',
+      badge: 'İade Takibi'
+    },
+    {
+      id: 'products',
+      title: 'Ürünler & Katalog',
+      desc: 'Ürün kataloğunu, satış fiyatlarını, stokları, komisyon ve KDV oranlarını günceller.',
+      icon: Tags,
+      color: 'text-emerald-600 bg-emerald-50 border-emerald-200',
+      badge: 'Katalog & Fiyat'
+    },
+    {
+      id: 'settlements',
+      title: 'Finansal Veriler & Hakedişler',
+      desc: 'Trendyol resmi hakediş ekstrelerini, kesinti faturalarını ve nakit mutabakatını çeker.',
+      icon: Coins,
+      color: 'text-amber-600 bg-amber-50 border-amber-200',
+      badge: 'Cari & Mutabakat'
+    },
+    {
+      id: 'status',
+      title: 'Sipariş Durumları (Hızlı Delta)',
+      desc: 'Sadece kargo ve teslimat statüsü değişen siparişleri saniyeler içinde günceller.',
+      icon: Activity,
+      color: 'text-purple-600 bg-purple-50 border-purple-200',
+      badge: 'Hızlı Delta'
+    }
+  ];
+
+  const openGranularSyncModal = (s: ConnectedStore) => {
+    setStoreToSync(s);
+    setSelectedModules(['orders', 'claims', 'products', 'settlements']);
+    setFullHistoryOrders(false);
+    setSyncRunning(false);
+    setSyncCompleted(false);
+    setSyncProgress({});
+    setSyncModalOpen(true);
+  };
+
+  const handleToggleModule = (modId: string) => {
+    if (syncRunning) return;
+    setSelectedModules(prev => 
+      prev.includes(modId) ? prev.filter(m => m !== modId) : [...prev, modId]
+    );
+  };
+
+  const handleToggleAllModules = () => {
+    if (syncRunning) return;
+    if (selectedModules.length === syncModuleOptions.length) {
+      setSelectedModules([]);
+    } else {
+      setSelectedModules(syncModuleOptions.map(m => m.id));
+    }
+  };
+
+  const handleExecuteGranularSync = async () => {
+    if (!storeToSync || selectedModules.length === 0) {
+      toast.error("Lütfen en az bir senkronizasyon alanı seçin.");
+      return;
+    }
+    setSyncRunning(true);
+    setSyncCompleted(false);
+
+    const initialProgress: Record<string, { status: 'pending' | 'running' | 'success' | 'error'; message?: string }> = {};
+    selectedModules.forEach(m => {
+      initialProgress[m] = { status: 'pending' };
+    });
+    setSyncProgress(initialProgress);
+
+    const isTrendyol = storeToSync.marketplace === 'trendyol';
+
+    for (const modId of selectedModules) {
+      setSyncProgress(prev => ({
+        ...prev,
+        [modId]: { status: 'running', message: 'Veriler çekiliyor ve işleniyor...' }
+      }));
+
+      try {
+        if (isTrendyol) {
+          if (modId === 'orders') {
+            const res = await fetch('/api/integrations/trendyol/sync-orders', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ storeId: storeToSync.id, fullHistory: fullHistoryOrders }),
+            });
+            const data = await res.json();
+            if (data.success) {
+              setSyncProgress(prev => ({
+                ...prev,
+                orders: { status: 'success', message: `${data.result?.totalOrdersFetched || 0} sipariş çekildi (${data.result?.deliveredCount || 0} teslim, ${data.result?.newOrdersCount || 0} yeni).` }
+              }));
+            } else {
+              setSyncProgress(prev => ({
+                ...prev,
+                orders: { status: 'error', message: data.error || 'Siparişler senkronize edilemedi.' }
+              }));
+            }
+          } else if (modId === 'claims') {
+            const res = await fetch('/api/integrations/trendyol/sync-claims', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ storeId: storeToSync.id }),
+            });
+            const data = await res.json();
+            if (data.success) {
+              setSyncProgress(prev => ({
+                ...prev,
+                claims: { status: 'success', message: `${data.result?.totalClaimsFetched || 0} iade/iptal talebi senkronize edildi.` }
+              }));
+            } else {
+              setSyncProgress(prev => ({
+                ...prev,
+                claims: { status: 'error', message: data.error || 'İade talepleri senkronize edilemedi.' }
+              }));
+            }
+          } else if (modId === 'products') {
+            const res = await fetch('/api/integrations/trendyol/sync-products', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ storeId: storeToSync.id, fetchAll: true }),
+            });
+            const data = await res.json();
+            if (data.success) {
+              setSyncProgress(prev => ({
+                ...prev,
+                products: { status: 'success', message: `${data.result?.totalConsolidated || 0} ürün ve fiyat/stok verisi güncellendi.` }
+              }));
+            } else {
+              setSyncProgress(prev => ({
+                ...prev,
+                products: { status: 'error', message: data.error || 'Ürünler senkronize edilemedi.' }
+              }));
+            }
+          } else if (modId === 'settlements') {
+            const res = await fetch('/api/integrations/trendyol/sync-settlements', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ storeId: storeToSync.id }),
+            });
+            const data = await res.json();
+            if (data.success) {
+              setSyncProgress(prev => ({
+                ...prev,
+                settlements: { status: 'success', message: `${data.result?.totalFetched || 0} finansal hakediş ve mutabakat işlemi eşleştirildi.` }
+              }));
+            } else {
+              setSyncProgress(prev => ({
+                ...prev,
+                settlements: { status: 'error', message: data.error || 'Finansal hakedişler çekilemedi.' }
+              }));
+            }
+          } else if (modId === 'status') {
+            const res = await fetch('/api/integrations/trendyol/sync-status', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ storeId: storeToSync.id, maxPages: 10 }),
+            });
+            const data = await res.json();
+            if (data.success) {
+              setSyncProgress(prev => ({
+                ...prev,
+                status: { status: 'success', message: data.message || 'Sipariş durumları güncellendi.' }
+              }));
+            } else {
+              setSyncProgress(prev => ({
+                ...prev,
+                status: { status: 'error', message: data.error || 'Durumlar güncellenemedi.' }
+              }));
+            }
+          }
+        } else {
+          // Other marketplaces (Hepsiburada, Amazon, etc.)
+          const res = await fetch('/api/integrations/sync', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ storeId: storeToSync.id }),
+          });
+          const data = await res.json();
+          setSyncProgress(prev => ({
+            ...prev,
+            [modId]: { status: 'success', message: `${storeToSync.marketplace.toUpperCase()} verileri senkronize edildi.` }
+          }));
+        }
+      } catch (err: any) {
+        setSyncProgress(prev => ({
+          ...prev,
+          [modId]: { status: 'error', message: err.message || 'Hata oluştu' }
+        }));
+      }
+    }
+
+    setSyncRunning(false);
+    setSyncCompleted(true);
+    toast.success(`${storeToSync.storeName} için seçilen alanlar senkronize edildi!`);
+    fetchStores();
+  };
+
   const handleSyncStatus = async (id: string, name: string) => {
     setSyncingId(id);
     try {
@@ -229,50 +459,6 @@ export default function StoresManagementPage() {
       }
     } catch (e: any) {
       toast.error("Durum senkronizasyonu hatası: " + e.message);
-    } finally {
-      setSyncingId(null);
-    }
-  };
-
-  const handleSyncStore = async (id: string, name: string, mp: string) => {
-    setSyncingId(id);
-    try {
-      if (mp === 'trendyol') {
-        toast.info(`${name} için Trendyol canlı senkronizasyonu başlatıldı...`);
-        const res = await fetch('/api/integrations/trendyol/sync-orders', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ storeId: id }),
-        });
-        const data = await res.json();
-
-        // Also sync products
-        await fetch('/api/integrations/trendyol/sync-products', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ storeId: id }),
-        }).catch(() => {});
-
-        if (data.success) {
-          toast.success(data.message || `${name} verileri güncellendi!`);
-          fetchStores();
-        } else {
-          toast.error(data.error || "Senkronizasyon tamamlanamadı.");
-        }
-      } else {
-        const res = await fetch('/api/integrations/sync', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ storeId: id }),
-        });
-        const data = await res.json();
-        if (res.ok) {
-          toast.success(data.message || `${name} verileri güncellendi!`);
-          fetchStores();
-        }
-      }
-    } catch (e: any) {
-      toast.error("Senkronizasyon hatası: " + e.message);
     } finally {
       setSyncingId(null);
     }
@@ -411,12 +597,12 @@ export default function StoresManagementPage() {
                   size="sm"
                   variant="outline"
                   disabled={isSyncing}
-                  onClick={() => handleSyncStore(s.id, s.storeName, s.marketplace)}
-                  className="text-xs h-7 gap-1 font-bold flex-1"
-                  title="Yeni siparişleri ve tüm geçmişi senkronize et"
+                  onClick={() => openGranularSyncModal(s)}
+                  className="text-xs h-7 gap-1.5 font-bold flex-1 bg-white hover:bg-canvas text-dark hover:text-primary hover:border-primary/50 transition-all cursor-pointer"
+                  title="Modüler senkronizasyon penceresini aç"
                 >
-                  <RefreshCw className={`w-3 h-3 ${isSyncing ? 'animate-spin text-primary' : ''}`} />
-                  <span>{isSyncing ? 'Çekiliyor...' : 'Senkronize Et'}</span>
+                  <SlidersHorizontal className="w-3.5 h-3.5 text-primary" />
+                  <span>Senkronize Et</span>
                 </Button>
 
                 {s.marketplace === 'trendyol' && (
@@ -734,6 +920,192 @@ export default function StoresManagementPage() {
                 </Button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL 3: Granular Sync Modal (Sipariş, İptal-İade, Ürünler, Finansal Veriler) */}
+      {syncModalOpen && storeToSync && (
+        <div className="fixed inset-0 z-50 bg-dark/60 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in">
+          <div className="bg-white rounded-3xl p-5 sm:p-6 max-w-xl w-full border border-border shadow-2xl space-y-4 animate-in zoom-in-95 max-h-[92vh] overflow-y-auto">
+            
+            {/* Modal Header */}
+            <div className="flex items-center justify-between pb-3 border-b border-border">
+              <div className="flex items-center gap-2.5">
+                <div className="w-9 h-9 rounded-2xl bg-primary/10 flex items-center justify-center text-primary">
+                  <SlidersHorizontal className="w-5 h-5" />
+                </div>
+                <div>
+                  <div className="flex items-center gap-2">
+                    <h4 className="text-base font-black text-dark">Modüler Veri Senkronizasyonu</h4>
+                    <span className="text-[10px] uppercase font-black px-2 py-0.5 rounded-lg bg-orange-100 text-orange-800 border border-orange-200">
+                      {storeToSync.marketplace}
+                    </span>
+                  </div>
+                  <p className="text-xs text-gray-500 font-medium">
+                    <strong className="text-dark">{storeToSync.storeName}</strong> için güncellenecek veri alanlarını seçin
+                  </p>
+                </div>
+              </div>
+              <button 
+                disabled={syncRunning}
+                onClick={() => setSyncModalOpen(false)} 
+                className="text-gray-400 hover:text-dark font-bold p-1 rounded-lg hover:bg-canvas transition-colors disabled:opacity-50 cursor-pointer"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Select All / Deselect Toolbar */}
+            <div className="flex items-center justify-between p-2.5 bg-canvas rounded-2xl border border-border text-xs">
+              <span className="text-gray-500 font-medium">
+                Seçilen Alanlar: <strong className="text-dark font-black">{selectedModules.length} / {syncModuleOptions.length}</strong>
+              </span>
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                disabled={syncRunning}
+                onClick={handleToggleAllModules}
+                className="h-7 text-xs font-bold text-primary hover:text-primary-hover hover:bg-white cursor-pointer"
+              >
+                {selectedModules.length === syncModuleOptions.length ? 'Tüm Seçimleri Kaldır' : 'Tümünü Seç'}
+              </Button>
+            </div>
+
+            {/* Module Options List */}
+            <div className="space-y-2.5">
+              {syncModuleOptions.map((mod) => {
+                const Icon = mod.icon;
+                const isSelected = selectedModules.includes(mod.id);
+                const step = syncProgress[mod.id];
+
+                return (
+                  <div
+                    key={mod.id}
+                    onClick={() => handleToggleModule(mod.id)}
+                    className={`p-3.5 rounded-2xl border transition-all cursor-pointer select-none ${
+                      isSelected 
+                        ? 'bg-white border-primary/40 shadow-xs ring-1 ring-primary/10' 
+                        : 'bg-canvas/50 border-border/80 opacity-70 hover:opacity-100 hover:bg-white'
+                    } ${syncRunning ? 'cursor-not-allowed' : ''}`}
+                  >
+                    <div className="flex items-start gap-3">
+                      <div className="pt-0.5">
+                        {isSelected ? (
+                          <div className="w-5 h-5 rounded-lg bg-primary text-white flex items-center justify-center shadow-xs">
+                            <Check className="w-3.5 h-3.5 stroke-[3]" />
+                          </div>
+                        ) : (
+                          <div className="w-5 h-5 rounded-lg border-2 border-gray-300 bg-white" />
+                        )}
+                      </div>
+
+                      <div className={`w-8 h-8 rounded-xl flex items-center justify-center shrink-0 ${mod.color}`}>
+                        <Icon className="w-4 h-4" />
+                      </div>
+
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center justify-between gap-2">
+                          <h5 className={`text-xs font-black ${isSelected ? 'text-dark' : 'text-gray-600'}`}>
+                            {mod.title}
+                          </h5>
+                          {mod.badge && (
+                            <span className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-canvas border border-border text-gray-500">
+                              {mod.badge}
+                            </span>
+                          )}
+                        </div>
+                        <p className="text-[11px] text-gray-400 mt-0.5 leading-relaxed">
+                          {mod.desc}
+                        </p>
+
+                        {/* Extra Option for Orders (Full Archive) */}
+                        {mod.id === 'orders' && isSelected && !syncRunning && !syncCompleted && (
+                          <div 
+                            onClick={(e) => { e.stopPropagation(); setFullHistoryOrders(!fullHistoryOrders); }} 
+                            className="mt-2.5 pt-2 border-t border-border/60 flex items-center gap-2 text-[11px] text-gray-600 cursor-pointer"
+                          >
+                            <input
+                              type="checkbox"
+                              checked={fullHistoryOrders}
+                              onChange={() => {}}
+                              className="rounded border-gray-300 text-primary focus:ring-primary h-3.5 w-3.5"
+                            />
+                            <span className="font-semibold text-gray-700">Tüm geçmiş siparişleri tara (Geniş Arşiv)</span>
+                          </div>
+                        )}
+
+                        {/* Real-time Status / Execution Feedback */}
+                        {step && (
+                          <div className="mt-2 pt-2 border-t border-border/50 text-[11px]">
+                            {step.status === 'pending' && (
+                              <span className="text-gray-400 font-medium flex items-center gap-1.5">
+                                <Loader2 className="w-3.5 h-3.5 animate-spin text-gray-400" /> Sıraya alındı, bekleniyor...
+                              </span>
+                            )}
+                            {step.status === 'running' && (
+                              <span className="text-primary font-bold flex items-center gap-1.5 animate-pulse">
+                                <Loader2 className="w-3.5 h-3.5 animate-spin" /> {step.message || 'Senkronize ediliyor...'}
+                              </span>
+                            )}
+                            {step.status === 'success' && (
+                              <span className="text-emerald-700 font-bold flex items-center gap-1.5">
+                                <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" /> {step.message || 'Tamamlandı'}
+                              </span>
+                            )}
+                            {step.status === 'error' && (
+                              <span className="text-red-600 font-bold flex items-center gap-1.5">
+                                <AlertCircle className="w-3.5 h-3.5 text-red-500" /> {step.message || 'Hata oluştu'}
+                              </span>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+
+            {/* Modal Actions */}
+            <div className="flex items-center justify-between pt-3 border-t border-border gap-2">
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                disabled={syncRunning}
+                onClick={() => setSyncModalOpen(false)}
+                className="text-xs cursor-pointer"
+              >
+                {syncCompleted ? 'Kapat' : 'Vazgeç'}
+              </Button>
+
+              <Button
+                type="button"
+                size="sm"
+                disabled={syncRunning || selectedModules.length === 0}
+                onClick={handleExecuteGranularSync}
+                className="text-xs font-bold gap-2 shadow-xs bg-primary hover:bg-primary-hover text-white cursor-pointer px-4 h-9"
+              >
+                {syncRunning ? (
+                  <>
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    <span>Senkronize Ediliyor...</span>
+                  </>
+                ) : syncCompleted ? (
+                  <>
+                    <CheckCircle2 className="w-4 h-4" />
+                    <span>Yeniden Senkronize Et ({selectedModules.length})</span>
+                  </>
+                ) : (
+                  <>
+                    <RefreshCw className="w-4 h-4" />
+                    <span>Seçilenleri Senkronize Et ({selectedModules.length})</span>
+                  </>
+                )}
+              </Button>
+            </div>
           </div>
         </div>
       )}
