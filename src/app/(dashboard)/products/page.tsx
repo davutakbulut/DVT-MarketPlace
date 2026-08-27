@@ -10,10 +10,20 @@ import {
   Check, X, Eye, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight,
   TrendingUp, Truck, Layers, DollarSign, Award, AlertCircle, Info,
   ChevronDown, ChevronUp, FileSpreadsheet, SlidersHorizontal, RotateCcw, Box,
-  Database
+  Database, ZoomIn
 } from "lucide-react";
 import Image from "next/image";
 import { useTenantStore } from "@/stores/useTenantStore";
+
+function getProductMarketplaceUrl(p: any): string {
+  if (p?.marketplaceUrl && typeof p.marketplaceUrl === 'string' && p.marketplaceUrl.startsWith('http')) {
+    return p.marketplaceUrl;
+  }
+  if (p?.barcode) {
+    return `https://www.trendyol.com/sr?q=${encodeURIComponent(p.barcode)}`;
+  }
+  return `https://www.trendyol.com/sr?q=${encodeURIComponent(p?.title || '')}`;
+}
 
 export default function ProductsCatalogPage() {
   const { activeStoreId } = useTenantStore();
@@ -44,6 +54,9 @@ export default function ProductsCatalogPage() {
   const [minStock, setMinStock] = useState("");
   const [maxStock, setMaxStock] = useState("");
 
+  // Image Zoom Lightbox State
+  const [zoomedProduct, setZoomedProduct] = useState<any | null>(null);
+
   // Breakdown Counts
   const [statusCounts, setStatusCounts] = useState({
     all: 0,
@@ -72,6 +85,14 @@ export default function ProductsCatalogPage() {
   const [editStock, setEditStock] = useState<number>(0);
   const [saving, setSaving] = useState(false);
   const [syncing, setSyncing] = useState(false);
+
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setZoomedProduct(null);
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, []);
 
   const fetchProducts = async () => {
     setLoading(true);
@@ -729,7 +750,7 @@ export default function ProductsCatalogPage() {
               <table className="w-full text-left text-xs border-collapse min-w-[950px]">
                 <thead>
                   <tr className="bg-canvas border-b border-border text-muted-foreground font-semibold text-[11px]">
-                    <th className="py-3 px-4 w-12 text-center">Görsel</th>
+                    <th className="py-3 px-4 w-14 text-center">Görsel</th>
                     <th className="py-3 px-4 table-sticky-first-col bg-canvas">Ürün Adı & Model</th>
                     <th className="py-3 px-4">Marka</th>
                     <th className="py-3 px-4 text-center font-bold">Stok</th>
@@ -745,30 +766,50 @@ export default function ProductsCatalogPage() {
                   {products.map((p) => {
                     const isEditing = editingId === p.id;
                     const hasStock = parseInt(p.stockQuantity || 0) > 0;
+                    const marketplaceUrl = getProductMarketplaceUrl(p);
 
                     return (
                       <tr key={p.id} className="hover:bg-canvas/50 transition-colors">
                         <td className="py-3 px-4 text-center">
-                          <div className="w-10 h-10 rounded-xl border border-border/80 shadow-2xs overflow-hidden bg-white mx-auto relative flex items-center justify-center group/img">
+                          <button
+                            type="button"
+                            onClick={() => setZoomedProduct(p)}
+                            className="w-11 h-11 rounded-xl border border-border/80 shadow-2xs overflow-hidden bg-white mx-auto relative flex items-center justify-center group/img cursor-zoom-in hover:border-primary hover:shadow-md transition-all block focus:outline-none"
+                            title="Görseli büyütmek için tıklayın"
+                          >
                             {p.imageUrl ? (
-                              <img 
-                                src={p.imageUrl} 
-                                alt={p.title} 
-                                className="w-full h-full object-cover transition-transform duration-300 group-hover/img:scale-125"
-                                onError={(e) => {
-                                  (e.target as any).src = 'https://images.unsplash.com/photo-1584308666744-24d5c474f2ae?w=100&auto=format&fit=crop&q=60';
-                                }}
-                              />
+                              <>
+                                <img 
+                                  src={p.imageUrl} 
+                                  alt={p.title} 
+                                  className="w-full h-full object-cover transition-transform duration-300 group-hover/img:scale-125"
+                                  onError={(e) => {
+                                    (e.target as any).src = 'https://images.unsplash.com/photo-1584308666744-24d5c474f2ae?w=100&auto=format&fit=crop&q=60';
+                                  }}
+                                />
+                                <div className="absolute inset-0 bg-black/40 opacity-0 group-hover/img:opacity-100 transition-opacity flex items-center justify-center">
+                                  <ZoomIn className="w-4 h-4 text-white drop-shadow" />
+                                </div>
+                              </>
                             ) : (
                               <div className="w-full h-full bg-primary-tint-50 flex items-center justify-center text-primary">
                                 <Package className="w-4 h-4" />
                               </div>
                             )}
-                          </div>
+                          </button>
                         </td>
                         <td className="py-3 px-4 table-sticky-first-col font-bold text-dark">
                           <div className="flex items-center gap-1.5 flex-wrap">
-                            <span className="block truncate max-w-[280px]">{p.title}</span>
+                            <a
+                              href={marketplaceUrl}
+                              target="_blank"
+                              rel="noreferrer"
+                              className="font-bold text-dark hover:text-primary transition-colors inline-flex items-center gap-1 group/link max-w-[280px]"
+                              title="Trendyol'da Ürünü Aç"
+                            >
+                              <span className="truncate">{p.title}</span>
+                              <ExternalLink className="w-3 h-3 text-orange-500 shrink-0 opacity-60 group-hover/link:opacity-100 transition-opacity" />
+                            </a>
                             {p.productStatus === 'active' && (
                               <span className="text-[9px] bg-emerald-100 text-emerald-800 font-bold px-1.5 py-0.5 rounded-full shrink-0">
                                 Aktif
@@ -885,17 +926,16 @@ export default function ProductsCatalogPage() {
                               >
                                 <Edit3 className="w-3.5 h-3.5" />
                               </button>
-                              {p.marketplaceUrl && (
-                                <a
-                                  href={p.marketplaceUrl}
-                                  target="_blank"
-                                  rel="noreferrer"
-                                  className="p-1.5 rounded-lg border border-border text-gray-500 hover:text-primary hover:bg-canvas transition-colors"
-                                  title="Trendyol'da Gör"
-                                >
-                                  <ExternalLink className="w-3.5 h-3.5" />
-                                </a>
-                              )}
+                              <a
+                                href={marketplaceUrl}
+                                target="_blank"
+                                rel="noreferrer"
+                                className="p-1.5 rounded-lg border border-orange-200 text-orange-600 bg-orange-50/60 hover:bg-orange-100 hover:text-orange-700 transition-colors inline-flex items-center gap-1 font-bold text-[11px]"
+                                title="Trendyol'da Ürünü Gör"
+                              >
+                                <ExternalLink className="w-3.5 h-3.5" />
+                                <span className="hidden lg:inline">Trendyol</span>
+                              </a>
                             </div>
                           )}
                         </td>
@@ -912,27 +952,38 @@ export default function ProductsCatalogPage() {
                 const isEditing = editingId === p.id;
                 const hasStock = parseInt(p.stockQuantity || 0) > 0;
                 const profit = parseFloat(p.calculatedNetProfit || 0);
+                const marketplaceUrl = getProductMarketplaceUrl(p);
 
                 return (
                   <div key={p.id} className="bg-canvas/50 rounded-2xl p-3.5 border border-border/80 shadow-2xs space-y-3 transition-all">
                     {/* Top: Image + Info */}
                     <div className="flex items-start gap-3">
-                      <div className="w-14 h-14 rounded-xl border border-border/80 shadow-2xs overflow-hidden bg-white shrink-0 relative flex items-center justify-center">
+                      <button
+                        type="button"
+                        onClick={() => setZoomedProduct(p)}
+                        className="w-14 h-14 rounded-xl border border-border/80 shadow-2xs overflow-hidden bg-white shrink-0 relative flex items-center justify-center group/img cursor-zoom-in active:scale-95 transition-transform focus:outline-none"
+                        title="Görseli büyüt"
+                      >
                         {p.imageUrl ? (
-                          <img 
-                            src={p.imageUrl} 
-                            alt={p.title} 
-                            className="w-full h-full object-cover"
-                            onError={(e) => {
-                              (e.target as any).src = 'https://images.unsplash.com/photo-1584308666744-24d5c474f2ae?w=100&auto=format&fit=crop&q=60';
-                            }}
-                          />
+                          <>
+                            <img 
+                              src={p.imageUrl} 
+                              alt={p.title} 
+                              className="w-full h-full object-cover"
+                              onError={(e) => {
+                                (e.target as any).src = 'https://images.unsplash.com/photo-1584308666744-24d5c474f2ae?w=100&auto=format&fit=crop&q=60';
+                              }}
+                            />
+                            <div className="absolute bottom-0.5 right-0.5 bg-black/60 rounded p-0.5">
+                              <ZoomIn className="w-2.5 h-2.5 text-white" />
+                            </div>
+                          </>
                         ) : (
                           <div className="w-full h-full bg-primary-tint-50 flex items-center justify-center text-primary">
                             <Package className="w-5 h-5" />
                           </div>
                         )}
-                      </div>
+                      </button>
 
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-1.5 flex-wrap mb-1">
@@ -956,9 +1007,16 @@ export default function ProductsCatalogPage() {
                           </Badge>
                         </div>
 
-                        <h4 className="font-bold text-dark text-xs line-clamp-2 leading-snug">
-                          {p.title}
-                        </h4>
+                        <a 
+                          href={marketplaceUrl}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="font-bold text-dark text-xs line-clamp-2 leading-snug hover:text-primary transition-colors flex items-center gap-1"
+                          title="Trendyol'da Ürünü Aç"
+                        >
+                          <span>{p.title}</span>
+                          <ExternalLink className="w-3 h-3 text-orange-500 shrink-0 inline" />
+                        </a>
 
                         <div className="flex items-center gap-2 mt-1 text-[10px] text-gray-500 font-mono flex-wrap">
                           <span>Barkod: {p.barcode}</span>
@@ -1067,7 +1125,7 @@ export default function ProductsCatalogPage() {
                           {p.brand || 'Genject'}
                         </span>
                         
-                        <div className="flex items-center gap-1.5">
+                        <div className="flex items-center gap-2">
                           <button
                             onClick={() => handleStartEdit(p)}
                             className="px-2.5 py-1 rounded-lg border border-border text-gray-700 font-bold text-[11px] hover:bg-canvas flex items-center gap-1 shadow-2xs"
@@ -1076,17 +1134,16 @@ export default function ProductsCatalogPage() {
                             <span>Düzenle</span>
                           </button>
 
-                          {p.marketplaceUrl && (
-                            <a
-                              href={p.marketplaceUrl}
-                              target="_blank"
-                              rel="noreferrer"
-                              className="p-1 rounded-lg border border-border text-gray-500 hover:text-primary hover:bg-canvas"
-                              title="Trendyol'da Gör"
-                            >
-                              <ExternalLink className="w-3.5 h-3.5" />
-                            </a>
-                          )}
+                          <a
+                            href={marketplaceUrl}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="px-2.5 py-1 rounded-lg border border-orange-200 text-orange-600 bg-orange-50 hover:bg-orange-100 font-bold text-[11px] flex items-center gap-1 shadow-2xs transition-colors"
+                            title="Trendyol'da Gör"
+                          >
+                            <ExternalLink className="w-3.5 h-3.5" />
+                            <span>Trendyol</span>
+                          </a>
                         </div>
                       </div>
                     )}
@@ -1128,6 +1185,100 @@ export default function ProductsCatalogPage() {
               <span>Sonraki</span>
               <ChevronRight className="w-3.5 h-3.5" />
             </button>
+          </div>
+        </div>
+      )}
+
+      {/* 7. IMAGE ZOOM / LIGHTBOX MODAL */}
+      {zoomedProduct && (
+        <div 
+          className="fixed inset-0 z-50 bg-black/75 backdrop-blur-xs flex items-center justify-center p-4 animate-in fade-in"
+          onClick={() => setZoomedProduct(null)}
+        >
+          <div 
+            className="bg-white rounded-3xl max-w-md w-full p-5 sm:p-6 shadow-2xl border border-border relative space-y-4 max-h-[90vh] overflow-y-auto"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Close Button */}
+            <button
+              onClick={() => setZoomedProduct(null)}
+              className="absolute top-4 right-4 w-8 h-8 rounded-full bg-gray-100 text-gray-600 hover:bg-gray-200 hover:text-dark flex items-center justify-center transition-colors cursor-pointer z-10"
+              title="Kapat (ESC)"
+            >
+              <X className="w-4 h-4" />
+            </button>
+
+            {/* Large HD Image */}
+            <div className="w-full aspect-square rounded-2xl bg-canvas border border-border/80 overflow-hidden flex items-center justify-center p-2 relative">
+              {zoomedProduct.imageUrl ? (
+                <img
+                  src={zoomedProduct.imageUrl}
+                  alt={zoomedProduct.title}
+                  className="w-full h-full object-contain"
+                />
+              ) : (
+                <div className="flex flex-col items-center justify-center text-gray-400 gap-2">
+                  <Package className="w-16 h-16 text-gray-300" />
+                  <span className="text-xs font-bold">Görsel Bulunmuyor</span>
+                </div>
+              )}
+            </div>
+
+            {/* Product Info */}
+            <div className="space-y-3">
+              <div className="flex items-center gap-1.5 flex-wrap">
+                <span className="text-[11px] font-bold text-primary bg-primary-tint-50 border border-primary/20 px-2 py-0.5 rounded-lg">
+                  {zoomedProduct.brand || 'Genject'}
+                </span>
+                <span className="text-[11px] font-mono font-bold text-gray-700 bg-canvas border border-border px-2 py-0.5 rounded-lg">
+                  Barkod: {zoomedProduct.barcode}
+                </span>
+                {zoomedProduct.modelCode && (
+                  <span className="text-[11px] font-mono font-bold text-gray-700 bg-canvas border border-border px-2 py-0.5 rounded-lg">
+                    Model: {zoomedProduct.modelCode}
+                  </span>
+                )}
+              </div>
+
+              <h3 className="text-xs sm:text-sm font-bold text-dark leading-snug">
+                {zoomedProduct.title}
+              </h3>
+
+              <div className="flex items-center justify-between pt-3 border-t border-border flex-wrap gap-2">
+                <div className="flex items-center gap-3">
+                  <div>
+                    <span className="text-[10px] text-gray-400 font-semibold block">Satış Fiyatı</span>
+                    <span className="text-base font-black text-primary tabular-nums">
+                      ₺{parseFloat(zoomedProduct.salePrice || 0).toFixed(2)}
+                    </span>
+                  </div>
+                  {parseFloat(zoomedProduct.costPrice || 0) > 0 && (
+                    <div>
+                      <span className="text-[10px] text-gray-400 font-semibold block">Alış Maliyeti</span>
+                      <span className="text-sm font-bold text-red-700 tabular-nums">
+                        ₺{parseFloat(zoomedProduct.costPrice).toFixed(2)}
+                      </span>
+                    </div>
+                  )}
+                  <div>
+                    <span className="text-[10px] text-gray-400 font-semibold block">Stok</span>
+                    <span className="text-sm font-bold text-dark">
+                      {zoomedProduct.stockQuantity} Adet
+                    </span>
+                  </div>
+                </div>
+
+                <a
+                  href={getProductMarketplaceUrl(zoomedProduct)}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="px-3.5 py-2 rounded-xl bg-orange-500 hover:bg-orange-600 text-white font-bold text-xs flex items-center gap-1.5 shadow-sm transition-colors cursor-pointer"
+                >
+                  <ExternalLink className="w-3.5 h-3.5" />
+                  <span>Trendyol'da Aç</span>
+                </a>
+              </div>
+            </div>
           </div>
         </div>
       )}
