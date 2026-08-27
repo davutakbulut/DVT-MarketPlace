@@ -4,7 +4,8 @@ import {
   testMssqlConnection,
   fetchItemCostByModelCodeFromMssql,
   fetchBatchCostsByModelCodesFromMssql,
-  fetchAllActiveCostsFromMssql
+  fetchAllActiveCostsFromMssql,
+  MssqlConfig
 } from '@/lib/integrations/mssql/mssqlClient';
 
 export const dynamic = 'force-dynamic';
@@ -15,7 +16,20 @@ export async function GET(request: Request) {
     const action = searchParams.get('action');
 
     if (action === 'test') {
-      const testResult = await testMssqlConnection();
+      const server = searchParams.get('server') || undefined;
+      const port = searchParams.get('port') ? parseInt(searchParams.get('port')!) : undefined;
+      const database = searchParams.get('database') || undefined;
+      const user = searchParams.get('user') || undefined;
+      const password = searchParams.get('password') || undefined;
+
+      const testConfig: Partial<MssqlConfig> = {};
+      if (server) testConfig.server = server;
+      if (port) testConfig.port = port;
+      if (database) testConfig.database = database;
+      if (user) testConfig.user = user;
+      if (password) testConfig.password = password;
+
+      const testResult = await testMssqlConnection(Object.keys(testConfig).length > 0 ? testConfig : undefined);
       return NextResponse.json(testResult);
     }
 
@@ -26,7 +40,7 @@ export async function GET(request: Request) {
       security: 'Read-only SELECT query restriction enforced'
     });
   } catch (error: any) {
-    return NextResponse.json({ success: false, error: error.message }, { status: 500 });
+    return NextResponse.json({ success: false, error: error.message }, { status: 200 });
   }
 }
 
@@ -37,12 +51,21 @@ export async function POST(request: Request) {
 
     // 1. Single Model Code sync
     if (action === 'sync_single' && modelCode) {
-      const costItem = await fetchItemCostByModelCodeFromMssql(modelCode);
+      let costItem = null;
+      try {
+        costItem = await fetchItemCostByModelCodeFromMssql(modelCode);
+      } catch (err: any) {
+        return NextResponse.json({
+          success: false,
+          error: `MSSQL Sunucusuna (${err.message}) bağlanılamadı. Lütfen sunucunuzda 1433 portunun ve SQL Server TCP/IP bağlantısının açık olduğundan emin olun.`
+        }, { status: 200 });
+      }
+
       if (!costItem) {
         return NextResponse.json({
           success: false,
           message: `Model Kodu "${modelCode}" için MSSQL (prItemBasePrice) üzerinde maliyet kaydı bulunamadı.`
-        }, { status: 404 });
+        }, { status: 200 });
       }
 
       // Update product in local DB by model_code or sku
@@ -114,10 +137,18 @@ export async function POST(request: Request) {
 
     let mssqlCosts: { modelCode: string; cost: number; currency: string }[] = [];
 
-    if (distinctModelCodes.length <= 500) {
-      mssqlCosts = await fetchBatchCostsByModelCodesFromMssql(distinctModelCodes);
-    } else {
-      mssqlCosts = await fetchAllActiveCostsFromMssql();
+    try {
+      if (distinctModelCodes.length <= 500) {
+        mssqlCosts = await fetchBatchCostsByModelCodesFromMssql(distinctModelCodes);
+      } else {
+        mssqlCosts = await fetchAllActiveCostsFromMssql();
+      }
+    } catch (dbErr: any) {
+      console.error('MSSQL Connection Error:', dbErr);
+      return NextResponse.json({
+        success: false,
+        error: `MSSQL Sunucusuna (${dbErr.message}) bağlanılamadı. Lütfen sunucunuzda (195.175.214.66) 1433 portunun ve SQL Server TCP/IP bağlantısının açık olduğundan emin olun.`
+      }, { status: 200 });
     }
 
     // Map by normalized ItemCode (case-insensitive & trimmed)
@@ -183,6 +214,6 @@ export async function POST(request: Request) {
     return NextResponse.json({
       success: false,
       error: error.message || 'Maliyet senkronizasyonu sırasında hata oluştu.'
-    }, { status: 500 });
+    }, { status: 200 });
   }
 }

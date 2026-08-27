@@ -243,6 +243,25 @@ export default function ProductsCatalogPage() {
   };
 
   const [syncingMssql, setSyncingMssql] = useState(false);
+  const [testingMssql, setTestingMssql] = useState(false);
+
+  const handleTestMssqlConnection = async () => {
+    setTestingMssql(true);
+    try {
+      toast.info("MSSQL sunucusu test ediliyor...", { duration: 3000 });
+      const res = await fetch('/api/integrations/mssql/sync-costs?action=test');
+      const data = await res.json();
+      if (data.success) {
+        toast.success(data.message);
+      } else {
+        toast.error(data.message || data.error || 'MSSQL bağlantısı kurulamadı.');
+      }
+    } catch (e: any) {
+      toast.error('Test hatası: ' + (e.message || e));
+    } finally {
+      setTestingMssql(false);
+    }
+  };
 
   const handleSyncMssqlCosts = async () => {
     setSyncingMssql(true);
@@ -338,8 +357,20 @@ export default function ProductsCatalogPage() {
 
         <div className="flex items-center gap-2">
           <Button
+            type="button"
+            variant="outline"
+            onClick={handleTestMssqlConnection}
+            disabled={testingMssql || syncingMssql}
+            className="text-xs font-bold gap-1.5 rounded-xl border-border hover:bg-canvas h-9 cursor-pointer"
+          >
+            <RefreshCw className={`w-3.5 h-3.5 text-gray-600 ${testingMssql ? 'animate-spin' : ''}`} />
+            <span>{testingMssql ? 'Test Ediliyor...' : 'Bağlantıyı Test Et'}</span>
+          </Button>
+
+          <Button
+            type="button"
             onClick={handleSyncMssqlCosts}
-            disabled={syncingMssql}
+            disabled={syncingMssql || testingMssql}
             className="text-xs font-bold gap-1.5 bg-slate-900 hover:bg-slate-800 text-white rounded-xl shadow-xs h-9 cursor-pointer"
           >
             <Database className={`w-3.5 h-3.5 text-blue-400 ${syncingMssql ? 'animate-spin' : ''}`} />
