@@ -140,31 +140,71 @@ export interface TrendyolAddress {
 
 export interface TrendyolOrderLine {
   id: number;
+  lineId?: number;
   productCode?: number;
+  contentId?: number;
   productName: string;
   sku?: string;
+  stockCode?: string;
   barcode: string;
   quantity: number;
-  price: number; // Unit Sale Price
+  price: number; // Unit Sale Price (Net)
+  lineUnitPrice?: number;
   amount: number; // Total amount for this line
-  discount: number;
-  tyDiscount: number; // Trendyol funded discount
-  sellerDiscount: number; // Merchant funded discount
-  vatBaseAmount: number;
+  lineGrossAmount?: number;
+  discount?: number;
+  lineTotalDiscount?: number;
+  tyDiscount?: number; // Trendyol funded discount
+  lineTyDiscount?: number;
+  sellerDiscount?: number; // Merchant funded discount
+  lineSellerDiscount?: number;
+  discountDetails?: Array<{
+    lineItemPrice: number;
+    lineItemSellerDiscount?: number;
+    lineItemTyDiscount?: number;
+    lineItemDiscount?: number;
+  }>;
+  vatBaseAmount?: number;
+  vatRate?: number;
+  commission?: number;
   commissionRate?: number;
   currencyCode: string;
   orderItemStatus?: string;
+  orderLineItemStatusName?: string;
   salesCampaignId?: number;
   merchantSku?: string;
   merchantId?: number;
+  sellerId?: number;
+  productSize?: string;
+  productColor?: string;
+  productOrigin?: string;
+  productCategoryId?: number;
+  businessUnit?: string;
+  cancelledBy?: string;
+  cancelReason?: string;
+  cancelReasonCode?: number;
+  defectiveClaimListingInsight?: string;
+  fastDeliveryOptions?: Array<{ type: string }>;
 }
 
 export interface TrendyolOrderPackage {
   id: number;
+  shipmentPackageId?: number;
   orderNumber: string;
-  grossAmount: number;
-  totalDiscount: number;
-  totalPrice: number;
+  orderCountryCode?: string;
+  grossAmount?: number;
+  packageGrossAmount?: number;
+  totalDiscount?: number;
+  packageSellerDiscount?: number;
+  totalTyDiscount?: number;
+  packageTyDiscount?: number;
+  packageTotalDiscount?: number;
+  totalPrice?: number;
+  packageTotalPrice?: number;
+  discountDisplays?: Array<{
+    displayName: string;
+    discountAmount: number;
+  }>;
   taxNumber?: string;
   invoiceAddress: TrendyolAddress;
   shipmentAddress: TrendyolAddress;
@@ -172,18 +212,23 @@ export interface TrendyolOrderPackage {
   customerLastName: string;
   customerEmail?: string;
   customerId: number;
-  cargoTrackingNumber?: string;
+  supplierId?: number;
+  channelId?: number;
+  cargoTrackingNumber?: string | number;
   cargoTrackingLink?: string;
+  cargoSenderNumber?: string;
   cargoProviderName: string;
+  cargoDeci?: number;
   lines: TrendyolOrderLine[];
   orderDate: number;
+  identityNumber?: string;
   tcIdentityNumber?: string;
   currencyCode: string;
   packageHistories?: Array<{
     createdDate: number;
     status: string;
   }>;
-  shipmentPackageStatus: 'Created' | 'Picking' | 'Invoiced' | 'Shipped' | 'Delivered' | 'UnDelivered' | 'Returned' | 'Cancelled' | 'UnDeliveredAndReturned' | 'ReadyToShip' | string;
+  shipmentPackageStatus: 'Created' | 'Picking' | 'Invoiced' | 'Shipped' | 'Delivered' | 'UnDelivered' | 'Returned' | 'Cancelled' | 'UnDeliveredAndReturned' | 'ReadyToShip' | 'AtCollectionPoint' | 'UnPacked' | 'UnSupplied' | string;
   status: string;
   deliveryType?: string;
   timeSlotId?: number;
@@ -192,10 +237,27 @@ export interface TrendyolOrderPackage {
   deliveryAddressType?: string;
   agreedDeliveryDate?: number;
   fastDelivery?: boolean;
+  fastDeliveryType?: 'TodayDelivery' | 'SameDayShipping' | 'FastDelivery' | string;
   originShipmentDate?: number;
+  lastModifiedDate?: number;
   commercial?: boolean;
   micro?: boolean; // Micro-export flag
+  is4P?: boolean; // Trendyol Yurt Dışı Aracılığı
+  whoPays?: number; // 1 if seller agreement
   giftBoxRequested?: boolean;
+  containsDangerousProduct?: boolean;
+  isCod?: boolean;
+  createdBy?: 'order-creation' | 'split' | 'cancel' | 'transfer' | string;
+  originPackageIds?: string[] | null;
+  hsCode?: string;
+  etgbNo?: string;
+  etgbDate?: number;
+  shipmentNumber?: number | string;
+  invoiceStatus?: 'NotInvoiced' | 'Received' | 'Rejected' | 'Invoiced' | string;
+  invoiceNumber?: string;
+  invoiceLink?: string;
+  invoiceRejectedReasonKeys?: string[];
+  '3pByTrendyol'?: boolean;
 }
 
 export interface TrendyolOrdersResponse {
@@ -212,7 +274,7 @@ export interface TrendyolOrderFilterParams {
   page?: number;
   size?: number;
   orderNumber?: string;
-  status?: 'Created' | 'Picking' | 'Invoiced' | 'Shipped' | 'Delivered' | 'UnDelivered' | 'Returned' | 'Cancelled';
+  status?: 'Created' | 'Picking' | 'Invoiced' | 'Shipped' | 'Delivered' | 'UnDelivered' | 'Returned' | 'Cancelled' | 'AtCollectionPoint' | 'UnPacked' | 'UnSupplied' | string;
   orderByField?: 'PackageLastModifiedDate' | 'CreatedDate';
   orderByDirection?: 'ASC' | 'DESC';
   shipmentPackageIds?: number[];

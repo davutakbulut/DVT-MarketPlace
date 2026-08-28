@@ -62,7 +62,9 @@ export class TrendyolClient {
   ): Promise<T> {
     const { method = 'GET', body, queryParams, retries = 3 } = options;
 
-    let url = `${this.baseUrl}${endpoint.startsWith('/') ? endpoint : `/${endpoint}`}`;
+    let url = endpoint.startsWith('http://') || endpoint.startsWith('https://') 
+      ? endpoint 
+      : `${this.baseUrl}${endpoint.startsWith('/') ? endpoint : `/${endpoint}`}`;
 
     if (queryParams) {
       const searchParams = new URLSearchParams();
@@ -267,24 +269,27 @@ export class TrendyolClient {
   }
 
   /**
-   * 5. Get Orders (Sipariş Paketleri Çekme)
-   * GET /suppliers/{supplierId}/orders
+   * 5. Get Orders (Sipariş Paketleri Çekme - Order V2)
+   * GET https://apigw.trendyol.com/integration/order/sellers/{sellerId}/v2/orders
    */
   public async getOrders(params: TrendyolOrderFilterParams = {}): Promise<TrendyolOrdersResponse> {
-    return this.request<TrendyolOrdersResponse>(`/suppliers/${this.supplierId}/orders`, {
-      method: 'GET',
-      queryParams: {
-        startDate: params.startDate,
-        endDate: params.endDate,
-        page: params.page ?? 0,
-        size: params.size ?? 50,
-        orderNumber: params.orderNumber,
-        status: params.status,
-        orderByField: params.orderByField || 'PackageLastModifiedDate',
-        orderByDirection: params.orderByDirection || 'DESC',
-        shipmentPackageIds: params.shipmentPackageIds?.join(','),
-      },
-    });
+    return this.request<TrendyolOrdersResponse>(
+      `https://apigw.trendyol.com/integration/order/sellers/${this.supplierId}/v2/orders`,
+      {
+        method: 'GET',
+        queryParams: {
+          startDate: params.startDate,
+          endDate: params.endDate,
+          page: params.page ?? 0,
+          size: params.size ?? 50,
+          orderNumber: params.orderNumber,
+          status: params.status,
+          orderByField: params.orderByField || 'PackageLastModifiedDate',
+          orderByDirection: params.orderByDirection || 'DESC',
+          shipmentPackageIds: params.shipmentPackageIds?.join(','),
+        },
+      }
+    );
   }
 
   /**

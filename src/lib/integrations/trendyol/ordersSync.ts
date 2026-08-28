@@ -257,24 +257,22 @@ export async function syncTrendyolOrders(
 
               let productId: string | null = null;
               let unitCost = 0;
-              let vatRate = 20;
-              let commRate = Number(line.commissionRate) || 15.0;
+              let vatRate = line.vatRate !== undefined && line.vatRate !== null ? Number(line.vatRate) : 20;
+              let commRate = line.commission !== undefined && line.commission !== null
+                ? Number(line.commission)
+                : (line.commissionRate !== undefined && line.commissionRate !== null ? Number(line.commissionRate) : 16.15);
               let lineDesi = 1.0;
 
-              const slugify = (text: string) => {
-                const trMap: Record<string, string> = { 'ç': 'c', 'Ç': 'c', 'ğ': 'g', 'Ğ': 'g', 'ş': 's', 'Ş': 's', 'ü': 'u', 'Ü': 'u', 'ı': 'i', 'İ': 'i', 'ö': 'o', 'Ö': 'o' };
-                return String(text || '').replace(/[çÇğĞşŞüÜıİöÖ]/g, c => trMap[c] || c).toLowerCase().replace(/,\s*one size/gi, '').replace(/,\s*\(k:\d+\)/gi, '').replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '') || 'urun';
-              };
-              const directProductUrl = line.productCode 
-                ? `https://www.trendyol.com/genject/${slugify(line.productName || barcode)}-p-${line.productCode}?merchantId=${supplierId || '230566'}&filterOverPriceListings=false` 
-                : null;
+              const directProductUrl = null; // Stored from official export / store catalog
 
               if (prodRows.length > 0) {
                 const prod = prodRows[0];
                 productId = prod.id;
                 unitCost = Number(prod.current_cost) || 0;
-                vatRate = Number(prod.vat_rate) || 20;
-                commRate = Number(line.commissionRate ?? prod.commission_rate) || 15.0;
+                vatRate = line.vatRate !== undefined && line.vatRate !== null ? Number(line.vatRate) : (Number(prod.vat_rate) || 20);
+                commRate = line.commission !== undefined && line.commission !== null
+                  ? Number(line.commission)
+                  : (Number(prod.commission_rate) || 16.15);
                 lineDesi = Math.max(0.5, Number(prod.shipment_desi) || 1.0);
 
                 if (directProductUrl) {
