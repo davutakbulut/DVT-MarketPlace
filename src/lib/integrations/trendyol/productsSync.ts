@@ -112,7 +112,8 @@ export async function syncTrendyolProducts(
             const sku = variant.stockCode || item.stockCode || modelCode || barcode;
             const salePrice = Number(variant.price?.salePrice ?? item.salePrice) || 0;
             const vatRate = Number(variant.vatRate ?? item.vatRate) || 20;
-            const commissionRate = Number(variant.commission) || 16.15;
+            const rawComm = Number(variant.commission);
+            const commissionRate = (rawComm === 16.15 || !rawComm) ? 19.00 : rawComm;
             const shipmentDesi = Math.max(0.5, Number(variant.dimensionalWeight ?? item.dimensionalWeight) || 1.0);
             const stockQuantity = Math.max(0, Number(variant.stock?.quantity ?? item.quantity) || 0);
             const isActive = variant.onSale !== false && variant.blacklisted !== true;
