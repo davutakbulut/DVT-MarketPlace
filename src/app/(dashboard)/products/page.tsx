@@ -863,7 +863,7 @@ export default function ProductsCatalogPage() {
                         </td>
                         <td className="py-3 px-4 font-semibold text-xs whitespace-nowrap">
                           <span className="text-gray-900 font-bold">%{parseFloat(p.commissionRate || 19).toFixed(0)}</span>
-                          <span className="text-gray-500 font-medium text-[11px] ml-1">(+%{parseFloat(p.vatRate || 20).toFixed(0)} KDV)</span>
+                          <span className="text-gray-500 font-medium text-[11px] ml-1">(+%20 KDV)</span>
                         </td>
                         <td className="py-3 px-4 text-muted-foreground font-medium">
                           {p.desi || 1} Desi
@@ -1082,7 +1082,7 @@ export default function ProductsCatalogPage() {
                         <div className="bg-white p-2.5 rounded-xl border border-border/80 flex flex-col justify-between">
                           <span className="text-[10px] text-gray-500 font-semibold block">Desi & Komisyon</span>
                           <span className="text-[11px] font-bold text-gray-700 mt-0.5 truncate">
-                            {p.desi || 1} Desi • %{parseFloat(p.commissionRate || 19).toFixed(0)} (+%{parseFloat(p.vatRate || 20).toFixed(0)} KDV)
+                            {p.desi || 1} Desi • %{parseFloat(p.commissionRate || 19).toFixed(0)} (+%20 KDV)
                           </span>
                         </div>
                       </div>
