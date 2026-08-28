@@ -85,93 +85,93 @@ export async function syncTrendyolProducts(
         totalCatalogFetched += items.length;
 
         for (const item of items) {
-          const barcode = (item.barcode || '').trim();
-          if (!barcode) continue;
-
-function slugify(text: string): string {
-  const trMap: Record<string, string> = {
-    'ç': 'c', 'Ç': 'c',
-    'ğ': 'g', 'Ğ': 'g',
-    'ş': 's', 'Ş': 's',
-    'ü': 'u', 'Ü': 'u',
-    'ı': 'i', 'İ': 'i',
-    'ö': 'o', 'Ö': 'o'
-  };
-  return String(text || '')
-    .replace(/[çÇğĞşŞüÜıİöÖ]/g, c => trMap[c] || c)
-    .toLowerCase()
-    .replace(/,\s*one size/gi, '')
-    .replace(/,\s*\(k:\d+\)/gi, '')
-    .replace(/[^a-z0-9]+/g, '-')
-    .replace(/^-+|-+$/g, '') || 'urun';
-}
+          const variantsList = (item.variants && Array.isArray(item.variants) && item.variants.length > 0)
+            ? item.variants
+            : [{
+                barcode: item.barcode,
+                stockCode: item.stockCode,
+                productUrl: (item as any).productUrl || null,
+                commission: (item as any).commission,
+                price: { salePrice: item.salePrice },
+                stock: { quantity: item.quantity },
+                dimensionalWeight: item.dimensionalWeight,
+                vatRate: item.vatRate,
+                onSale: item.onSale,
+                blacklisted: item.blacklisted,
+              }];
 
           const title = item.title || 'İsimsiz Ürün';
-          const brand = item.brand || null;
-          const sku = item.stockCode || item.productMainId || barcode;
+          const brand = (typeof item.brand === 'object' ? item.brand?.name : item.brand) || null;
           const modelCode = item.productMainId || null;
           const imageUrl = item.images && item.images.length > 0 ? item.images[0].url : null;
-          const salePrice = Number(item.salePrice) || 0;
-          const vatRate = Number(item.vatRate) || 20;
-          const shipmentDesi = Math.max(0.5, Number(item.dimensionalWeight) || 1.0);
-          const stockQuantity = Math.max(0, Number(item.quantity) || 10);
-          const isActive = item.onSale === true && item.approved === true;
-          const contentId = (item as any).platformListingId || (item as any).id;
-          const productUrl = contentId 
-            ? `https://www.trendyol.com/${slugify(brand || 'genject')}/${slugify(title)}-p-${contentId}?merchantId=${store.supplier_id || store.seller_id || '230566'}&filterOverPriceListings=false`
-            : null;
 
-          const existing = await query(
-            `SELECT id, current_cost FROM products WHERE store_id = $1 AND barcode = $2`,
-            [store.id, barcode]
-          );
+          for (const variant of variantsList) {
+            const barcode = (variant.barcode || item.barcode || '').trim();
+            if (!barcode) continue;
 
-          if (existing.length > 0) {
-            await query(
-              `UPDATE products
-               SET title = $1,
-                   brand = COALESCE($2, brand),
-                   sku = COALESCE($3, sku),
-                   model_code = COALESCE($4, model_code),
-                   image_url = COALESCE($5, image_url),
-                   current_sale_price = $6,
-                   vat_rate = $7,
-                   shipment_desi = $8,
-                   stock_quantity = $9,
-                   is_active = $10,
-                   marketplace = 'trendyol',
-                   marketplace_product_url = COALESCE($11, marketplace_product_url),
-                   updated_at = NOW()
-               WHERE store_id = $12 AND barcode = $13`,
-              [
-                title, brand, sku, modelCode, imageUrl,
-                salePrice, vatRate, shipmentDesi, stockQuantity,
-                isActive, productUrl, store.id, barcode
-              ]
+            const sku = variant.stockCode || item.stockCode || modelCode || barcode;
+            const salePrice = Number(variant.price?.salePrice ?? item.salePrice) || 0;
+            const vatRate = Number(variant.vatRate ?? item.vatRate) || 20;
+            const commissionRate = Number(variant.commission) || 16.15;
+            const shipmentDesi = Math.max(0.5, Number(variant.dimensionalWeight ?? item.dimensionalWeight) || 1.0);
+            const stockQuantity = Math.max(0, Number(variant.stock?.quantity ?? item.quantity) || 0);
+            const isActive = variant.onSale !== false && variant.blacklisted !== true;
+            const productUrl = variant.productUrl || null;
+
+            const existing = await query(
+              `SELECT id, current_cost, marketplace_product_url FROM products WHERE store_id = $1 AND barcode = $2`,
+              [store.id, barcode]
             );
-            updatedCount++;
-          } else {
-            await query(
-              `INSERT INTO products (
-                 store_id, company_id, barcode, sku, model_code, title, brand,
-                 image_url, current_sale_price, current_cost, vat_rate, shipment_desi,
-                 measured_desi, commission_rate, stock_quantity, delivery_type,
-                 is_active, marketplace, marketplace_product_url, created_at, updated_at
-               ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, 0.0, $10, $11, $11, 15.0, $12, 'standard', $13, 'trendyol', $14, NOW(), NOW())
-               ON CONFLICT (store_id, barcode) DO UPDATE SET
-                 title = EXCLUDED.title,
-                 current_sale_price = EXCLUDED.current_sale_price,
-                 stock_quantity = EXCLUDED.stock_quantity,
-                 shipment_desi = EXCLUDED.shipment_desi,
-                 marketplace_product_url = COALESCE(EXCLUDED.marketplace_product_url, products.marketplace_product_url),
-                 updated_at = NOW()`,
-              [
-                store.id, companyId, barcode, sku, modelCode, title, brand,
-                imageUrl, salePrice, vatRate, shipmentDesi, stockQuantity,
-                isActive, productUrl
-              ]
-            );
-            insertedCount++;
+
+            if (existing.length > 0) {
+              await query(
+                `UPDATE products
+                 SET title = $1,
+                     brand = COALESCE($2, brand),
+                     sku = COALESCE($3, sku),
+                     model_code = COALESCE($4, model_code),
+                     image_url = COALESCE($5, image_url),
+                     current_sale_price = $6,
+                     vat_rate = $7,
+                     commission_rate = $8,
+                     shipment_desi = $9,
+                     stock_quantity = $10,
+                     is_active = $11,
+                     marketplace = 'trendyol',
+                     marketplace_product_url = COALESCE($12, marketplace_product_url),
+                     updated_at = NOW()
+                 WHERE store_id = $13 AND barcode = $14`,
+                [
+                  title, brand, sku, modelCode, imageUrl,
+                  salePrice, vatRate, commissionRate, shipmentDesi, stockQuantity,
+                  isActive, productUrl, store.id, barcode
+                ]
+              );
+              updatedCount++;
+            } else {
+              await query(
+                `INSERT INTO products (
+                   store_id, company_id, barcode, sku, model_code, title, brand,
+                   image_url, current_sale_price, current_cost, vat_rate, shipment_desi,
+                   measured_desi, commission_rate, stock_quantity, delivery_type,
+                   is_active, marketplace, marketplace_product_url, created_at, updated_at
+                 ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, 0.0, $10, $11, $11, $12, $13, 'standard', $14, 'trendyol', $15, NOW(), NOW())
+                 ON CONFLICT (store_id, barcode) DO UPDATE SET
+                   title = EXCLUDED.title,
+                   current_sale_price = EXCLUDED.current_sale_price,
+                   stock_quantity = EXCLUDED.stock_quantity,
+                   shipment_desi = EXCLUDED.shipment_desi,
+                   commission_rate = EXCLUDED.commission_rate,
+                   marketplace_product_url = COALESCE(EXCLUDED.marketplace_product_url, products.marketplace_product_url),
+                   updated_at = NOW()`,
+                [
+                  store.id, companyId, barcode, sku, modelCode, title, brand,
+                  imageUrl, salePrice, vatRate, shipmentDesi, commissionRate, stockQuantity,
+                  isActive, productUrl
+                ]
+              );
+              insertedCount++;
+            }
           }
         }
 

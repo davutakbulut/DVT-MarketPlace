@@ -213,30 +213,86 @@ export class TrendyolClient {
   }
 
   /**
-   * 2. Get Products (Ürün Kataloğu Çekme)
-   * GET /suppliers/{supplierId}/products
+   * 2. Get Approved Products V2 (Onaylı Ürün Kataloğu Çekme)
+   * GET https://apigw.trendyol.com/integration/product/sellers/{sellerId}/products/approved
    */
-  public async getProducts(params: TrendyolProductFilterParams = {}): Promise<TrendyolProductsResponse> {
-    return this.request<TrendyolProductsResponse>(`/suppliers/${this.supplierId}/products`, {
-      method: 'GET',
-      queryParams: {
-        approved: params.approved,
-        barcode: params.barcode,
-        startDate: params.startDate,
-        endDate: params.endDate,
-        page: params.page ?? 0,
-        size: params.size ?? 50,
-        dateQueryType: params.dateQueryType,
-        onSale: params.onSale,
-        rejected: params.rejected,
-        brandId: params.brandId,
-      },
+  public async getApprovedProducts(params: { page?: number; size?: number; barcode?: string; brandId?: number } = {}): Promise<any> {
+    return this.request<any>(
+      `https://apigw.trendyol.com/integration/product/sellers/${this.supplierId}/products/approved`,
+      {
+        method: 'GET',
+        queryParams: {
+          page: params.page ?? 0,
+          size: params.size ?? 50,
+          barcode: params.barcode,
+          brandId: params.brandId,
+        },
+      }
+    );
+  }
+
+  /**
+   * 2b. Get Approved Inventory & Price V2 (Onaylı Ürün Stok ve Fiyat Listesi)
+   * GET https://apigw.trendyol.com/integration/product/sellers/{sellerId}/products/approved/inventory-and-price
+   */
+  public async getApprovedInventoryAndPrice(params: { page?: number; size?: number } = {}): Promise<any> {
+    return this.request<any>(
+      `https://apigw.trendyol.com/integration/product/sellers/${this.supplierId}/products/approved/inventory-and-price`,
+      {
+        method: 'GET',
+        queryParams: {
+          page: params.page ?? 0,
+          size: params.size ?? 50,
+        },
+      }
+    );
+  }
+
+  /**
+   * 2c. Get Unapproved Products V2 (Onaysız Ürünler)
+   * GET https://apigw.trendyol.com/integration/product/sellers/{sellerId}/products/unapproved
+   */
+  public async getUnapprovedProducts(params: { page?: number; size?: number } = {}): Promise<any> {
+    return this.request<any>(
+      `https://apigw.trendyol.com/integration/product/sellers/${this.supplierId}/products/unapproved`,
+      {
+        method: 'GET',
+        queryParams: {
+          page: params.page ?? 0,
+          size: params.size ?? 50,
+        },
+      }
+    );
+  }
+
+  /**
+   * 2d. Get Single Product V2 (Tek Ürün Bilgisi)
+   * GET https://apigw.trendyol.com/integration/product/sellers/{sellerId}/product/{barcode}
+   */
+  public async getSingleProduct(barcode: string): Promise<any> {
+    return this.request<any>(
+      `https://apigw.trendyol.com/integration/product/sellers/${this.supplierId}/product/${encodeURIComponent(barcode)}`,
+      {
+        method: 'GET',
+      }
+    );
+  }
+
+  /**
+   * Legacy wrapper for getProducts -> uses getApprovedProducts V2
+   */
+  public async getProducts(params: TrendyolProductFilterParams = {}): Promise<any> {
+    return this.getApprovedProducts({
+      page: params.page,
+      size: params.size,
+      barcode: params.barcode,
+      brandId: params.brandId,
     });
   }
 
   /**
-   * 3. Update Price & Inventory (Fiyat & Stok Güncelleme - Çift Yönlü Writeback)
-   * POST /suppliers/{supplierId}/v2/products/price-and-inventory
+   * 3. Update Price & Inventory V2 (Fiyat & Stok Güncelleme - Çift Yönlü Writeback)
+   * POST https://apigw.trendyol.com/integration/inventory/sellers/{sellerId}/products/price-and-inventory
    */
   public async updatePriceAndInventory(
     payload: TrendyolPriceAndInventoryPayload
@@ -245,7 +301,7 @@ export class TrendyolClient {
       throw new Error('Güncellenecek ürün listesi boş olamaz.');
     }
     return this.request<TrendyolBatchRequestResponse>(
-      `/suppliers/${this.supplierId}/v2/products/price-and-inventory`,
+      `https://apigw.trendyol.com/integration/inventory/sellers/${this.supplierId}/products/price-and-inventory`,
       {
         method: 'POST',
         body: payload,
@@ -254,14 +310,14 @@ export class TrendyolClient {
   }
 
   /**
-   * 4. Get Batch Request Status (Toplu Fiyat/Stok İşlem Durumu Kontrolü)
-   * GET /suppliers/{supplierId}/products/batch-requests/{batchRequestId}
+   * 4. Get Batch Request Status V2 (Toplu Fiyat/Stok İşlem Durumu Kontrolü)
+   * GET https://apigw.trendyol.com/integration/product/sellers/{sellerId}/products/batch-requests/{batchRequestId}
    */
   public async getBatchRequestResult(
     batchRequestId: string
   ): Promise<TrendyolBatchRequestStatusResponse> {
     return this.request<TrendyolBatchRequestStatusResponse>(
-      `/suppliers/${this.supplierId}/products/batch-requests/${batchRequestId}`,
+      `https://apigw.trendyol.com/integration/product/sellers/${this.supplierId}/products/batch-requests/${batchRequestId}`,
       {
         method: 'GET',
       }

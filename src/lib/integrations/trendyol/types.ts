@@ -25,34 +25,73 @@ export interface TrendyolProductImage {
   url: string;
 }
 
+export interface TrendyolProductVariant {
+  variantId?: number;
+  barcode: string;
+  stockCode?: string;
+  productUrl?: string;
+  commission?: number;
+  vatRate?: number;
+  dimensionalWeight?: number;
+  onSale?: boolean;
+  locked?: boolean;
+  archived?: boolean;
+  blacklisted?: boolean;
+  blacklistReason?: string;
+  origin?: string;
+  price?: {
+    salePrice?: number;
+    listPrice?: number;
+    priceSeenByCustomer?: number;
+  };
+  stock?: {
+    quantity?: number;
+    lastModifiedDate?: number;
+  };
+  deliveryOptions?: {
+    deliveryDuration?: number;
+    isRushDelivery?: boolean;
+    fastDeliveryOptions?: Array<{ deliveryOptionType?: string }>;
+  };
+}
+
 export interface TrendyolProductItem {
   id?: string;
-  barcode: string;
-  title: string;
+  contentId?: number;
+  barcode?: string;
+  title?: string;
   productMainId?: string;
   brandId?: number;
-  brand?: string;
+  brand?: string | { id?: number; name?: string };
   categoryId?: number;
+  category?: { id?: number; name?: string };
   categoryName?: string;
-  quantity: number;
+  quantity?: number;
   stockCode?: string;
   dimensionalWeight?: number; // Desi
   description?: string;
-  listPrice: number;
-  salePrice: number;
-  vatRate: number;
-  images?: TrendyolProductImage[];
-  attributes?: TrendyolProductAttribute[];
+  listPrice?: number;
+  salePrice?: number;
+  vatRate?: number;
+  images?: Array<{ url: string }>;
+  attributes?: Array<{
+    attributeId: number;
+    attributeName?: string;
+    attributeValueId?: number;
+    attributeValue?: string;
+    customAttributeValue?: string;
+  }>;
   platformListingId?: string;
-  onSale: boolean;
-  approved: boolean;
-  archived: boolean;
-  locked: boolean;
-  rejected: boolean;
-  blacklisted: boolean;
+  onSale?: boolean;
+  approved?: boolean;
+  archived?: boolean;
+  locked?: boolean;
+  rejected?: boolean;
+  blacklisted?: boolean;
   hasHtmlContent?: boolean;
   lastPriceChangeDate?: number;
   lastStockChangeDate?: number;
+  variants?: TrendyolProductVariant[];
 }
 
 export interface TrendyolProductsResponse {
